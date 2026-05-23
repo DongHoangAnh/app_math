@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "MathUp Mobile",
+    "slug": "mathup-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.mathup.mobile"
+    },
+    "android": {
+      "package": "com.mathup.mobile"
+    }
+  }
+}

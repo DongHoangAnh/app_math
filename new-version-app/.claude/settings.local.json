@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx expo *)",
+      "Bash(curl -s \"http://localhost:8081/status\")",
+      "Bash(curl -s \"http://localhost:8081/info\")",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":8081\")",
+      "Bash(findstr LISTENING)"
+    ]
+  }
+}

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, SafeAreaView,
+  TouchableOpacity, SafeAreaView, Image,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
+import { authFetch } from '../utils/authFetch';
+import EditProfileModal from '../components/EditProfileModal';
 
 const C = {
   primary:   '#FF6B35',
@@ -29,6 +31,8 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const [stats, setStats]               = useState<UserStats>(FALLBACK);
   const [rankingPoints, setRankingPoints] = useState(0);
+  const [avatarUrl, setAvatarUrl]       = useState<string | null>(null);
+  const [editVisible, setEditVisible]   = useState(false);
 
   const displayName = user?.user_metadata?.full_name ?? 'Người chơi';
   const initial     = displayName[0]?.toUpperCase() ?? 'M';
@@ -36,19 +40,37 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     if (!user) return;
+
     supabase
       .from('user_profiles')
-      .select('ranking_points')
+      .select('ranking_points, avatar_url')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => { if (data) setRankingPoints(data.ranking_points); })
+      .then(({ data }) => {
+        if (data) {
+          setRankingPoints(data.ranking_points);
+          setAvatarUrl(data.avatar_url ?? null);
+        }
+      })
       .catch(() => {});
 
-    fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
+    authFetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
       .then((r) => r.json())
-      .then(setStats)
+      .then((data) => setStats({
+        totalScore:   data.totalScore   ?? 0,
+        totalMatches: data.totalMatches ?? 0,
+        wins:         data.totalWins    ?? 0,
+        winRate:      data.winRate      ?? 0,
+        streak:       data.currentStreak ?? 0,
+        level:        data.level        ?? 1,
+      }))
       .catch(() => {});
   }, [user]);
+
+  const handleProfileSaved = (newName: string, newAvatarUrl: string | null) => {
+    setAvatarUrl(newAvatarUrl);
+    setEditVisible(false);
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -59,11 +81,24 @@ export default function ProfileScreen() {
           <View style={styles.headerDeco1} />
           <View style={styles.headerDeco2} />
 
-          <View style={styles.avatarRing}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initial}</Text>
+          {/* Avatar với nút edit */}
+          <TouchableOpacity
+            style={styles.avatarRing}
+            onPress={() => setEditVisible(true)}
+            activeOpacity={0.85}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initial}</Text>
+              </View>
+            )}
+            <View style={styles.editBadge}>
+              <Text style={styles.editBadgeIcon}>✏️</Text>
             </View>
-          </View>
+          </TouchableOpacity>
+
           <Text style={styles.name}>{displayName}</Text>
           {grade && <Text style={styles.grade}>Lớp {grade}</Text>}
 
@@ -92,9 +127,9 @@ export default function ProfileScreen() {
           <Text style={styles.sectionText}>Cài đặt</Text>
         </View>
         <View style={styles.menu}>
-          <MenuItem icon="🎨" label="Cài Đặt"   onPress={() => {}} />
-          <MenuItem icon="💬" label="Trợ Giúp"   onPress={() => {}} />
-          <MenuItem icon="📋" label="Điều Khoản" onPress={() => {}} isLast />
+          <MenuItem icon="👤" label="Chỉnh sửa hồ sơ" onPress={() => setEditVisible(true)} />
+          <MenuItem icon="💬" label="Trợ Giúp"         onPress={() => {}} />
+          <MenuItem icon="📋" label="Điều Khoản"       onPress={() => {}} isLast />
         </View>
 
         {/* ── Sign out ── */}
@@ -104,6 +139,15 @@ export default function ProfileScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {/* ── Edit Profile Modal ── */}
+      <EditProfileModal
+        visible={editVisible}
+        currentName={displayName}
+        currentAvatarUrl={avatarUrl}
+        onClose={() => setEditVisible(false)}
+        onSaved={handleProfileSaved}
+      />
     </SafeAreaView>
   );
 }
@@ -170,7 +214,11 @@ const styles = StyleSheet.create({
   avatarRing: {
     width: 96, height: 96, borderRadius: 48,
     borderWidth: 4, borderColor: C.secondary,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 12,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 12, position: 'relative',
+  },
+  avatarImg: {
+    width: 84, height: 84, borderRadius: 42,
   },
   avatar: {
     width: 84, height: 84, borderRadius: 42,
@@ -178,8 +226,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   avatarText: { fontSize: 36, fontWeight: '900', color: '#7B5800' },
-  name:       { fontSize: 22, fontWeight: '900', color: '#fff' },
-  grade:      { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+  editBadge: {
+    position: 'absolute', bottom: -2, right: -2,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: C.secondary,
+  },
+  editBadgeIcon: { fontSize: 12 },
+  name:  { fontSize: 22, fontWeight: '900', color: '#fff' },
+  grade: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
 
   headerStats: {
     flexDirection: 'row', marginTop: 20,

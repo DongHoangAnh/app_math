@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { supabase } from "../services/supabase";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -237,12 +238,15 @@ export function useGameShowWS(
     }, []);
 
     // ─── Join queue ─────────────────────────────────────────
-    const joinQueue = useCallback(() => {
+    const joinQueue = useCallback(async () => {
         if (!userId) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token ?? "";
+        if (!token) return; // refuse to join without a valid session
         connect();
         const tryJoin = () => {
             if (wsRef.current?.readyState === WebSocket.OPEN) {
-                send({ type: "JOIN_QUEUE", userId, displayName, grade, winRate, totalScore });
+                send({ type: "JOIN_QUEUE", userId, token, displayName, grade, winRate, totalScore });
             } else {
                 setTimeout(tryJoin, 200);
             }

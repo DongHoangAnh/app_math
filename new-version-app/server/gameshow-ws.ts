@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
 import fs from "fs";
 import path from "path";
-import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch } from "./supabase-server";
+import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch, verifyToken } from "./supabase-server";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -45,7 +45,7 @@ interface GameRoom {
 }
 
 type WSMessage =
-    | { type: "JOIN_QUEUE"; userId: string; displayName: string; grade?: string; winRate?: number; totalScore?: number }
+    | { type: "JOIN_QUEUE"; userId: string; token: string; displayName: string; grade?: string; winRate?: number; totalScore?: number }
     | { type: "LEAVE_QUEUE"; userId: string }
     | { type: "SUBMIT_ANSWER"; userId: string; roomId: string; questionIndex: number; answer: string; timeMs: number }
     | { type: "PING" };
@@ -468,7 +468,7 @@ export function setupGameShowWS(httpServer: Server) {
     wss.on("connection", (ws) => {
         let currentPlayer: Player | null = null;
 
-        ws.on("message", (raw) => {
+        ws.on("message", async (raw) => {
             let msg: WSMessage;
             try {
                 msg = JSON.parse(raw.toString());
@@ -478,11 +478,18 @@ export function setupGameShowWS(httpServer: Server) {
 
             switch (msg.type) {
                 case "JOIN_QUEUE": {
+                    // Verify the JWT token and ensure it belongs to the claimed userId
+                    const authed = await verifyToken(msg.token ?? "");
+                    if (!authed || authed.id !== msg.userId) {
+                        ws.close(4001, "Unauthorized");
+                        return;
+                    }
+
                     if (currentPlayer) handleDisconnect(currentPlayer.userId);
 
                     currentPlayer = {
                         ws,
-                        userId: msg.userId,
+                        userId: authed.id, // use verified id — never trust client claim
                         displayName: msg.displayName,
                         grade: msg.grade,
                         winRate: msg.winRate,
@@ -527,7 +534,16 @@ export function setupGameShowWS(httpServer: Server) {
 
                 case "SUBMIT_ANSWER": {
                     if (!currentPlayer) return;
-                    handleAnswer(msg.userId, msg.roomId, msg.questionIndex, msg.answer, msg.timeMs);
+                    // Validate types to prevent prototype pollution / unexpected values
+                    const qIdx = Number(msg.questionIndex);
+                    const tMs  = Math.max(0, Number(msg.timeMs));
+                    if (
+                        typeof msg.roomId !== "string" ||
+                        !Number.isInteger(qIdx) || qIdx < 0 || qIdx > 99 ||
+                        typeof msg.answer !== "string" || msg.answer.length > 200
+                    ) return;
+                    // Always use the authenticated player's id — never the client-supplied userId
+                    handleAnswer(currentPlayer.userId, msg.roomId, qIdx, msg.answer, tMs);
                     break;
                 }
 

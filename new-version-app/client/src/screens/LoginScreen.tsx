@@ -19,13 +19,17 @@ const C = {
 };
 
 export default function LoginScreen() {
-  const { signInWithEmail, loading } = useAuth();
+  const { signInWithEmail, signInWithGoogle, loading } = useAuth();
   const navigation = useNavigation<any>();
 
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]           = useState('');
+  const [password, setPassword]     = useState('');
+  const [showPwd, setShowPwd]       = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+
+  const busy = submitting || googleLoading || loading;
 
   const handleEmailLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -37,19 +41,25 @@ export default function LoginScreen() {
     try {
       await signInWithEmail(email.trim(), password);
     } catch (e: any) {
-      setError(e?.message ?? 'Đăng nhập thất bại');
+      setError(translateAuthError(e?.message));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const fillAccount = (acc: 'admin' | 'admin1') => {
-    setEmail(acc === 'admin' ? 'admin@mathup.dev' : 'admin1@mathup.dev');
-    setPassword('admin123');
+  const handleGoogleLogin = async () => {
     setError(null);
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (e: any) {
+      if (!e?.message?.toLowerCase().includes('cancel')) {
+        setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
   };
-
-  const busy = submitting || loading;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -62,7 +72,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero area */}
+          {/* Hero */}
           <View style={styles.hero}>
             <View style={styles.heroBg} />
             <View style={styles.heroCircle} />
@@ -77,12 +87,39 @@ export default function LoginScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Đăng nhập</Text>
 
+            {/* Google button */}
+            <TouchableOpacity
+              style={[styles.googleBtn, busy && { opacity: 0.6 }]}
+              onPress={handleGoogleLogin}
+              disabled={busy}
+              activeOpacity={0.85}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#3C4043" size="small" />
+              ) : (
+                <>
+                  <View style={styles.googleIconWrap}>
+                    <Text style={styles.googleG}>G</Text>
+                  </View>
+                  <Text style={styles.googleText}>Tiếp tục với Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>hoặc dùng email</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Email */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>✉️  Email</Text>
               <TextInput
                 style={styles.input}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(t) => { setEmail(t); setError(null); }}
                 placeholder="email@example.com"
                 placeholderTextColor="#C9B8AF"
                 keyboardType="email-address"
@@ -92,17 +129,34 @@ export default function LoginScreen() {
               />
             </View>
 
+            {/* Password */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>🔑  Mật khẩu</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••"
-                placeholderTextColor="#C9B8AF"
-                secureTextEntry
-                editable={!busy}
-              />
+              <View style={styles.labelRow}>
+                <Text style={styles.inputLabel}>🔑  Mật khẩu</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.forgotLink}>Quên mật khẩu?</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={(t) => { setPassword(t); setError(null); }}
+                  placeholder="••••••"
+                  placeholderTextColor="#C9B8AF"
+                  secureTextEntry={!showPwd}
+                  editable={!busy}
+                  returnKeyType="done"
+                  onSubmitEditing={handleEmailLogin}
+                />
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPwd(!showPwd)}>
+                  <Text style={styles.eyeIcon}>{showPwd ? '🙈' : '👁️'}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {error && (
@@ -117,31 +171,16 @@ export default function LoginScreen() {
               disabled={busy}
               activeOpacity={0.85}
             >
-              {busy
+              {submitting
                 ? <ActivityIndicator color="#fff" />
                 : <Text style={styles.loginBtnText}>Đăng Nhập →</Text>}
             </TouchableOpacity>
           </View>
 
-          {/* Test accounts */}
-          <View style={styles.testBox}>
-            <Text style={styles.testTitle}>🧪  Tài khoản thử nghiệm</Text>
-            <View style={styles.testRow}>
-              <TouchableOpacity style={styles.testBtn} onPress={() => fillAccount('admin')} activeOpacity={0.7}>
-                <Text style={styles.testBtnEmail}>admin@mathup.dev</Text>
-                <Text style={styles.testBtnPwd}>admin123</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.testBtn} onPress={() => fillAccount('admin1')} activeOpacity={0.7}>
-                <Text style={styles.testBtnEmail}>admin1@mathup.dev</Text>
-                <Text style={styles.testBtnPwd}>admin123</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.testHint}>Nhấn để điền tự động</Text>
-          </View>
-
+          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Chưa có tài khoản?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <TouchableOpacity onPress={() => navigation.navigate('Register')} activeOpacity={0.7}>
               <Text style={styles.footerLink}> Đăng ký ngay 🎉</Text>
             </TouchableOpacity>
           </View>
@@ -151,14 +190,26 @@ export default function LoginScreen() {
   );
 }
 
+function translateAuthError(msg?: string): string {
+  if (!msg) return 'Đăng nhập thất bại';
+  const m = msg.toLowerCase();
+  if (m.includes('invalid login') || m.includes('invalid credentials'))
+    return 'Email hoặc mật khẩu không đúng';
+  if (m.includes('email not confirmed'))
+    return 'Email chưa được xác nhận. Kiểm tra hộp thư của bạn.';
+  if (m.includes('too many requests') || m.includes('rate limit'))
+    return 'Quá nhiều lần thử. Vui lòng chờ vài phút.';
+  if (m.includes('user not found'))
+    return 'Không tìm thấy tài khoản với email này';
+  return msg;
+}
+
 const styles = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: C.bg },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
 
   // Hero
-  hero: {
-    alignItems: 'center', paddingTop: 40, paddingBottom: 36, overflow: 'hidden',
-  },
+  hero: { alignItems: 'center', paddingTop: 40, paddingBottom: 36, overflow: 'hidden' },
   heroBg: {
     position: 'absolute', top: -40, width: 300, height: 300, borderRadius: 150,
     backgroundColor: 'rgba(255,107,53,0.08)',
@@ -188,18 +239,44 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 22, fontWeight: '900', color: C.text },
 
+  // Google button
+  googleBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#fff', borderRadius: 18,
+    paddingVertical: 14, paddingHorizontal: 20, gap: 10,
+    borderWidth: 1.5, borderColor: '#E0E0E0',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 6, elevation: 2,
+  },
+  googleIconWrap: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: '#4285F4',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  googleG:    { fontSize: 14, fontWeight: '900', color: '#fff' },
+  googleText: { fontSize: 15, fontWeight: '700', color: '#3C4043' },
+
+  // Divider
+  divider:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#FFE5D9' },
+  dividerText: { fontSize: 12, color: C.textLight, fontWeight: '600' },
+
+  // Inputs
   inputGroup: { gap: 8 },
+  labelRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   inputLabel: { fontSize: 13, fontWeight: '800', color: C.textLight },
+  forgotLink: { fontSize: 13, fontWeight: '700', color: C.primary },
+  inputWrap:  { position: 'relative', justifyContent: 'center' },
   input: {
     backgroundColor: C.bg, borderRadius: 16,
     paddingHorizontal: 16, paddingVertical: 14,
     fontSize: 15, color: C.text,
     borderWidth: 2, borderColor: '#FFD8C5',
   },
+  eyeBtn:  { position: 'absolute', right: 14, padding: 4 },
+  eyeIcon: { fontSize: 18 },
 
-  errorBox: {
-    backgroundColor: '#FFEBEE', borderRadius: 14, padding: 12,
-  },
+  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: 14, padding: 12 },
   errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
 
   loginBtn: {
@@ -209,23 +286,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
   },
   loginBtnText: { fontSize: 17, fontWeight: '900', color: '#fff' },
-
-  // Test box
-  testBox: {
-    marginTop: 20, backgroundColor: '#FFF9C4',
-    borderRadius: 22, padding: 16, gap: 10,
-    borderWidth: 1.5, borderColor: '#FFE082',
-  },
-  testTitle: { fontSize: 12, fontWeight: '800', color: '#6D4C00', textAlign: 'center' },
-  testRow:   { flexDirection: 'row', gap: 10 },
-  testBtn: {
-    flex: 1, backgroundColor: C.card, borderRadius: 14,
-    padding: 12, alignItems: 'center', gap: 2,
-    borderWidth: 1.5, borderColor: '#FFD54F',
-  },
-  testBtnEmail: { fontSize: 11, fontWeight: '700', color: C.text },
-  testBtnPwd:   { fontSize: 13, fontWeight: '900', color: C.primary },
-  testHint:     { fontSize: 11, color: '#8D6E00', textAlign: 'center' },
 
   footer: {
     flexDirection: 'row', justifyContent: 'center',

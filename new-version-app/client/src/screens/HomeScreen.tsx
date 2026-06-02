@@ -6,6 +6,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
+import { authFetch } from '../utils/authFetch';
 import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
 import { LevelBadge } from '../components/LevelBadge';
 import { getLevelProgress } from '../utils/levelUtils';
@@ -29,6 +30,8 @@ export default function HomeScreen() {
   const [rankingPoints, setRankingPoints] = useState<number>(0);
   const [userExp, setUserExp] = useState<number>(0);
   const [userLevel, setUserLevel] = useState<number>(1);
+  const [streak, setStreak] = useState<number>(0);
+  const [wins, setWins] = useState<number | null>(null);
 
   const displayName = user?.user_metadata?.full_name ?? 'Bạn';
   const initial = displayName[0]?.toUpperCase() ?? 'B';
@@ -49,6 +52,14 @@ export default function HomeScreen() {
           setUserExp(data.exp ?? 0);
           setUserLevel(data.level ?? 1);
         }
+      })
+      .catch(() => {});
+
+    authFetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setStreak(data.currentStreak ?? 0);
+        setWins(data.totalWins ?? 0);
       })
       .catch(() => {});
   }, [user]);
@@ -99,13 +110,13 @@ export default function HomeScreen() {
             <View style={styles.pointDivider} />
             <View style={styles.pointCard}>
               <Text style={styles.pointIcon}>🔥</Text>
-              <Text style={styles.pointValue}>0</Text>
+              <Text style={styles.pointValue}>{streak}</Text>
               <Text style={styles.pointLabel}>Streak</Text>
             </View>
             <View style={styles.pointDivider} />
             <View style={styles.pointCard}>
               <Text style={styles.pointIcon}>🎯</Text>
-              <Text style={styles.pointValue}>—</Text>
+              <Text style={styles.pointValue}>{wins ?? '—'}</Text>
               <Text style={styles.pointLabel}>Thắng</Text>
             </View>
           </View>

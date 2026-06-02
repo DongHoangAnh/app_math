@@ -4,6 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY;
@@ -15,12 +16,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+const isWeb = Platform.OS === 'web';
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    // Web: dùng localStorage (mặc định), Native: dùng AsyncStorage
+    storage: isWeb ? undefined : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Web: bật để Supabase tự xử lý token từ URL sau OAuth redirect
+    // Native: tắt vì dùng deep link + exchangeCodeForSession thủ công
+    detectSessionInUrl: isWeb,
   },
 });
 

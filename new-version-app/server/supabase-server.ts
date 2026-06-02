@@ -111,6 +111,17 @@ export async function saveDisconnectWin(
 // INTERNAL — atomic upsert via Supabase RPC
 // ═══════════════════════════════════════════════════════════
 
+export async function verifyToken(token: string): Promise<{ id: string } | null> {
+    if (!supabase || !token) return null;
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        if (error || !user) return null;
+        return { id: user.id };
+    } catch {
+        return null;
+    }
+}
+
 export async function testSupabaseConnection(): Promise<void> {
     const url = process.env.SUPABASE_URL ?? "";
     const key = process.env.SUPABASE_SERVICE_KEY ?? "";
@@ -118,7 +129,7 @@ export async function testSupabaseConnection(): Promise<void> {
         console.error("[Supabase] ❌ ENV MISSING — SUPABASE_URL or SUPABASE_SERVICE_KEY not set");
         return;
     }
-    console.log("[Supabase] ✅ ENV loaded — URL:", url);
+    console.log("[Supabase] ✅ ENV loaded — URL:", url.replace(/^(https?:\/\/[^.]+).*/, "$1…"));
     try {
         const client = getSupabaseClient();
         // Test 1: game_matches table exists?

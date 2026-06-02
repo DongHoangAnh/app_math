@@ -2,18 +2,55 @@
   "expo": {
     "name": "MathUp Mobile",
     "slug": "mathup-mobile",
+    "scheme": "mathup",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTabletMode": true,
-      "bundleIdentifier": "com.mathup.mobile"
+      "bundleIdentifier": "com.mathup.mobile",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Cho phép truy cập ảnh để đặt ảnh đại diện",
+        "NSCameraUsageDescription": "Cho phép dùng camera để chụp ảnh đại diện",
+        "NSPhotoLibraryAddUsageDescription": "Cho phép lưu ảnh đại diện vào thư viện ảnh"
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
+      }
     },
     "android": {
-      "package": "com.mathup.mobile"
-    }
+      "package": "com.mathup.mobile",
+      "versionCode": 1,
+      "compileSdkVersion": 35,
+      "targetSdkVersion": 35,
+      "minSdkVersion": 24,
+      "permissions": [
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FF6B35"
+      }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép truy cập ảnh để đặt ảnh đại diện",
+          "cameraPermission": "Cho phép dùng camera để chụp ảnh đại diện"
+        }
+      ],
+      "expo-web-browser"
+    ]
   }
 }

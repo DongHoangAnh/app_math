@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { authFetch } from '../utils/authFetch';
 
 export type DailyTask = {
   task_key: string;
@@ -20,7 +21,7 @@ export function useDailyTasks(userId: string | null, displayName?: string) {
     if (!userId) return;
     setLoading(true);
     try {
-      const res = await globalThis.fetch(
+      const res = await authFetch(
         `${process.env.EXPO_PUBLIC_API_URL}/api/daily-tasks/${userId}`
       );
       if (res.ok) {
@@ -41,11 +42,10 @@ export function useDailyTasks(userId: string | null, displayName?: string) {
       if (!userId || claiming) return null;
       setClaiming(taskKey);
       try {
-        const res = await globalThis.fetch(
+        const res = await authFetch(
           `${process.env.EXPO_PUBLIC_API_URL}/api/daily-tasks/${userId}/claim/${taskKey}`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ displayName: displayName ?? 'Player' }),
           }
         );

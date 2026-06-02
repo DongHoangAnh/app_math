@@ -30,6 +30,16 @@ export interface GameResult {
     rankingDelta?: number;
 }
 
+export interface ChatMessage {
+    id: string;
+    fromUserId: string;
+    fromName: string;
+    text?: string;
+    emoji?: string;
+    type: "chat" | "emoji";
+    timestamp: number;
+}
+
 export type MatchPhase =
     | "idle"
     | "queued"
@@ -56,6 +66,7 @@ export interface GameShowState {
     myRankingDelta: number | null;
     connected: boolean;
     error: string | null;
+    chatMessages: ChatMessage[];
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -87,7 +98,9 @@ export function useGameShowWS(
     const wsRef = useRef<WebSocket | null>(null);
     const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const userIdRef = useRef(userId);
+    const displayNameRef = useRef(displayName);
     useEffect(() => { userIdRef.current = userId; }, [userId]);
+    useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
     // Track start time for each question
     const questionStartRef = useRef<number>(Date.now());
 
@@ -104,6 +117,7 @@ export function useGameShowWS(
         myRankingDelta: null,
         connected: false,
         error: null,
+        chatMessages: [],
     });
 
     // ─── Send raw JSON ──────────────────────────────────────
@@ -163,6 +177,7 @@ export function useGameShowWS(
                         finalResults: null,
                         myRankingDelta: null,
                         error: null,
+                        chatMessages: [],
                     }));
                     break;
 
@@ -222,6 +237,47 @@ export function useGameShowWS(
                     }));
                     break;
 
+                case "EMOJI_RECEIVED": {
+                    // Skip if this is the echo of our own optimistic emoji (already in chatMessages)
+                    if (msg.fromUserId === userIdRef.current) break;
+                    const emojiMsg: ChatMessage = {
+                        id: `${msg.fromUserId}_${msg.timestamp}`,
+                        fromUserId: msg.fromUserId,
+                        fromName: msg.fromName,
+                        emoji: msg.emoji,
+                        type: "emoji",
+                        timestamp: msg.timestamp,
+                    };
+                    setState((s) => ({ ...s, chatMessages: [...s.chatMessages.slice(-49), emojiMsg] }));
+                    break;
+                }
+
+                case "CHAT_RECEIVED": {
+                    const chatMsg: ChatMessage = {
+                        id: `${msg.fromUserId}_${msg.timestamp}`,
+                        fromUserId: msg.fromUserId,
+                        fromName: msg.fromName,
+                        text: msg.text,
+                        type: "chat",
+                        timestamp: msg.timestamp,
+                    };
+                    setState((s) => {
+                        // Replace optimistic local_ message if this echo is our own
+                        if (msg.fromUserId === userIdRef.current) {
+                            const msgs = [...s.chatMessages];
+                            const localIdx = msgs.map((m, i) => ({ m, i })).reverse()
+                                .find(({ m }) => m.id.startsWith("local_"))?.i;
+                            if (localIdx !== undefined) {
+                                msgs[localIdx] = chatMsg;
+                                return { ...s, chatMessages: msgs };
+                            }
+                        }
+                        return { ...s, chatMessages: [...s.chatMessages.slice(-49), chatMsg] };
+                    });
+                    break;
+                }
+
+                // CHAT_RATE_LIMITED / CHAT_MODERATED: server drops the message, no client action needed
                 // PONG: no-op
                 default:
                     break;
@@ -311,6 +367,39 @@ export function useGameShowWS(
         }
     }, [state.phase]);
 
+    // ─── Send emoji reaction — optimistic: add locally, skip server echo ──
+    const sendEmoji = useCallback((emoji: string) => {
+        if (!state.roomId || !userIdRef.current) return;
+        // Add optimistically so animation triggers immediately for sender
+        const optMsg: ChatMessage = {
+            id: `local_emoji_${Date.now()}`,
+            fromUserId: userIdRef.current,
+            fromName: displayNameRef.current,
+            emoji,
+            type: "emoji",
+            timestamp: Date.now(),
+        };
+        setState(s => ({ ...s, chatMessages: [...s.chatMessages.slice(-49), optMsg] }));
+        send({ type: "SEND_EMOJI", roomId: state.roomId, emoji });
+    }, [state.roomId, send]);
+
+    // ─── Send chat message — optimistic: show instantly, replace on server echo ──
+    const sendChat = useCallback((text: string) => {
+        if (!state.roomId || !userIdRef.current) return;
+        const trimmed = text.trim().slice(0, 120);
+        if (!trimmed) return;
+        const optMsg: ChatMessage = {
+            id: `local_${Date.now()}`,
+            fromUserId: userIdRef.current,
+            fromName: displayNameRef.current,
+            text: trimmed,
+            type: "chat",
+            timestamp: Date.now(),
+        };
+        setState(s => ({ ...s, chatMessages: [...s.chatMessages.slice(-49), optMsg] }));
+        send({ type: "SEND_CHAT", roomId: state.roomId, text: trimmed });
+    }, [state.roomId, send]);
+
     // ─── Reset ──────────────────────────────────────────────
     const resetGame = useCallback(() => {
         setState({
@@ -326,6 +415,7 @@ export function useGameShowWS(
             myRankingDelta: null,
             connected: state.connected,
             error: null,
+            chatMessages: [],
         });
     }, [state.connected]);
 
@@ -334,5 +424,5 @@ export function useGameShowWS(
         return () => { disconnect(); };
     }, [disconnect]);
 
-    return { state, joinQueue, leaveQueue, submitAnswer, resetGame, connect, disconnect };
+    return { state, joinQueue, leaveQueue, submitAnswer, resetGame, connect, disconnect, sendEmoji, sendChat };
 }

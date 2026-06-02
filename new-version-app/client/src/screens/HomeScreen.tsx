@@ -7,6 +7,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
+import { LevelBadge } from '../components/LevelBadge';
+import { getLevelProgress } from '../utils/levelUtils';
 
 const C = {
   primary:     '#FF6B35',
@@ -169,18 +171,21 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.dailyHeader}>
             <Text style={styles.sectionLabel}>Nhiệm vụ hôm nay</Text>
-            <View style={styles.expPill}>
-              <Text style={styles.expPillText}>⚡ Lv.{userLevel}</Text>
-            </View>
+            <LevelBadge level={userLevel} size="sm" />
           </View>
 
           {/* EXP progress bar */}
-          <View style={styles.expBarWrap}>
-            <View style={styles.expBarBg}>
-              <View style={[styles.expBarFill, { width: `${(userExp % 300) / 300 * 100}%` as any }]} />
-            </View>
-            <Text style={styles.expBarLabel}>{userExp % 300} / 300 EXP</Text>
-          </View>
+          {(() => {
+            const lp = getLevelProgress(userExp);
+            return (
+              <View style={styles.expBarWrap}>
+                <View style={styles.expBarBg}>
+                  <View style={[styles.expBarFill, { width: `${lp.percent}%` as any }]} />
+                </View>
+                <Text style={styles.expBarLabel}>{lp.expInLevel} / {lp.expForNext} EXP</Text>
+              </View>
+            );
+          })()}
 
           {tasksLoading && tasks.length === 0 ? (
             <View style={styles.tasksPlaceholder}>

@@ -9,20 +9,24 @@ import { useAuth } from '../hooks/useAuth';
 interface Entry { id: string; display_name: string | null; ranking_points: number }
 
 const C = {
-  primary: '#3B82F6', deep: '#1E40AF', yellow: '#FACC15',
-  bg: '#F8FBFF', white: '#FFFFFF', text: '#1E293B', textLight: '#64748B',
+  primary:   '#FF6B35',
+  secondary: '#FFD23F',
+  bg:        '#FFF8F2',
+  card:      '#FFFFFF',
+  text:      '#2C1810',
+  textLight: '#8B7B74',
 };
 
-const MEDALS = ['🥇', '🥈', '🥉'];
-const TOP_COLORS = ['#FEF9C3', '#F3F4F6', '#FFF7ED'];
-const TOP_BORDERS = ['#FACC15', '#D1D5DB', '#FED7AA'];
+const MEDALS     = ['🥇', '🥈', '🥉'];
+const MEDAL_BG   = ['#FFF9C4', '#F5F5F5', '#FFF3E0'];
+const MEDAL_BD   = ['#FFD54F', '#BDBDBD', '#FFB74D'];
 
 export default function LeaderboardScreen() {
   const { user } = useAuth();
-  const [entries, setEntries]   = useState<Entry[]>([]);
-  const [loading, setLoading]   = useState(true);
+  const [entries, setEntries]     = useState<Entry[]>([]);
+  const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [error, setError]         = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -32,19 +36,17 @@ export default function LeaderboardScreen() {
         .select('id, display_name, ranking_points')
         .order('ranking_points', { ascending: false })
         .limit(50);
-      if (e) {
-        console.warn('Leaderboard error:', e.message);
-        setError('Không thể tải bảng xếp hạng');
-      } else {
-        setEntries(data ?? []);
-      }
-    } catch (err: any) {
-      console.warn('Leaderboard error:', err.message);
+      if (e) { setError('Không thể tải bảng xếp hạng'); }
+      else { setEntries(data ?? []); }
+    } catch {
       setError('Không thể tải bảng xếp hạng');
     }
   }, []);
 
-  useEffect(() => { setLoading(true); load().finally(() => setLoading(false)); }, [load]);
+  useEffect(() => {
+    setLoading(true);
+    load().finally(() => setLoading(false));
+  }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -52,25 +54,41 @@ export default function LeaderboardScreen() {
     setRefreshing(false);
   }, [load]);
 
-  const myRank = user ? entries.findIndex((e) => e.id === user.id) + 1 : 0;
+  const myRank   = user ? entries.findIndex((e) => e.id === user.id) + 1 : 0;
   const myPoints = user ? entries.find((e) => e.id === user.id)?.ranking_points ?? 0 : 0;
 
   return (
     <SafeAreaView style={styles.safe}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Bảng Xếp Hạng</Text>
-        <Text style={styles.headerSub}>Tích điểm bằng cách thắng trận đấu 1v1</Text>
+        <View style={styles.headerDeco} />
+        <Text style={styles.headerTitle}>🏆 Bảng Xếp Hạng</Text>
+        <Text style={styles.headerSub}>Top 50 người chơi xuất sắc nhất</Text>
+
+        {/* Rule pills */}
+        <View style={styles.ruleRow}>
+          <View style={[styles.rulePill, { backgroundColor: 'rgba(76,175,80,0.25)' }]}>
+            <Text style={[styles.ruleTxt, { color: '#C8E6C9' }]}>Thắng +5</Text>
+          </View>
+          <View style={[styles.rulePill, { backgroundColor: 'rgba(255,68,68,0.25)' }]}>
+            <Text style={[styles.ruleTxt, { color: '#FFCDD2' }]}>Thua −3</Text>
+          </View>
+          <View style={[styles.rulePill, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+            <Text style={[styles.ruleTxt, { color: 'rgba(255,255,255,0.7)' }]}>Min 0</Text>
+          </View>
+        </View>
       </View>
 
       {/* My rank card */}
       {user && myRank > 0 && (
         <View style={styles.myCard}>
           <View style={styles.myCardLeft}>
-            <Text style={styles.myCardRank}>#{myRank}</Text>
+            <View style={styles.myRankBadge}>
+              <Text style={styles.myRankText}>#{myRank}</Text>
+            </View>
             <View>
-              <Text style={styles.myCardName}>Bạn</Text>
-              <Text style={styles.myCardSub}>Hạng của bạn</Text>
+              <Text style={styles.myCardName}>Xếp hạng của bạn</Text>
+              <Text style={styles.myCardSub}>{entries[myRank - 1]?.display_name ?? 'Bạn'}</Text>
             </View>
           </View>
           <View style={styles.myCardRight}>
@@ -79,19 +97,6 @@ export default function LeaderboardScreen() {
           </View>
         </View>
       )}
-
-      {/* Rules */}
-      <View style={styles.rules}>
-        <View style={[styles.rulePill, { backgroundColor: '#DCFCE7' }]}>
-          <Text style={[styles.ruleTxt, { color: '#16A34A' }]}>Thắng +5</Text>
-        </View>
-        <View style={[styles.rulePill, { backgroundColor: '#FEE2E2' }]}>
-          <Text style={[styles.ruleTxt, { color: '#DC2626' }]}>Thua −3</Text>
-        </View>
-        <View style={[styles.rulePill, { backgroundColor: '#F1F5F9' }]}>
-          <Text style={[styles.ruleTxt, { color: C.textLight }]}>Tối thiểu 0</Text>
-        </View>
-      </View>
 
       {loading ? (
         <ActivityIndicator color={C.primary} size="large" style={{ marginTop: 48 }} />
@@ -106,10 +111,16 @@ export default function LeaderboardScreen() {
         <FlatList
           data={entries}
           keyExtractor={(e) => e.id}
-          renderItem={({ item, index }) => <EntryRow item={item} index={index} myId={user?.id} />}
+          renderItem={({ item, index }) => (
+            <EntryRow item={item} index={index} myId={user?.id} />
+          )}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
-          ListEmptyComponent={<Text style={styles.emptyTxt}>Chưa có dữ liệu</Text>}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />
+          }
+          ListEmptyComponent={
+            <Text style={styles.emptyTxt}>Chưa có dữ liệu</Text>
+          }
         />
       )}
     </SafeAreaView>
@@ -117,30 +128,42 @@ export default function LeaderboardScreen() {
 }
 
 function EntryRow({ item, index, myId }: { item: Entry; index: number; myId?: string }) {
-  const isMe = item.id === myId;
+  const isMe  = item.id === myId;
   const isTop = index < 3;
 
   return (
     <View style={[
       styles.row,
-      isTop && { backgroundColor: TOP_COLORS[index], borderWidth: 1.5, borderColor: TOP_BORDERS[index] },
+      isTop && { backgroundColor: MEDAL_BG[index], borderColor: MEDAL_BD[index], borderWidth: 2 },
       isMe && !isTop && styles.myRow,
     ]}>
-      <View style={[styles.rankBox, isTop && styles.rankBoxTop]}>
+      <View style={styles.rankCol}>
         {isTop
-          ? <Text style={{ fontSize: 22 }}>{MEDALS[index]}</Text>
+          ? <Text style={styles.medal}>{MEDALS[index]}</Text>
           : <Text style={styles.rankNum}>{index + 1}</Text>}
       </View>
 
-      <View style={styles.nameBox}>
-        <Text style={[styles.nameText, isMe && styles.myName]} numberOfLines={1}>
-          {item.display_name || 'Người chơi'}
+      <View style={[styles.rowAvatar, { backgroundColor: isTop ? MEDAL_BD[index] : '#FFE5D9' }]}>
+        <Text style={styles.rowAvatarText}>
+          {(item.display_name ?? 'N')[0].toUpperCase()}
         </Text>
-        {isMe && <Text style={styles.meBadge}>Bạn</Text>}
       </View>
 
-      <View style={styles.ptsBox}>
-        <Text style={[styles.pts, isTop && { color: C.deep, fontSize: 22 }]}>{item.ranking_points}</Text>
+      <View style={styles.nameCol}>
+        <Text style={[styles.nameText, isMe && { color: C.primary, fontWeight: '900' }]} numberOfLines={1}>
+          {item.display_name || 'Người chơi'}
+        </Text>
+        {isMe && (
+          <View style={styles.meBadge}>
+            <Text style={styles.meBadgeTxt}>BẠN</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.ptsCol}>
+        <Text style={[styles.pts, isTop && { color: C.text, fontSize: 20 }]}>
+          {item.ranking_points}
+        </Text>
         <Text style={styles.ptsUnit}>điểm</Text>
       </View>
     </View>
@@ -151,63 +174,86 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
 
   header: {
-    backgroundColor: C.primary, paddingVertical: 20, paddingHorizontal: 20,
-    alignItems: 'center',
-    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+    backgroundColor: C.primary,
+    paddingVertical: 22, paddingHorizontal: 20,
+    alignItems: 'center', overflow: 'hidden',
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+  },
+  headerDeco: {
+    position: 'absolute', top: -50, right: -50,
+    width: 160, height: 160, borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   headerTitle: { fontSize: 24, fontWeight: '900', color: '#fff' },
-  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+  headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 4, fontWeight: '600' },
+  ruleRow:     { flexDirection: 'row', gap: 8, marginTop: 14 },
+  rulePill: {
+    paddingVertical: 6, paddingHorizontal: 14,
+    borderRadius: 12, alignItems: 'center',
+  },
+  ruleTxt: { fontSize: 12, fontWeight: '800' },
 
   myCard: {
     marginHorizontal: 20, marginTop: 16,
-    backgroundColor: C.deep, borderRadius: 20, padding: 16,
+    backgroundColor: '#2C1810', borderRadius: 22, padding: 16,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    shadowColor: C.deep, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25, shadowRadius: 14, elevation: 8,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
+    borderWidth: 2, borderColor: C.primary,
   },
-  myCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  myCardRank: { fontSize: 28, fontWeight: '900', color: C.yellow },
-  myCardName: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  myCardSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
-  myCardRight: { alignItems: 'flex-end' },
-  myCardPoints: { fontSize: 28, fontWeight: '900', color: C.yellow },
-  myCardUnit: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
+  myCardLeft:   { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  myRankBadge: {
+    backgroundColor: C.secondary, width: 52, height: 52,
+    borderRadius: 16, justifyContent: 'center', alignItems: 'center',
+  },
+  myRankText:   { fontSize: 18, fontWeight: '900', color: '#7B5800' },
+  myCardName:   { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
+  myCardSub:    { fontSize: 16, fontWeight: '900', color: '#fff', marginTop: 2 },
+  myCardRight:  { alignItems: 'flex-end' },
+  myCardPoints: { fontSize: 30, fontWeight: '900', color: C.secondary },
+  myCardUnit:   { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
 
-  rules: { flexDirection: 'row', gap: 8, paddingHorizontal: 20, marginTop: 12, marginBottom: 4 },
-  rulePill: { flex: 1, paddingVertical: 6, borderRadius: 10, alignItems: 'center' },
-  ruleTxt: { fontSize: 12, fontWeight: '700' },
-
-  list: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 28 },
+  list: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28 },
 
   row: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.white, borderRadius: 16,
-    paddingVertical: 14, paddingHorizontal: 16,
+    backgroundColor: C.card, borderRadius: 18,
+    paddingVertical: 13, paddingHorizontal: 14,
     marginBottom: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    gap: 10,
   },
-  myRow: { borderWidth: 2, borderColor: C.primary, backgroundColor: '#EFF6FF' },
+  myRow: { borderWidth: 2, borderColor: C.primary, backgroundColor: '#FFF3EE' },
 
-  rankBox: { width: 36, alignItems: 'center' },
-  rankBoxTop: {},
-  rankNum: { fontSize: 15, fontWeight: '800', color: C.textLight },
+  rankCol:   { width: 32, alignItems: 'center' },
+  medal:     { fontSize: 24 },
+  rankNum:   { fontSize: 15, fontWeight: '900', color: C.textLight },
 
-  nameBox: { flex: 1, marginLeft: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  nameText: { fontSize: 15, fontWeight: '600', color: C.text, flexShrink: 1 },
-  myName: { color: C.primary, fontWeight: '800' },
+  rowAvatar: {
+    width: 38, height: 38, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  rowAvatarText: { fontSize: 16, fontWeight: '900', color: '#7B5800' },
+
+  nameCol: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nameText: { fontSize: 15, fontWeight: '700', color: C.text, flexShrink: 1 },
   meBadge: {
-    fontSize: 10, fontWeight: '700', color: C.primary,
-    backgroundColor: '#DBEAFE', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+    backgroundColor: C.primary, borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2,
   },
+  meBadgeTxt: { fontSize: 9, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
 
-  ptsBox: { alignItems: 'flex-end' },
-  pts: { fontSize: 18, fontWeight: '900', color: C.text },
+  ptsCol:  { alignItems: 'flex-end' },
+  pts:     { fontSize: 17, fontWeight: '900', color: C.text },
   ptsUnit: { fontSize: 10, color: C.textLight },
 
   errorBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   errorTxt: { fontSize: 15, color: C.textLight, marginBottom: 16 },
-  retryBtn: { backgroundColor: C.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: 14 },
+  retryBtn: {
+    backgroundColor: C.primary, paddingVertical: 12,
+    paddingHorizontal: 28, borderRadius: 16,
+  },
   retryTxt: { color: '#fff', fontSize: 14, fontWeight: '700' },
   emptyTxt: { textAlign: 'center', color: C.textLight, fontSize: 15, marginTop: 48 },
 });

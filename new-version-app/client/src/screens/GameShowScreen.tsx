@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, SafeAreaView, StatusBar,
+  ActivityIndicator, SafeAreaView,
 } from 'react-native';
 import { useGameShowWS } from '../hooks/useGameShowWS';
 import { useAuth } from '../hooks/useAuth';
@@ -9,9 +9,15 @@ import GameQuestion from '../components/GameQuestion';
 import GameResults from '../components/GameResults';
 
 const C = {
-  primary: '#3B82F6', deep: '#1E40AF', yellow: '#FACC15',
-  bg: '#F8FBFF', white: '#FFFFFF', text: '#1E293B', textLight: '#64748B',
-  success: '#22C55E', error: '#EF4444',
+  primary:     '#FF6B35',
+  primaryDark: '#E85D28',
+  secondary:   '#FFD23F',
+  bg:          '#FFF8F2',
+  card:        '#FFFFFF',
+  text:        '#2C1810',
+  textLight:   '#8B7B74',
+  success:     '#4CAF50',
+  error:       '#FF4444',
 };
 
 function adaptQuestion(q: any) {
@@ -33,13 +39,14 @@ function sumTime(answers: Record<number, { timeMs: number }>) {
 
 export default function GameShowScreen() {
   const { user } = useAuth();
-  const userId = user?.id ?? null;
+  const userId      = user?.id ?? null;
   const displayName = user?.user_metadata?.full_name ?? 'Bạn';
-  const grade = user?.user_metadata?.grade;
+  const grade       = user?.user_metadata?.grade;
 
   const { state, joinQueue, leaveQueue, submitAnswer } = useGameShowWS(userId, displayName, grade);
 
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(3);
 
   const handleAnswer = (answer: string) => {
     if (!state.roomId || selectedAnswer) return;
@@ -53,6 +60,18 @@ export default function GameShowScreen() {
     joinQueue();
   };
 
+  useEffect(() => {
+    if (state.phase !== 'match_found') return;
+    setCountdown(3);
+    const id = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) { clearInterval(id); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [state.phase]);
+
   const myScore = countCorrect(state.myAnswers);
   const myTime  = sumTime(state.myAnswers);
 
@@ -61,15 +80,30 @@ export default function GameShowScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.idleContainer}>
-          <View style={styles.idleDeco} />
+          <View style={styles.idleDeco1} />
           <View style={styles.idleDeco2} />
+          <View style={styles.idleDeco3} />
+
+          <View style={styles.idleIconWrap}>
+            <Text style={styles.idleIcon}>🎮</Text>
+          </View>
 
           <Text style={styles.idleTitle}>Đấu 1v1</Text>
           <Text style={styles.idleSub}>Thách đấu toán học trực tiếp</Text>
 
-          <View style={styles.idleCard}>
-            <Text style={styles.idleCardIcon}>⚔️</Text>
-            <Text style={styles.idleCardText}>10 câu hỏi · Ai nhanh & đúng hơn thắng</Text>
+          <View style={styles.idleInfoRow}>
+            <View style={styles.idleInfoChip}>
+              <Text style={styles.idleInfoEmoji}>🔢</Text>
+              <Text style={styles.idleInfoText}>10 câu</Text>
+            </View>
+            <View style={styles.idleInfoChip}>
+              <Text style={styles.idleInfoEmoji}>⚡</Text>
+              <Text style={styles.idleInfoText}>Ai nhanh hơn</Text>
+            </View>
+            <View style={styles.idleInfoChip}>
+              <Text style={styles.idleInfoEmoji}>🏆</Text>
+              <Text style={styles.idleInfoText}>+5 điểm</Text>
+            </View>
           </View>
 
           {state.error && (
@@ -79,12 +113,12 @@ export default function GameShowScreen() {
           )}
 
           <TouchableOpacity
-            style={[styles.primaryBtn, !userId && styles.primaryBtnDisabled]}
+            style={[styles.findBtn, !userId && { opacity: 0.5 }]}
             onPress={joinQueue}
             disabled={!userId}
-            activeOpacity={0.85}
+            activeOpacity={0.88}
           >
-            <Text style={styles.primaryBtnText}>🔍  Tìm Đối Thủ</Text>
+            <Text style={styles.findBtnText}>🚀  Tìm Đối Thủ</Text>
           </TouchableOpacity>
 
           {!userId && (
@@ -98,14 +132,16 @@ export default function GameShowScreen() {
   // ── QUEUED ────────────────────────────────────────────────────
   if (state.phase === 'queued') {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
         <View style={styles.centerBox}>
-          <View style={styles.searchingAnim}>
-            <ActivityIndicator size="large" color={C.primary} />
+          <View style={styles.searchingRing}>
+            <View style={styles.searchingInner}>
+              <ActivityIndicator size="large" color={C.primary} />
+            </View>
           </View>
           <Text style={styles.searchingTitle}>Đang tìm đối thủ...</Text>
-          <Text style={styles.searchingSub}>Ghép trận có thể mất vài giây</Text>
-          <TouchableOpacity style={styles.cancelBtn} onPress={leaveQueue}>
+          <Text style={styles.searchingSub}>Đang ghép trận · vui lòng chờ</Text>
+          <TouchableOpacity style={styles.cancelBtn} onPress={leaveQueue} activeOpacity={0.8}>
             <Text style={styles.cancelBtnText}>Huỷ</Text>
           </TouchableOpacity>
         </View>
@@ -116,25 +152,31 @@ export default function GameShowScreen() {
   // ── MATCH FOUND ───────────────────────────────────────────────
   if (state.phase === 'match_found') {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: C.deep }]}>
-        <View style={styles.centerBox}>
-          <Text style={styles.vsFound}>Tìm thấy đối thủ!</Text>
+      <SafeAreaView style={styles.vsSafe}>
+        <View style={styles.vsContainer}>
+          <View style={styles.vsDeco1} />
+          <View style={styles.vsDeco2} />
+
+          <Text style={styles.vsFoundText}>Tìm thấy đối thủ!</Text>
 
           <View style={styles.vsRow}>
+            {/* Me */}
             <View style={styles.vsPlayer}>
-              <View style={[styles.vsAvatar, { backgroundColor: C.yellow }]}>
+              <View style={[styles.vsAvatar, { backgroundColor: C.secondary }]}>
                 <Text style={styles.vsAvatarText}>{displayName[0]?.toUpperCase()}</Text>
               </View>
               <Text style={styles.vsName} numberOfLines={1}>{displayName}</Text>
-              <Text style={styles.vsYou}>(Bạn)</Text>
+              <View style={styles.youBadge}><Text style={styles.youBadgeText}>BẠN</Text></View>
             </View>
 
+            {/* VS badge */}
             <View style={styles.vsBadge}>
               <Text style={styles.vsText}>VS</Text>
             </View>
 
+            {/* Opponent */}
             <View style={styles.vsPlayer}>
-              <View style={[styles.vsAvatar, { backgroundColor: '#EF4444' }]}>
+              <View style={[styles.vsAvatar, { backgroundColor: '#FF4444' }]}>
                 <Text style={styles.vsAvatarText}>
                   {state.opponent?.displayName[0]?.toUpperCase() ?? '?'}
                 </Text>
@@ -142,13 +184,15 @@ export default function GameShowScreen() {
               <Text style={styles.vsName} numberOfLines={1}>
                 {state.opponent?.displayName ?? '...'}
               </Text>
-              <Text style={styles.vsGrade}>{state.opponent?.grade ?? ''}</Text>
+              <View style={[styles.youBadge, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                <Text style={styles.youBadgeText}>{state.opponent?.grade ?? 'Đối thủ'}</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.vsCountdown}>
-            <ActivityIndicator color={C.yellow} />
-            <Text style={styles.vsCountdownText}>Chuẩn bị...</Text>
+          <View style={styles.countdownWrap}>
+            <Text style={styles.countdownNum}>{countdown || '🚀'}</Text>
+            <Text style={styles.countdownLabel}>Trận bắt đầu sau</Text>
           </View>
         </View>
       </SafeAreaView>
@@ -157,38 +201,53 @@ export default function GameShowScreen() {
 
   // ── PLAYING ───────────────────────────────────────────────────
   if (state.phase === 'playing') {
-    const total = state.questions.length || 10;
+    const total   = state.questions.length || 10;
     const current = state.currentQuestionIndex;
-    const rawQ = state.questions[current];
-    if (!rawQ) return <SafeAreaView style={styles.safe}><ActivityIndicator color={C.primary} style={{ marginTop: 60 }} /></SafeAreaView>;
+    const rawQ    = state.questions[current];
+
+    if (!rawQ) {
+      return (
+        <SafeAreaView style={styles.safe}>
+          <ActivityIndicator color={C.primary} size="large" style={{ marginTop: 60 }} />
+        </SafeAreaView>
+      );
+    }
 
     const opponentName = state.opponent?.displayName ?? 'Đối thủ';
+    const progress = ((current + 1) / total) * 100;
 
     return (
       <SafeAreaView style={styles.safe}>
         {/* Score header */}
         <View style={styles.gameHeader}>
-          <View style={styles.playerScore}>
-            <Text style={styles.playerScoreLabel}>{displayName.split(' ').pop()}</Text>
-            <Text style={styles.playerScoreValue}>{myScore}</Text>
+          {/* Player score */}
+          <View style={styles.scoreBlock}>
+            <Text style={styles.scorePlayerName} numberOfLines={1}>
+              {displayName.split(' ').pop()}
+            </Text>
+            <Text style={[styles.scoreValue, { color: C.primary }]}>{myScore}</Text>
           </View>
 
+          {/* Progress center */}
           <View style={styles.progressCenter}>
-            <Text style={styles.questionNum}>{current + 1} / {total}</Text>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${((current + 1) / total) * 100}%` as any }]} />
+            <Text style={styles.questionCounter}>{current + 1}/{total}</Text>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${progress}%` as any }]} />
             </View>
           </View>
 
-          <View style={[styles.playerScore, { alignItems: 'flex-end' }]}>
-            <Text style={styles.playerScoreLabel}>{opponentName.split(' ').pop()}</Text>
-            <Text style={[styles.playerScoreValue, { color: '#EF4444' }]}>
+          {/* Opponent score */}
+          <View style={[styles.scoreBlock, { alignItems: 'flex-end' }]}>
+            <Text style={styles.scorePlayerName} numberOfLines={1}>
+              {opponentName.split(' ').pop()}
+            </Text>
+            <Text style={[styles.scoreValue, { color: '#FF4444' }]}>
               {state.opponentAnsweredCount}
             </Text>
           </View>
         </View>
 
-        {/* Question + Options */}
+        {/* Game body */}
         <View style={styles.gameBody}>
           {state.opponentFinished && (
             <View style={styles.opponentDoneBanner}>
@@ -209,14 +268,16 @@ export default function GameShowScreen() {
   // ── YOU FINISHED ──────────────────────────────────────────────
   if (state.phase === 'you_finished') {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]}>
         <View style={styles.centerBox}>
-          <Text style={styles.waitIcon}>✅</Text>
+          <View style={styles.waitIconWrap}>
+            <Text style={styles.waitIcon}>✅</Text>
+          </View>
           <Text style={styles.waitTitle}>Bạn đã hoàn thành!</Text>
           <Text style={styles.waitSub}>
-            Đang chờ đối thủ... ({state.opponentAnsweredCount}/{state.questions.length} câu)
+            Đang chờ đối thủ · {state.opponentAnsweredCount}/{state.questions.length} câu
           </Text>
-          <ActivityIndicator color={C.primary} style={{ marginTop: 24 }} />
+          <ActivityIndicator color={C.primary} style={{ marginTop: 24 }} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -235,6 +296,8 @@ export default function GameShowScreen() {
         playerTime={myTime}
         opponentTime={oppEntry ? oppEntry[1].totalTimeMs : 0}
         rankingDelta={state.myRankingDelta}
+        userId={userId}
+        winnerId={state.winnerId}
         onPlayAgain={handlePlayAgain}
       />
     );
@@ -243,18 +306,18 @@ export default function GameShowScreen() {
   // ── OPPONENT DISCONNECTED ─────────────────────────────────────
   if (state.phase === 'opponent_disconnected') {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: C.deep }]}>
+      <SafeAreaView style={styles.vsSafe}>
         <View style={styles.centerBox}>
           <Text style={styles.discIcon}>🏃</Text>
           <Text style={styles.discTitle}>Đối thủ bỏ cuộc!</Text>
           <Text style={styles.discSub}>Bạn thắng mặc định</Text>
           {state.myRankingDelta != null && (
             <View style={styles.rankDeltaBadge}>
-              <Text style={styles.rankDeltaText}>+{state.myRankingDelta} điểm xếp hạng</Text>
+              <Text style={styles.rankDeltaText}>+{state.myRankingDelta} điểm 🏆</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.primaryBtn} onPress={handlePlayAgain}>
-            <Text style={styles.primaryBtnText}>Chơi Trận Mới</Text>
+          <TouchableOpacity style={styles.findBtn} onPress={handlePlayAgain}>
+            <Text style={styles.findBtnText}>Chơi Trận Mới</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -265,130 +328,180 @@ export default function GameShowScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe:      { flex: 1, backgroundColor: C.bg },
+  vsSafe:    { flex: 1, backgroundColor: '#1A0A00' },
+  centerBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
 
   // ── Idle ──
   idleContainer: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    padding: 28, backgroundColor: C.deep, overflow: 'hidden',
+    padding: 28, backgroundColor: '#1A0A00', overflow: 'hidden',
   },
-  idleDeco: {
+  idleDeco1: {
     position: 'absolute', top: -60, right: -60,
-    width: 200, height: 200, borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    width: 220, height: 220, borderRadius: 110,
+    backgroundColor: 'rgba(255,107,53,0.12)',
   },
   idleDeco2: {
     position: 'absolute', bottom: -80, left: -40,
-    width: 240, height: 240, borderRadius: 120,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: 'rgba(255,210,63,0.08)',
   },
-  idleTitle: { fontSize: 40, fontWeight: '900', color: '#fff', marginBottom: 8 },
-  idleSub: { fontSize: 15, color: 'rgba(255,255,255,0.7)', marginBottom: 32 },
-  idleCard: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20, padding: 20, alignItems: 'center',
-    marginBottom: 32, width: '100%',
+  idleDeco3: {
+    position: 'absolute', top: '40%', left: -30,
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(255,107,53,0.06)',
   },
-  idleCardIcon: { fontSize: 40, marginBottom: 8 },
-  idleCardText: { fontSize: 14, color: 'rgba(255,255,255,0.85)', textAlign: 'center' },
+  idleIconWrap: {
+    width: 100, height: 100, borderRadius: 32,
+    backgroundColor: C.primary,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5, shadowRadius: 20, elevation: 15,
+  },
+  idleIcon:  { fontSize: 50 },
+  idleTitle: { fontSize: 42, fontWeight: '900', color: '#fff', marginBottom: 8 },
+  idleSub:   { fontSize: 15, color: 'rgba(255,255,255,0.65)', marginBottom: 32 },
 
-  // ── Buttons ──
-  primaryBtn: {
-    backgroundColor: C.yellow, paddingVertical: 18,
-    paddingHorizontal: 48, borderRadius: 20,
-    shadowColor: C.yellow, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4, shadowRadius: 12, elevation: 8, marginTop: 8,
+  idleInfoRow: { flexDirection: 'row', gap: 10, marginBottom: 32 },
+  idleInfoChip: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14,
+    alignItems: 'center', gap: 4,
   },
-  primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { fontSize: 18, fontWeight: '900', color: C.deep },
+  idleInfoEmoji: { fontSize: 18 },
+  idleInfoText:  { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.8)' },
+
+  findBtn: {
+    backgroundColor: C.primary, paddingVertical: 18,
+    paddingHorizontal: 52, borderRadius: 22,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5, shadowRadius: 16, elevation: 12, marginTop: 8,
+  },
+  findBtnText: { fontSize: 19, fontWeight: '900', color: '#fff' },
+
+  errorBox: {
+    backgroundColor: 'rgba(255,68,68,0.15)', borderRadius: 14,
+    padding: 12, marginBottom: 16, width: '100%',
+  },
+  errorText: { color: '#FF8888', fontSize: 13, textAlign: 'center' },
+  hintText:  { fontSize: 13, color: 'rgba(255,255,255,0.5)', marginTop: 12 },
+
+  // ── Searching ──
+  searchingRing: {
+    width: 96, height: 96, borderRadius: 48,
+    borderWidth: 4, borderColor: '#FFD8C5',
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 24,
+  },
+  searchingInner: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: '#FFF0E8',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  searchingTitle: { fontSize: 24, fontWeight: '900', color: C.text, marginBottom: 8 },
+  searchingSub:   { fontSize: 14, color: C.textLight },
   cancelBtn: {
-    marginTop: 20, paddingVertical: 12, paddingHorizontal: 32,
-    borderRadius: 16, borderWidth: 2, borderColor: '#E2E8F0',
+    marginTop: 28, paddingVertical: 12, paddingHorizontal: 36,
+    borderRadius: 18, borderWidth: 2, borderColor: '#FFD8C5',
   },
   cancelBtnText: { fontSize: 15, fontWeight: '700', color: C.textLight },
 
-  errorBox: {
-    backgroundColor: '#FEE2E2', borderRadius: 14, padding: 12,
-    marginBottom: 16, width: '100%',
-  },
-  errorText: { color: '#DC2626', fontSize: 13, textAlign: 'center' },
-  hintText: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 12 },
-
-  // ── Centered layout ──
-  centerBox: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28,
-  },
-
-  // ── Searching ──
-  searchingAnim: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#EFF6FF', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2, shadowRadius: 16, elevation: 8,
-  },
-  searchingTitle: { fontSize: 24, fontWeight: '800', color: C.text, marginBottom: 8 },
-  searchingSub: { fontSize: 14, color: C.textLight },
-
   // ── VS screen ──
-  vsFound: { fontSize: 28, fontWeight: '900', color: C.yellow, marginBottom: 40 },
-  vsRow: { flexDirection: 'row', alignItems: 'center', gap: 16, width: '100%', justifyContent: 'center' },
-  vsPlayer: { flex: 1, alignItems: 'center', gap: 8 },
+  vsContainer: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    padding: 28, overflow: 'hidden',
+  },
+  vsDeco1: {
+    position: 'absolute', top: -80, right: -80,
+    width: 250, height: 250, borderRadius: 125,
+    backgroundColor: 'rgba(255,107,53,0.12)',
+  },
+  vsDeco2: {
+    position: 'absolute', bottom: -60, left: -60,
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: 'rgba(255,210,63,0.08)',
+  },
+  vsFoundText: { fontSize: 28, fontWeight: '900', color: C.secondary, marginBottom: 40 },
+  vsRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 12, width: '100%', justifyContent: 'center',
+  },
+  vsPlayer:   { flex: 1, alignItems: 'center', gap: 10 },
   vsAvatar: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 72, height: 72, borderRadius: 36,
     justifyContent: 'center', alignItems: 'center',
+    borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)',
   },
-  vsAvatarText: { fontSize: 28, fontWeight: '900', color: '#fff' },
-  vsName: { fontSize: 14, fontWeight: '700', color: '#fff', textAlign: 'center' },
-  vsYou: { fontSize: 11, color: C.yellow },
-  vsGrade: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
+  vsAvatarText: { fontSize: 30, fontWeight: '900', color: '#fff' },
+  vsName:    { fontSize: 14, fontWeight: '800', color: '#fff', textAlign: 'center' },
+  youBadge: {
+    backgroundColor: C.primary,
+    paddingHorizontal: 10, paddingVertical: 3,
+    borderRadius: 8,
+  },
+  youBadgeText: { fontSize: 10, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
   vsBadge: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: C.yellow, justifyContent: 'center', alignItems: 'center',
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: C.secondary,
+    justifyContent: 'center', alignItems: 'center',
+    shadowColor: C.secondary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
   },
-  vsText: { fontSize: 14, fontWeight: '900', color: C.deep },
-  vsCountdown: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 40 },
-  vsCountdownText: { fontSize: 15, color: 'rgba(255,255,255,0.8)' },
+  vsText: { fontSize: 13, fontWeight: '900', color: '#7B5800' },
+
+  countdownWrap: { alignItems: 'center', marginTop: 40 },
+  countdownNum:  { fontSize: 64, fontWeight: '900', color: C.secondary },
+  countdownLabel:{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
 
   // ── Playing ──
   gameHeader: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingVertical: 16,
-    backgroundColor: C.white,
-    shadowColor: 'rgba(59,130,246,0.1)',
-    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 1,
-    shadowRadius: 12, elevation: 4,
+    paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: C.card,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1,
+    shadowRadius: 12, elevation: 6,
   },
-  playerScore: { flex: 1, alignItems: 'flex-start' },
-  playerScoreLabel: { fontSize: 11, color: C.textLight, fontWeight: '600' },
-  playerScoreValue: { fontSize: 28, fontWeight: '900', color: C.primary },
+  scoreBlock:     { flex: 1 },
+  scorePlayerName:{ fontSize: 11, color: C.textLight, fontWeight: '700' },
+  scoreValue:     { fontSize: 32, fontWeight: '900' },
   progressCenter: { flex: 1.5, alignItems: 'center', gap: 6 },
-  questionNum: { fontSize: 13, fontWeight: '700', color: C.textLight },
-  progressBar: {
-    width: '100%', height: 6, backgroundColor: '#E2E8F0',
-    borderRadius: 3, overflow: 'hidden',
+  questionCounter:{ fontSize: 13, fontWeight: '800', color: C.textLight },
+  progressTrack: {
+    width: '100%', height: 8, backgroundColor: '#FFE5D9',
+    borderRadius: 4, overflow: 'hidden',
   },
-  progressFill: { height: '100%', backgroundColor: C.primary, borderRadius: 3 },
-  gameBody: { flex: 1, padding: 20, justifyContent: 'center' },
+  progressFill: {
+    height: '100%', backgroundColor: C.primary, borderRadius: 4,
+  },
+  gameBody: { flex: 1, padding: 18, justifyContent: 'center' },
   opponentDoneBanner: {
-    backgroundColor: '#FEF9C3', borderRadius: 12,
-    paddingVertical: 8, paddingHorizontal: 16,
-    alignItems: 'center', marginBottom: 16,
+    backgroundColor: '#FFF9C4', borderRadius: 14,
+    paddingVertical: 9, paddingHorizontal: 16,
+    alignItems: 'center', marginBottom: 14,
+    borderWidth: 1, borderColor: '#FFE082',
   },
-  opponentDoneText: { fontSize: 13, fontWeight: '700', color: '#92400E' },
+  opponentDoneText: { fontSize: 13, fontWeight: '800', color: '#6D4C00' },
 
   // ── You finished ──
-  waitIcon: { fontSize: 64, marginBottom: 16 },
+  waitIconWrap: {
+    width: 90, height: 90, borderRadius: 28,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 20,
+  },
+  waitIcon:  { fontSize: 48 },
   waitTitle: { fontSize: 26, fontWeight: '900', color: C.text, marginBottom: 8 },
-  waitSub: { fontSize: 14, color: C.textLight, textAlign: 'center' },
+  waitSub:   { fontSize: 14, color: C.textLight, textAlign: 'center' },
 
   // ── Disconnect ──
-  discIcon: { fontSize: 72, marginBottom: 16 },
+  discIcon:  { fontSize: 80, marginBottom: 16 },
   discTitle: { fontSize: 32, fontWeight: '900', color: '#fff', marginBottom: 8 },
-  discSub: { fontSize: 16, color: 'rgba(255,255,255,0.75)', marginBottom: 24 },
+  discSub:   { fontSize: 16, color: 'rgba(255,255,255,0.7)', marginBottom: 28 },
   rankDeltaBadge: {
-    backgroundColor: C.yellow, paddingVertical: 12, paddingHorizontal: 24,
-    borderRadius: 16, marginBottom: 28,
+    backgroundColor: C.secondary, paddingVertical: 14, paddingHorizontal: 28,
+    borderRadius: 18, marginBottom: 32,
   },
-  rankDeltaText: { fontSize: 20, fontWeight: '900', color: C.deep },
+  rankDeltaText: { fontSize: 22, fontWeight: '900', color: '#7B5800' },
 });

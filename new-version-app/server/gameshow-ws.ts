@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
 import fs from "fs";
 import path from "path";
-import { saveGameMatch, saveDisconnectWin } from "./supabase-server";
+import { saveGameMatch, saveDisconnectWin, saveMatchRecord } from "./supabase-server";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -59,7 +59,82 @@ const activeRooms = new Map<string, GameRoom>();
 const playerToRoom = new Map<string, string>(); // userId → roomId
 
 // ═══════════════════════════════════════════════════════════
-// LOAD QUESTIONS FROM data.json
+// RANDOM QUESTION GENERATOR — lớp 1: +, -, ×, ÷ và so sánh
+// ═══════════════════════════════════════════════════════════
+
+let _qCounter = 0;
+function nextQId() { return `q_${++_qCounter}`; }
+
+function randInt(min: number, max: number): number {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffleArr<T>(arr: T[]): T[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function numericOptions(correct: number): string[] {
+    const pool = new Set<number>([correct]);
+    for (const d of shuffleArr([1, 2, 3, -1, -2, 4, 5, -3, 10, -4])) {
+        if (pool.size >= 4) break;
+        const w = correct + d;
+        if (w >= 0) pool.add(w);
+    }
+    let fill = correct + pool.size + 1;
+    while (pool.size < 4) { pool.add(fill); fill++; }
+    return shuffleArr([...pool].slice(0, 4).map(String));
+}
+
+function makeArithmeticQ(): GameQuestion {
+    const op = shuffleArr(["+", "-", "×", "÷"])[0];
+    let a: number, b: number, answer: number, text: string;
+
+    if (op === "+") {
+        a = randInt(1, 9); b = randInt(1, 9);
+        answer = a + b;
+        text = `${a} + ${b} = ?`;
+    } else if (op === "-") {
+        a = randInt(1, 9); b = randInt(1, a);
+        answer = a - b;
+        text = `${a} - ${b} = ?`;
+    } else if (op === "×") {
+        a = randInt(1, 5); b = randInt(1, 5);
+        answer = a * b;
+        text = `${a} × ${b} = ?`;
+    } else {
+        b = randInt(2, 5); answer = randInt(1, 4);
+        a = b * answer;
+        text = `${a} ÷ ${b} = ?`;
+    }
+
+    return { id: nextQId(), level: 1, question: text, options: numericOptions(answer), correctAnswer: String(answer), difficulty: 1 };
+}
+
+function makeComparisonQ(): GameQuestion {
+    const a = randInt(1, 9), b = randInt(1, 9);
+    const correct = a > b ? ">" : a < b ? "<" : "=";
+    return {
+        id: nextQId(), level: 1,
+        question: `${a}  □  ${b}`,
+        options: shuffleArr([">", "<", "="]),
+        correctAnswer: correct,
+        difficulty: 1,
+    };
+}
+
+function generateGrade1Questions(count: number): GameQuestion[] {
+    return Array.from({ length: count }, (_, i) =>
+        i % 3 === 2 ? makeComparisonQ() : makeArithmeticQ()
+    );
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOAD QUESTIONS FROM data.json (fallback: random gen)
 // ═══════════════════════════════════════════════════════════
 
 function loadGameQuestions(count = 10): GameQuestion[] {
@@ -87,20 +162,8 @@ function loadGameQuestions(count = 10): GameQuestion[] {
             correctAnswer: q.choices[q.correct_answer],
             difficulty: q.difficulty === "N" ? 1 : q.difficulty === "T" ? 2 : q.difficulty === "V" ? 3 : 4,
         }));
-    } catch (err) {
-        console.error("[GameShow WS] Failed to load questions, using fallback:", err);
-        return [
-            { id: "f1", level: 1, question: "Phép tính 5 + 3 có kết quả là:", options: ["8", "7", "6", "9"], correctAnswer: "8", difficulty: 1 },
-            { id: "f2", level: 2, question: "12 ÷ 4 = ?", options: ["2", "3", "4", "6"], correctAnswer: "3", difficulty: 1 },
-            { id: "f3", level: 3, question: "x + 7 = 15, x = ?", options: ["8", "22", "7", "15"], correctAnswer: "8", difficulty: 2 },
-            { id: "f4", level: 4, question: "y = 3x + 2 khi x = 1, y = ?", options: ["5", "3", "2", "6"], correctAnswer: "5", difficulty: 2 },
-            { id: "f5", level: 5, question: "25% của 200 là:", options: ["50", "40", "60", "25"], correctAnswer: "50", difficulty: 2 },
-            { id: "f6", level: 6, question: "2x - 6 = 10, x = ?", options: ["8", "2", "4", "16"], correctAnswer: "8", difficulty: 3 },
-            { id: "f7", level: 7, question: "Tam giác vuông cạnh 3, 4 → cạnh huyền = ?", options: ["5", "7", "6", "8"], correctAnswer: "5", difficulty: 3 },
-            { id: "f8", level: 8, question: "x² - 5x + 6 = 0, nghiệm là:", options: ["x=2 hoặc x=3", "x=1 hoặc x=6", "x=-2 hoặc x=-3", "x=4 hoặc x=1"], correctAnswer: "x=2 hoặc x=3", difficulty: 4 },
-            { id: "f9", level: 9, question: "√144 = ?", options: ["12", "14", "10", "16"], correctAnswer: "12", difficulty: 4 },
-            { id: "f10", level: 10, question: "Đạo hàm y = x³ + 2x là:", options: ["3x²+2", "3x²+2x", "x²+2", "3x+2"], correctAnswer: "3x²+2", difficulty: 5 },
-        ];
+    } catch {
+        return generateGrade1Questions(count);
     }
 }
 
@@ -120,6 +183,17 @@ function generateRoomId(): string {
 
 function getOpponent(room: GameRoom, userId: string): Player {
     return room.player1.userId === userId ? room.player2 : room.player1;
+}
+
+function calcPlayerStats(prog?: PlayerProgress) {
+    if (!prog) return { correct: 0, score: 0, totalTimeMs: 0 };
+    let correct = 0;
+    let totalTime = 0;
+    for (const ans of Object.values(prog.answers)) {
+        if (ans.isCorrect) correct++;
+        totalTime += ans.timeMs;
+    }
+    return { correct, score: correct * 100, totalTimeMs: totalTime };
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -238,21 +312,8 @@ function handleAnswer(userId: string, roomId: string, questionIndex: number, ans
 function finishGame(room: GameRoom) {
     if (room.finished) return;
     room.finished = true;
-
-    const calcStats = (userId: string) => {
-        const prog = room.progress[userId];
-        if (!prog) return { correct: 0, score: 0, totalTimeMs: 0 };
-        let correct = 0;
-        let totalTime = 0;
-        for (const ans of Object.values(prog.answers)) {
-            if (ans.isCorrect) correct++;
-            totalTime += ans.timeMs;
-        }
-        return { correct, score: correct * 100, totalTimeMs: totalTime };
-    };
-
-    const p1Stats = calcStats(room.player1.userId);
-    const p2Stats = calcStats(room.player2.userId);
+    const p1Stats = calcPlayerStats(room.progress[room.player1.userId]);
+    const p2Stats = calcPlayerStats(room.progress[room.player2.userId]);
 
     // Determine winner (by score; tiebreak by time)
     let winnerId: string | null = null;
@@ -340,10 +401,35 @@ function handleDisconnect(userId: string) {
         if (room && !room.finished) {
             room.finished = true;
             const opponent = getOpponent(room, userId);
-            // Award ranking points to winner (fire-and-forget)
-            saveDisconnectWin(opponent.userId, opponent.displayName).catch((err) =>
-                console.error("[GameShow WS] saveDisconnectWin error:", err)
-            );
+            const p1Stats = calcPlayerStats(room.progress[room.player1.userId]);
+            const p2Stats = calcPlayerStats(room.progress[room.player2.userId]);
+
+            // Save match record + award ranking points (fire-and-forget)
+            (async () => {
+                const matchRecord = {
+                    room_id: room.roomId,
+                    player1_id: room.player1.userId,
+                    player2_id: room.player2.userId,
+                    player1_display_name: room.player1.displayName,
+                    player2_display_name: room.player2.displayName,
+                    player1_score: p1Stats.score,
+                    player2_score: p2Stats.score,
+                    player1_correct: p1Stats.correct,
+                    player2_correct: p2Stats.correct,
+                    player1_total_time_ms: p1Stats.totalTimeMs,
+                    player2_total_time_ms: p2Stats.totalTimeMs,
+                    winner_id: opponent.userId,
+                    questions_count: room.questions.length,
+                };
+
+                const saveMatch = saveMatchRecord(matchRecord).catch((err) =>
+                    console.error("[GameShow WS] saveMatchRecord error:", err)
+                );
+                const saveRanking = saveDisconnectWin(opponent.userId, opponent.displayName).catch((err) =>
+                    console.error("[GameShow WS] saveDisconnectWin error:", err)
+                );
+                await Promise.all([saveMatch, saveRanking]);
+            })();
             sendToPlayer(opponent, {
                 type: "OPPONENT_DISCONNECTED",
                 message: "Đối thủ đã ngắt kết nối. Bạn thắng mặc định!",

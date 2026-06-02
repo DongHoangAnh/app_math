@@ -21,9 +21,9 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
   return (
     <View style={{
       alignItems: 'center', justifyContent: 'center',
-      width: 44, height: 32,
-      backgroundColor: focused ? '#EFF6FF' : 'transparent',
-      borderRadius: 10,
+      width: 46, height: 32,
+      backgroundColor: focused ? '#FFE5D9' : 'transparent',
+      borderRadius: 12,
     }}>
       <Text style={{ fontSize: focused ? 22 : 20 }}>{icon}</Text>
     </View>
@@ -40,15 +40,15 @@ function MainTabs() {
           height: 72,
           paddingBottom: 10,
           paddingTop: 8,
-          shadowColor: 'rgba(59,130,246,0.15)',
+          shadowColor: '#FF6B35',
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 1,
+          shadowOpacity: 0.12,
           shadowRadius: 16,
           elevation: 12,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '700', marginTop: 2 },
-        tabBarActiveTintColor: '#3B82F6',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '800', marginTop: 2 },
+        tabBarActiveTintColor: '#FF6B35',
+        tabBarInactiveTintColor: '#C9B8AF',
         headerShown: false,
       }}
     >
@@ -57,7 +57,7 @@ function MainTabs() {
         component={HomeScreen}
         options={{
           tabBarLabel: 'Trang Chủ',
-          tabBarIcon: ({ focused }) => <TabIcon icon="🏠" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="🏡" focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -65,7 +65,7 @@ function MainTabs() {
         component={GameShowScreen}
         options={{
           tabBarLabel: 'Đấu',
-          tabBarIcon: ({ focused }) => <TabIcon icon="⚔️" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="🎮" focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -81,7 +81,7 @@ function MainTabs() {
         component={StatisticsScreen}
         options={{
           tabBarLabel: 'Thống Kê',
-          tabBarIcon: ({ focused }) => <TabIcon icon="📊" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="📈" focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -89,7 +89,7 @@ function MainTabs() {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Hồ Sơ',
-          tabBarIcon: ({ focused }) => <TabIcon icon="👤" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="😊" focused={focused} />,
         }}
       />
     </Tab.Navigator>
@@ -102,7 +102,7 @@ function RootNavigator() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#FF6B35" />
       </View>
     );
   }

@@ -14,11 +14,12 @@ interface GameQuestionProps {
   isDisabled: boolean;
 }
 
-const OPTION_THEMES = [
-  { bg: '#EFF6FF', border: '#93C5FD', activeBg: '#3B82F6', label: 'A' },
-  { bg: '#F0FDF4', border: '#86EFAC', activeBg: '#22C55E', label: 'B' },
-  { bg: '#FFF7ED', border: '#FED7AA', activeBg: '#F59E0B', label: 'C' },
-  { bg: '#FDF4FF', border: '#E9D5FF', activeBg: '#A855F7', label: 'D' },
+// Xiaoyuan-style: bold solid colors per option
+const OPTION_COLORS = [
+  { idle: '#4A90D9', active: '#2171B5', label: 'A' },  // Blue
+  { idle: '#52C41A', active: '#389E0D', label: 'B' },  // Green
+  { idle: '#FF6B35', active: '#E85D28', label: 'C' },  // Orange
+  { idle: '#9C27B0', active: '#6A1B9A', label: 'D' },  // Purple
 ];
 
 export default function GameQuestion({
@@ -34,55 +35,51 @@ export default function GameQuestion({
 
   return (
     <View style={styles.container}>
-      {/* Question */}
+      {/* Question card */}
       <View style={styles.questionCard}>
-        <Text style={styles.questionText}>{question.text}</Text>
+        <View style={styles.questionInner}>
+          <Text style={styles.questionText}>{question.text}</Text>
+        </View>
       </View>
 
       {/* Options 2×2 */}
       <View style={styles.grid}>
         {question.options.map((option, i) => {
-          const theme = OPTION_THEMES[i % 4];
+          const theme = OPTION_COLORS[i % 4];
           const state = getState(option);
 
-          const cardBg =
-            state === 'correct' ? '#22C55E' :
-            state === 'wrong'   ? '#EF4444' :
-            state === 'dimmed'  ? '#F8FBFF' :
-            theme.bg;
+          let bgColor: string;
+          let borderColor: string;
+          let textColor = '#fff';
+          let labelContent = theme.label;
 
-          const borderColor =
-            state === 'correct' ? '#16A34A' :
-            state === 'wrong'   ? '#DC2626' :
-            state === 'dimmed'  ? '#E2E8F0' :
-            theme.border;
-
-          const labelBg =
-            state === 'correct' ? 'rgba(255,255,255,0.3)' :
-            state === 'wrong'   ? 'rgba(255,255,255,0.3)' :
-            state === 'dimmed'  ? '#E2E8F0' :
-            theme.activeBg;
-
-          const textColor =
-            state === 'correct' || state === 'wrong' ? '#fff' :
-            state === 'dimmed' ? '#CBD5E1' : '#1E293B';
-
-          const labelTextColor =
-            state === 'correct' || state === 'wrong' ? '#fff' :
-            state === 'dimmed' ? '#94A3B8' : '#fff';
+          if (state === 'correct') {
+            bgColor = '#4CAF50';
+            borderColor = '#388E3C';
+            labelContent = '✓';
+          } else if (state === 'wrong') {
+            bgColor = '#FF4444';
+            borderColor = '#CC0000';
+            labelContent = '✗';
+          } else if (state === 'dimmed') {
+            bgColor = '#E0E0E0';
+            borderColor = '#BDBDBD';
+            textColor = '#9E9E9E';
+          } else {
+            bgColor = theme.idle;
+            borderColor = theme.active;
+          }
 
           return (
             <TouchableOpacity
               key={i}
-              style={[styles.option, { backgroundColor: cardBg, borderColor }]}
+              style={[styles.option, { backgroundColor: bgColor, borderColor }]}
               onPress={() => !isDisabled && !selectedAnswer && onSelectAnswer(option)}
               disabled={isDisabled || !!selectedAnswer}
-              activeOpacity={0.75}
+              activeOpacity={0.8}
             >
-              <View style={[styles.optionLabel, { backgroundColor: labelBg }]}>
-                <Text style={[styles.optionLabelText, { color: labelTextColor }]}>
-                  {state === 'correct' ? '✓' : state === 'wrong' ? '✗' : theme.label}
-                </Text>
+              <View style={[styles.labelBadge, { backgroundColor: 'rgba(0,0,0,0.2)' }]}>
+                <Text style={styles.labelText}>{labelContent}</Text>
               </View>
               <Text style={[styles.optionText, { color: textColor }]} numberOfLines={2}>
                 {option}
@@ -96,24 +93,33 @@ export default function GameQuestion({
 }
 
 const styles = StyleSheet.create({
-  container: { gap: 16 },
+  container: { gap: 20 },
 
   questionCard: {
     backgroundColor: '#fff',
-    borderRadius: 24,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
+    borderRadius: 28,
+    padding: 6,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 10,
+    borderWidth: 3,
+    borderColor: '#FFD8C5',
+  },
+  questionInner: {
+    backgroundColor: '#FFF8F2',
+    borderRadius: 22,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    shadowColor: 'rgba(59,130,246,0.15)',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 8,
+    minHeight: 120,
+    justifyContent: 'center',
   },
   questionText: {
-    fontSize: 48,
+    fontSize: 56,
     fontWeight: '900',
-    color: '#1E293B',
+    color: '#2C1810',
     textAlign: 'center',
     letterSpacing: -1,
   },
@@ -121,32 +127,33 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 14,
   },
 
   option: {
-    width: '47.5%',
-    borderRadius: 20,
-    borderWidth: 2,
+    width: '47.2%',
+    borderRadius: 22,
+    borderWidth: 3,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minHeight: 72,
+    minHeight: 76,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  optionLabel: {
-    width: 32, height: 32, borderRadius: 10,
+  labelBadge: {
+    width: 34, height: 34, borderRadius: 11,
     justifyContent: 'center', alignItems: 'center',
+    flexShrink: 0,
   },
-  optionLabelText: {
-    fontSize: 13, fontWeight: '800',
+  labelText: {
+    fontSize: 14, fontWeight: '900', color: '#fff',
   },
   optionText: {
-    flex: 1, fontSize: 20, fontWeight: '700',
+    flex: 1, fontSize: 22, fontWeight: '900',
   },
 });

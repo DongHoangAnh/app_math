@@ -3,20 +3,11 @@ import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, SafeAreaView, Image,
 } from 'react-native';
+import { C, R } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { authFetch } from '../utils/authFetch';
 import EditProfileModal from '../components/EditProfileModal';
-
-const C = {
-  primary:   '#FF6B35',
-  secondary: '#FFD23F',
-  bg:        '#FFF8F2',
-  card:      '#FFFFFF',
-  text:      '#2C1810',
-  textLight: '#8B7B74',
-  error:     '#FF4444',
-};
 
 interface UserStats {
   totalScore: number; totalMatches: number;
@@ -192,7 +183,7 @@ function MenuItem({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1, backgroundColor: C.background },
 
   // Header
   header: {
@@ -213,7 +204,7 @@ const styles = StyleSheet.create({
   },
   avatarRing: {
     width: 96, height: 96, borderRadius: 48,
-    borderWidth: 4, borderColor: C.secondary,
+    borderWidth: 4, borderColor: C.primaryLight,
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 12, position: 'relative',
   },
@@ -222,16 +213,16 @@ const styles = StyleSheet.create({
   },
   avatar: {
     width: 84, height: 84, borderRadius: 42,
-    backgroundColor: C.secondary,
+    backgroundColor: C.primaryLight,
     justifyContent: 'center', alignItems: 'center',
   },
   avatarText: { fontSize: 36, fontWeight: '900', color: '#7B5800' },
   editBadge: {
     position: 'absolute', bottom: -2, right: -2,
-    width: 28, height: 28, borderRadius: 14,
+    width: 28, height: 28, borderRadius: R.sm,
     backgroundColor: '#fff',
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: C.secondary,
+    borderWidth: 2, borderColor: C.primaryLight,
   },
   editBadgeIcon: { fontSize: 12 },
   name:  { fontSize: 22, fontWeight: '900', color: '#fff' },
@@ -240,7 +231,7 @@ const styles = StyleSheet.create({
   headerStats: {
     flexDirection: 'row', marginTop: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 22, paddingVertical: 14, paddingHorizontal: 8,
+    borderRadius: R.xl, paddingVertical: 14, paddingHorizontal: 8,
     width: '88%',
   },
   headerStatItem: { flex: 1, alignItems: 'center' },
@@ -251,49 +242,49 @@ const styles = StyleSheet.create({
 
   // Stats
   sectionTitle: { paddingHorizontal: 20, marginTop: 22, marginBottom: 12 },
-  sectionText:  { fontSize: 15, fontWeight: '900', color: C.textLight },
+  sectionText:  { fontSize: 15, fontWeight: '900', color: C.textSecond },
 
   statsGrid: {
     flexDirection: 'row', flexWrap: 'wrap',
     paddingHorizontal: 16, gap: 12,
   },
   statCard: {
-    width: '47%', borderRadius: 22, padding: 18, alignItems: 'center',
+    width: '47%', borderRadius: R.xl, padding: 18, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
   },
   statIconWrap: {
-    width: 48, height: 48, borderRadius: 16,
+    width: 48, height: 48, borderRadius: R.md,
     justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
   statIcon:  { fontSize: 24 },
-  statValue: { fontSize: 26, fontWeight: '900', color: C.text },
-  statLabel: { fontSize: 11, color: C.textLight, marginTop: 2, fontWeight: '700' },
+  statValue: { fontSize: 26, fontWeight: '900', color: C.textPrimary },
+  statLabel: { fontSize: 11, color: C.textSecond, marginTop: 2, fontWeight: '700' },
 
   // Menu
   menu: {
     marginHorizontal: 16,
-    backgroundColor: C.card, borderRadius: 22, overflow: 'hidden',
-    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 4 },
+    backgroundColor: C.surface, borderRadius: R.xl, overflow: 'hidden',
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-    borderWidth: 1.5, borderColor: '#FFE5D9',
+    borderWidth: 1.5, borderColor: C.border,
   },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 17, paddingHorizontal: 20,
-    borderBottomWidth: 1, borderBottomColor: '#FFF0E8', gap: 14,
+    borderBottomWidth: 1, borderBottomColor: C.border, gap: 14,
   },
   menuIconWrap: {
-    width: 38, height: 38, borderRadius: 12,
-    backgroundColor: '#FFF0E8', justifyContent: 'center', alignItems: 'center',
+    width: 38, height: 38, borderRadius: R.sm,
+    backgroundColor: C.border, justifyContent: 'center', alignItems: 'center',
   },
-  menuLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: C.text },
+  menuLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: C.textPrimary },
   menuArrow: { fontSize: 22, color: '#FFB89A' },
 
   // Sign out
   signOutBtn: {
     marginHorizontal: 16, marginTop: 16,
-    backgroundColor: '#FFEBEE', borderRadius: 22,
+    backgroundColor: '#FFEBEE', borderRadius: R.xl,
     paddingVertical: 17, alignItems: 'center',
     borderWidth: 1.5, borderColor: '#FFCDD2',
   },

@@ -6,17 +6,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
-
-const C = {
-  primary:   '#FF6B35',
-  secondary: '#FFD23F',
-  bg:        '#FFF8F2',
-  card:      '#FFFFFF',
-  text:      '#2C1810',
-  textLight: '#8B7B74',
-  error:     '#FF4444',
-  success:   '#4CAF50',
-};
+import { C, R } from '../theme';
 
 export default function ForgotPasswordScreen() {
   const { sendPasswordResetEmail } = useAuth();
@@ -156,7 +146,7 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.bg },
+  safe:   { flex: 1, backgroundColor: C.background },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
 
   backBtn:  { marginTop: 16, alignSelf: 'flex-start' },
@@ -165,43 +155,43 @@ const styles = StyleSheet.create({
   // Hero
   hero: { alignItems: 'center', paddingTop: 28, paddingBottom: 32 },
   iconWrap: {
-    width: 88, height: 88, borderRadius: 28,
+    width: 88, height: 88, borderRadius: R.xxl,
     backgroundColor: C.primary,
     justifyContent: 'center', alignItems: 'center', marginBottom: 18,
     shadowColor: C.primary, shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35, shadowRadius: 16, elevation: 12,
   },
   iconEmoji: { fontSize: 44 },
-  title:    { fontSize: 28, fontWeight: '900', color: C.text, marginBottom: 10 },
+  title:    { fontSize: 28, fontWeight: '900', color: C.textPrimary, marginBottom: 10 },
   subtitle: {
-    fontSize: 14, color: C.textLight, textAlign: 'center',
+    fontSize: 14, color: C.textSecond, textAlign: 'center',
     lineHeight: 20, paddingHorizontal: 8,
   },
 
   // Card
   card: {
-    backgroundColor: C.card, borderRadius: 28, padding: 24,
-    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 6 },
+    backgroundColor: C.surface, borderRadius: R.xxl, padding: 24,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12, shadowRadius: 20, elevation: 8,
     gap: 16,
   },
-  cardTitle: { fontSize: 20, fontWeight: '900', color: C.text },
+  cardTitle: { fontSize: 20, fontWeight: '900', color: C.textPrimary },
 
   inputGroup: { gap: 8 },
-  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textLight },
+  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textSecond },
   input: {
-    backgroundColor: C.bg, borderRadius: 16,
+    backgroundColor: C.background, borderRadius: R.md,
     paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: C.text,
-    borderWidth: 2, borderColor: '#FFD8C5',
+    fontSize: 15, color: C.textPrimary,
+    borderWidth: 2, borderColor: C.border,
   },
   inputError: { borderColor: C.error },
 
-  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: 14, padding: 12 },
+  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
   errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
 
   sendBtn: {
-    backgroundColor: C.primary, borderRadius: 18, paddingVertical: 17,
+    backgroundColor: C.primary, borderRadius: R.lg, paddingVertical: 17,
     alignItems: 'center',
     shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
@@ -212,11 +202,11 @@ const styles = StyleSheet.create({
   successBox: { alignItems: 'center', gap: 14, paddingVertical: 8 },
   successEmoji: { fontSize: 64 },
   successTitle: { fontSize: 22, fontWeight: '900', color: C.success },
-  successText: { fontSize: 14, color: C.textLight, textAlign: 'center', lineHeight: 22 },
-  spamHint:   { fontSize: 12, color: C.textLight, textAlign: 'center', fontStyle: 'italic' },
+  successText: { fontSize: 14, color: C.textSecond, textAlign: 'center', lineHeight: 22 },
+  spamHint:   { fontSize: 12, color: C.textSecond, textAlign: 'center', fontStyle: 'italic' },
   resendBtn: {
     marginTop: 4, paddingVertical: 10, paddingHorizontal: 24,
-    borderRadius: 14, borderWidth: 1.5, borderColor: C.primary,
+    borderRadius: R.sm, borderWidth: 1.5, borderColor: C.primary,
   },
   resendText: { fontSize: 13, fontWeight: '700', color: C.primary },
 
@@ -224,6 +214,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center',
     marginTop: 28, marginBottom: 8,
   },
-  footerText: { fontSize: 14, color: C.textLight },
+  footerText: { fontSize: 14, color: C.textSecond },
   footerLink: { fontSize: 14, fontWeight: '800', color: C.primary },
 });

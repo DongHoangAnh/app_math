@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { C, R } from '../theme';
 
 interface PlayerCardProps {
   name: string;
@@ -63,14 +64,14 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#007AFF',
+    backgroundColor: C.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     color: '#fff',
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   name: {
     fontSize: 16,
@@ -89,8 +90,8 @@ const styles = StyleSheet.create({
   },
   score: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#007AFF',
+    fontWeight: '700',
+    color: C.primary,
     marginTop: 4,
   },
   winnerBadge: {
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
   },
   winnerText: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#333',
   },
 });

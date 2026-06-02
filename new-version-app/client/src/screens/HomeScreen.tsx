@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, SafeAreaView, Alert,
 } from 'react-native';
+import { C, R } from '../theme';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
@@ -10,19 +11,6 @@ import { authFetch } from '../utils/authFetch';
 import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
 import { LevelBadge } from '../components/LevelBadge';
 import { getLevelProgress } from '../utils/levelUtils';
-
-const C = {
-  primary:     '#FF6B35',
-  primaryDark: '#E85D28',
-  secondary:   '#FFD23F',
-  bg:          '#FFF8F2',
-  card:        '#FFFFFF',
-  text:        '#2C1810',
-  textLight:   '#8B7B74',
-  success:     '#4CAF50',
-  error:       '#FF4444',
-  teal:        '#00BCD4',
-};
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -277,7 +265,7 @@ function NavCard({
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.bg },
+  safe:   { flex: 1, backgroundColor: C.background },
   scroll: { flex: 1 },
 
   // Header
@@ -303,7 +291,7 @@ const styles = StyleSheet.create({
   headerRow:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: {
     width: 52, height: 52, borderRadius: 26,
-    backgroundColor: C.secondary,
+    backgroundColor: C.primaryLight,
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)',
   },
@@ -314,16 +302,16 @@ const styles = StyleSheet.create({
   rankPill: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 18, alignItems: 'center',
+    borderRadius: R.lg, alignItems: 'center',
   },
   rankPillIcon:  { fontSize: 14 },
-  rankPillValue: { fontSize: 16, fontWeight: '900', color: C.secondary },
+  rankPillValue: { fontSize: 16, fontWeight: '900', color: C.primaryLight },
 
   // Points row
   pointsRow: {
     flexDirection: 'row', marginTop: 18,
     backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 20, paddingVertical: 14,
+    borderRadius: R.lg, paddingVertical: 14,
   },
   pointCard:   { flex: 1, alignItems: 'center' },
   pointIcon:   { fontSize: 20, marginBottom: 2 },
@@ -333,13 +321,13 @@ const styles = StyleSheet.create({
 
   // Section
   section:      { paddingHorizontal: 20, marginTop: 24 },
-  sectionLabel: { fontSize: 15, fontWeight: '800', color: C.textLight, marginBottom: 12 },
+  sectionLabel: { fontSize: 15, fontWeight: '800', color: C.textSecond, marginBottom: 12 },
 
   // Battle card
   battleCard: {
-    backgroundColor: '#2C1810',
-    borderRadius: 28, padding: 22, overflow: 'hidden',
-    shadowColor: '#FF6B35',
+    backgroundColor: C.textPrimary,
+    borderRadius: R.xl, padding: 22, overflow: 'hidden',
+    shadowColor: C.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
@@ -357,7 +345,7 @@ const styles = StyleSheet.create({
   },
   battleInner:  { flexDirection: 'row', alignItems: 'center', gap: 14 },
   battleIconWrap: {
-    width: 58, height: 58, borderRadius: 18,
+    width: 58, height: 58, borderRadius: R.lg,
     backgroundColor: 'rgba(255,107,53,0.2)',
     justifyContent: 'center', alignItems: 'center',
   },
@@ -367,7 +355,7 @@ const styles = StyleSheet.create({
   battleSub:    { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
   playBtn: {
     backgroundColor: C.primary, paddingVertical: 12,
-    paddingHorizontal: 20, borderRadius: 16,
+    paddingHorizontal: 20, borderRadius: R.md,
     shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5, shadowRadius: 8, elevation: 6,
   },
@@ -379,63 +367,63 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, marginTop: 16,
   },
   ruleChip: {
-    flex: 1, paddingVertical: 8, borderRadius: 14, alignItems: 'center',
+    flex: 1, paddingVertical: 8, borderRadius: R.sm, alignItems: 'center',
   },
   ruleChipText: { fontSize: 12, fontWeight: '800' },
 
   // Nav grid
   navGrid:     { flexDirection: 'row', gap: 12 },
   navCard: {
-    flex: 1, borderRadius: 22, padding: 16, alignItems: 'center',
+    flex: 1, borderRadius: R.xl, padding: 16, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08, shadowRadius: 10, elevation: 3,
   },
   navCardIcon: {
-    width: 52, height: 52, borderRadius: 16,
+    width: 52, height: 52, borderRadius: R.md,
     justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
-  navCardLabel: { fontSize: 12, fontWeight: '800', color: C.text },
+  navCardLabel: { fontSize: 12, fontWeight: '800', color: C.textPrimary },
 
   // Daily tasks
   dailyHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   expPill: {
     backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: R.sm,
   },
   expPillText:    { fontSize: 12, fontWeight: '800', color: '#2E7D32' },
   expBarWrap:     { marginBottom: 12 },
   expBarBg: {
     height: 8, backgroundColor: '#EEE', borderRadius: 4, overflow: 'hidden', marginBottom: 3,
   },
-  expBarFill:     { height: '100%', backgroundColor: '#4CAF50', borderRadius: 4 },
-  expBarLabel:    { fontSize: 11, color: C.textLight, fontWeight: '600', textAlign: 'right' },
+  expBarFill:     { height: '100%', backgroundColor: C.success, borderRadius: 4 },
+  expBarLabel:    { fontSize: 11, color: C.textSecond, fontWeight: '600', textAlign: 'right' },
   tasksPlaceholder: { paddingVertical: 20, alignItems: 'center' },
-  tasksPlaceholderText: { color: C.textLight, fontSize: 13 },
+  tasksPlaceholderText: { color: C.textSecond, fontSize: 13 },
   taskRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.card, borderRadius: 18, padding: 14,
+    backgroundColor: C.surface, borderRadius: R.lg, padding: 14,
     marginBottom: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
   taskInfo:       { flex: 1 },
   taskTitleRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-  taskTitle:      { fontSize: 14, fontWeight: '800', color: C.text },
+  taskTitle:      { fontSize: 14, fontWeight: '800', color: C.textPrimary },
   taskExp:        { fontSize: 12, fontWeight: '700', color: C.primary },
-  taskDesc:       { fontSize: 12, color: C.textLight, marginBottom: 6 },
+  taskDesc:       { fontSize: 12, color: C.textSecond, marginBottom: 6 },
   taskProgBarBg: {
     height: 5, backgroundColor: '#EEE', borderRadius: 3, overflow: 'hidden', marginBottom: 3,
   },
   taskProgBarFill:{ height: '100%', borderRadius: 3 },
-  taskProgText:   { fontSize: 11, color: C.textLight, fontWeight: '600' },
+  taskProgText:   { fontSize: 11, color: C.textSecond, fontWeight: '600' },
   claimBtn: {
     marginLeft: 12, backgroundColor: C.primary,
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: R.sm,
   },
   claimBtnDisabled: { opacity: 0.5 },
   claimBtnText:   { fontSize: 13, fontWeight: '900', color: '#fff' },
   claimedBadge: {
-    marginLeft: 12, width: 32, height: 32, borderRadius: 16,
+    marginLeft: 12, width: 32, height: 32, borderRadius: R.md,
     backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center',
   },
   claimedText:    { fontSize: 14, color: C.success, fontWeight: '900' },
@@ -444,7 +432,7 @@ const styles = StyleSheet.create({
   tipBanner: {
     marginHorizontal: 20, marginTop: 20,
     backgroundColor: '#FFF9C4',
-    borderRadius: 20, padding: 16,
+    borderRadius: R.lg, padding: 16,
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderWidth: 1, borderColor: '#FFE082',
   },

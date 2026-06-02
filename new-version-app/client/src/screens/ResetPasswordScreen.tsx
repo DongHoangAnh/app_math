@@ -5,17 +5,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
-
-const C = {
-  primary:   '#FF6B35',
-  secondary: '#FFD23F',
-  bg:        '#FFF8F2',
-  card:      '#FFFFFF',
-  text:      '#2C1810',
-  textLight: '#8B7B74',
-  error:     '#FF4444',
-  success:   '#4CAF50',
-};
+import { C, R } from '../theme';
 
 const PASSWORD_MIN = 8;
 
@@ -28,10 +18,10 @@ function getPasswordStrength(pwd: string): { score: number; label: string; color
   if (/[0-9]/.test(pwd))          score++;
   if (/[^A-Za-z0-9]/.test(pwd))  score++;
 
-  if (score <= 1) return { score, label: 'Rất yếu',  color: '#FF4444' };
+  if (score <= 1) return { score, label: 'Rất yếu',  color: C.error };
   if (score === 2) return { score, label: 'Yếu',      color: '#FF8C00' };
-  if (score === 3) return { score, label: 'Trung bình', color: '#FFD23F' };
-  if (score === 4) return { score, label: 'Mạnh',     color: '#4CAF50' };
+  if (score === 3) return { score, label: 'Trung bình', color: C.primaryLight };
+  if (score === 4) return { score, label: 'Mạnh',     color: C.success };
   return { score, label: 'Rất mạnh', color: '#1B8A3E' };
 }
 
@@ -212,37 +202,37 @@ function PwdHint({ ok, text }: { ok: boolean; text: string }) {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.bg },
+  safe:   { flex: 1, backgroundColor: C.background },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
 
   hero: { alignItems: 'center', paddingTop: 36, paddingBottom: 28 },
   iconWrap: {
-    width: 88, height: 88, borderRadius: 28,
+    width: 88, height: 88, borderRadius: R.xxl,
     backgroundColor: C.primary,
     justifyContent: 'center', alignItems: 'center', marginBottom: 18,
     shadowColor: C.primary, shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35, shadowRadius: 16, elevation: 12,
   },
   iconEmoji: { fontSize: 44 },
-  title:    { fontSize: 26, fontWeight: '900', color: C.text, marginBottom: 8 },
-  subtitle: { fontSize: 13, color: C.textLight, textAlign: 'center', lineHeight: 20 },
+  title:    { fontSize: 26, fontWeight: '900', color: C.textPrimary, marginBottom: 8 },
+  subtitle: { fontSize: 13, color: C.textSecond, textAlign: 'center', lineHeight: 20 },
 
   card: {
-    backgroundColor: C.card, borderRadius: 28, padding: 24,
-    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 6 },
+    backgroundColor: C.surface, borderRadius: R.xxl, padding: 24,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12, shadowRadius: 20, elevation: 8,
     gap: 18,
   },
 
   inputGroup: { gap: 8 },
-  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textLight },
+  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textSecond },
   inputWrap:  { position: 'relative', justifyContent: 'center' },
   input: {
-    backgroundColor: C.bg, borderRadius: 16,
+    backgroundColor: C.background, borderRadius: R.md,
     paddingHorizontal: 16, paddingVertical: 14,
     paddingRight: 50,
-    fontSize: 15, color: C.text,
-    borderWidth: 2, borderColor: '#FFD8C5',
+    fontSize: 15, color: C.textPrimary,
+    borderWidth: 2, borderColor: C.border,
   },
   inputError: { borderColor: C.error },
   inputOk:    { borderColor: C.success },
@@ -264,14 +254,14 @@ const styles = StyleSheet.create({
   hintRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   hintDot:  { fontSize: 13, color: '#CCC', width: 16, textAlign: 'center' },
   hintDotOk: { color: C.success },
-  hintText:  { fontSize: 12, color: C.textLight },
-  hintTextOk: { color: C.text },
+  hintText:  { fontSize: 12, color: C.textSecond },
+  hintTextOk: { color: C.textPrimary },
 
-  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: 14, padding: 12 },
+  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
   errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
 
   resetBtn: {
-    backgroundColor: C.primary, borderRadius: 18, paddingVertical: 17,
+    backgroundColor: C.primary, borderRadius: R.lg, paddingVertical: 17,
     alignItems: 'center',
     shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
@@ -279,11 +269,11 @@ const styles = StyleSheet.create({
   resetBtnText: { fontSize: 16, fontWeight: '900', color: '#fff' },
 
   cancelWrap: { alignItems: 'center', marginTop: 24 },
-  cancelText: { fontSize: 13, color: C.textLight, fontWeight: '600' },
+  cancelText: { fontSize: 13, color: C.textSecond, fontWeight: '600' },
 
   // Done state
   doneWrap:  { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 16 },
   doneEmoji: { fontSize: 72 },
   doneTitle: { fontSize: 24, fontWeight: '900', color: C.success, textAlign: 'center' },
-  doneText:  { fontSize: 14, color: C.textLight, textAlign: 'center', lineHeight: 22 },
+  doneText:  { fontSize: 14, color: C.textSecond, textAlign: 'center', lineHeight: 22 },
 });

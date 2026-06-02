@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  SafeAreaView,
+  SafeAreaView, Animated, TextInput, KeyboardAvoidingView,
+  Platform, ScrollView,
 } from 'react-native';
 import { useGameShowWS } from '../hooks/useGameShowWS';
 import { useAuth } from '../hooks/useAuth';
@@ -29,6 +30,8 @@ const MODES = [
 ];
 
 const QUESTION_SECONDS = 10;
+const CHAT_EMOJIS = ['🔥', '😎', '👍', '😅', '💀', '🎉'];
+const VI_CLIENT_BANNED = ['đụ', 'địt', 'lồn', 'cặc', 'buồi', 'đéo', 'đĩ', 'đmm', 'đcm', 'đkm'];
 
 // ── Helpers ───────────────────────────────────────────────────
 function countCorrect(answers: Record<number, { isCorrect: boolean }>) {
@@ -59,7 +62,7 @@ export default function GameShowScreen() {
     ?? 'Bạn';
   const grade = user?.user_metadata?.grade;
 
-  const { state, joinQueue, leaveQueue, submitAnswer } = useGameShowWS(userId, displayName, grade);
+  const { state, joinQueue, leaveQueue, submitAnswer, sendEmoji, sendChat } = useGameShowWS(userId, displayName, grade);
 
   const [selectedAnswer, setSelectedAnswer]     = useState<string | null>(null);
   const [revealState, setRevealState]           = useState<'hidden' | 'revealed'>('hidden');
@@ -67,14 +70,23 @@ export default function GameShowScreen() {
   const [countdown, setCountdown]               = useState(3);
   const [questionTimer, setQuestionTimer]       = useState(QUESTION_SECONDS);
   const [myRankingPoints, setMyRankingPoints]   = useState<number | null>(null);
+  const [chatInput, setChatInput]               = useState('');
+  const [showChatInput, setShowChatInput]       = useState(false);
+  const [floatingEmojis, setFloatingEmojis]     = useState<Array<{
+    id: string; emoji: string; isMe: boolean;
+    y: Animated.Value; opacity: Animated.Value; scale: Animated.Value;
+    xShift: number;
+  }>>([]);
 
-  const timerRef       = useRef<ReturnType<typeof setInterval> | null>(null);
-  const prevPhase      = useRef(state.phase);
-  const prevQIdx       = useRef(state.currentQuestionIndex);
+  const timerRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevPhase       = useRef(state.phase);
+  const prevQIdx        = useRef(state.currentQuestionIndex);
   const submitAnswerRef = useRef(submitAnswer);
   const selectedAnswerRef = useRef<string | null>(null);
-  const currentIdxRef  = useRef(state.currentQuestionIndex);
-  const roomIdRef      = useRef(state.roomId);
+  const currentIdxRef   = useRef(state.currentQuestionIndex);
+  const roomIdRef       = useRef(state.roomId);
+  const chatScrollRef   = useRef<ScrollView | null>(null);
+  const prevChatLenRef  = useRef(0);
   useEffect(() => { submitAnswerRef.current = submitAnswer; }, [submitAnswer]);
   useEffect(() => { selectedAnswerRef.current = selectedAnswer; }, [selectedAnswer]);
   useEffect(() => { currentIdxRef.current = state.currentQuestionIndex; }, [state.currentQuestionIndex]);
@@ -144,6 +156,67 @@ export default function GameShowScreen() {
     }, 1000);
     return () => clearInterval(id);
   }, [state.phase]);
+
+  // ── Floating emoji (Google Meet style) ────────────────────
+  const spawnFloatingEmoji = useCallback((emoji: string, isMe: boolean) => {
+    const id = `fe_${Date.now()}_${Math.floor(Math.random() * 999)}`;
+    const y       = new Animated.Value(0);
+    const opacity = new Animated.Value(0);
+    const scale   = new Animated.Value(0.1);
+    const xShift  = Math.floor(Math.random() * 28); // 0–27px lane variation
+
+    // Keep at most 8 simultaneous emojis
+    setFloatingEmojis(prev => [...prev.slice(-7), { id, emoji, isMe, y, opacity, scale, xShift }]);
+
+    Animated.sequence([
+      // Phase 1 — pop in (like Meet bubble appearing)
+      Animated.parallel([
+        Animated.spring(scale, { toValue: 1.2, useNativeDriver: true, tension: 280, friction: 6 }),
+        Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      ]),
+      // Phase 2 — float up; fade starts at 700 ms, gone by 1900 ms
+      Animated.parallel([
+        Animated.timing(y, { toValue: -250, duration: 2000, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 0.9, duration: 2000, useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(700),
+          Animated.timing(opacity, { toValue: 0, duration: 1200, useNativeDriver: true }),
+        ]),
+      ]),
+    ]).start(() => setFloatingEmojis(prev => prev.filter(e => e.id !== id)));
+  }, []);
+
+  // Spawn animation when a new emoji message arrives
+  useEffect(() => {
+    const msgs = state.chatMessages;
+    if (msgs.length > prevChatLenRef.current) {
+      msgs.slice(prevChatLenRef.current).forEach(msg => {
+        if (msg.type === 'emoji' && msg.emoji) {
+          spawnFloatingEmoji(msg.emoji, msg.fromUserId === userId);
+        }
+      });
+    }
+    prevChatLenRef.current = msgs.length;
+  }, [state.chatMessages, userId, spawnFloatingEmoji]);
+
+  // Auto-dismiss text input when question advances
+  useEffect(() => {
+    if (state.phase === 'playing') setShowChatInput(false);
+  }, [state.currentQuestionIndex, state.phase]);
+
+  // ── Chat send ─────────────────────────────────────────────
+  const handleSendChat = useCallback((keepOpen = false) => {
+    const text = chatInput.trim();
+    if (!text) return;
+    const lower = text.toLowerCase();
+    if (VI_CLIENT_BANNED.some(w => lower.includes(w))) {
+      setChatInput('');
+      return;
+    }
+    sendChat(text);
+    setChatInput('');
+    if (!keepOpen) setShowChatInput(false);
+  }, [chatInput, sendChat]);
 
   // ── Handlers ──────────────────────────────────────────────
   const handleAnswer = (answer: string) => {
@@ -335,8 +408,31 @@ export default function GameShowScreen() {
       );
     }
 
+    const lastTwoTextMsgs = state.chatMessages.filter(m => m.type === 'chat').slice(-2);
+
     return (
       <SafeAreaView style={styles.gameplaySafe}>
+        {/* Floating emoji overlay — lanes on each side, never covers center content */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {floatingEmojis.map(fe => (
+            <Animated.Text
+              key={fe.id}
+              style={[
+                styles.floatingEmoji,
+                fe.isMe
+                  ? { left: 4 + fe.xShift }
+                  : { right: 4 + fe.xShift },
+                {
+                  transform: [{ translateY: fe.y }, { scale: fe.scale }],
+                  opacity: fe.opacity,
+                },
+              ]}
+            >
+              {fe.emoji}
+            </Animated.Text>
+          ))}
+        </View>
+
         {/* Battle Header */}
         <View style={styles.battleHeader}>
           <View style={styles.battleHeaderRow}>
@@ -413,6 +509,60 @@ export default function GameShowScreen() {
             ))}
           </View>
         </View>
+
+        {/* Chat bar */}
+        <View style={styles.chatBar}>
+          {lastTwoTextMsgs.map(msg => {
+            const isMe = msg.fromUserId === userId;
+            return (
+              <View key={msg.id} style={[styles.chatBubble, isMe ? styles.chatBubbleMe : styles.chatBubbleThem]}>
+                <Text style={isMe ? styles.chatNameMe : styles.chatNameThem}>
+                  {isMe ? 'Bạn' : msg.fromName.split(' ').pop()}
+                </Text>
+                <Text style={isMe ? styles.chatTextMe : styles.chatTextThem}>{msg.text}</Text>
+              </View>
+            );
+          })}
+
+          {showChatInput && (
+            <View style={styles.chatInputRow}>
+              <TextInput
+                style={styles.chatInputField}
+                value={chatInput}
+                onChangeText={setChatInput}
+                placeholder="Nhắn tin..."
+                placeholderTextColor="#AAA"
+                maxLength={120}
+                autoFocus
+                returnKeyType="send"
+                onSubmitEditing={() => handleSendChat(false)}
+              />
+              <TouchableOpacity onPress={() => handleSendChat(false)} style={styles.chatSendBtn}>
+                <Text style={styles.chatSendBtnText}>Gửi</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.emojiRow}>
+            {CHAT_EMOJIS.map(emoji => (
+              <TouchableOpacity
+                key={emoji}
+                onPress={() => sendEmoji(emoji)}
+                style={styles.emojiBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.emojiBtnText}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={() => setShowChatInput(s => !s)}
+              style={[styles.emojiBtn, showChatInput && styles.emojiBtnActive]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.emojiBtnText}>💬</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -421,19 +571,93 @@ export default function GameShowScreen() {
   // YOU FINISHED
   // ═══════════════════════════════════════════════════════════
   if (state.phase === 'you_finished') {
+    const textMsgs = state.chatMessages.filter(m => m.type === 'chat');
     return (
-      <SafeAreaView style={styles.gameplaySafe}>
+      <KeyboardAvoidingView
+        style={styles.gameplaySafe}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* Floating emoji overlay */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {floatingEmojis.map(fe => (
+            <Animated.Text
+              key={fe.id}
+              style={[
+                styles.floatingEmoji,
+                fe.isMe
+                  ? { left: 4 + fe.xShift }
+                  : { right: 4 + fe.xShift },
+                {
+                  transform: [{ translateY: fe.y }, { scale: fe.scale }],
+                  opacity: fe.opacity,
+                },
+              ]}
+            >
+              {fe.emoji}
+            </Animated.Text>
+          ))}
+        </View>
+
         <View style={styles.centerFlex}>
           <Text style={{ fontSize: 52, marginBottom: 16 }}>✅</Text>
           <Text style={styles.waitTitle}>Bạn đã hoàn thành!</Text>
           <Text style={styles.waitSub}>
             Đang chờ đối thủ · {state.opponentAnsweredCount}/{total} câu
           </Text>
-          <Text style={[styles.waitSub, { marginTop: 20, color: C.blue }]}>
+          <Text style={[styles.waitSub, { marginTop: 12, color: C.blue }]}>
             Điểm của bạn: {myScore}/{total}
           </Text>
         </View>
-      </SafeAreaView>
+
+        {/* Full chat panel while waiting */}
+        <View style={styles.waitChatPanel}>
+          <ScrollView
+            ref={chatScrollRef}
+            style={styles.waitChatScroll}
+            onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
+            keyboardShouldPersistTaps="handled"
+          >
+            {textMsgs.length === 0 && (
+              <Text style={styles.chatEmptyHint}>Nhắn gì đó với đối thủ nhé 👋</Text>
+            )}
+            {textMsgs.map(msg => {
+              const isMe = msg.fromUserId === userId;
+              return (
+                <View key={msg.id} style={[styles.chatBubble, isMe ? styles.chatBubbleMe : styles.chatBubbleThem]}>
+                  <Text style={isMe ? styles.chatNameMe : styles.chatNameThem}>
+                    {isMe ? 'Bạn' : msg.fromName.split(' ').pop()}
+                  </Text>
+                  <Text style={isMe ? styles.chatTextMe : styles.chatTextThem}>{msg.text}</Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+
+          <View style={styles.emojiRow}>
+            {CHAT_EMOJIS.map(emoji => (
+              <TouchableOpacity key={emoji} onPress={() => sendEmoji(emoji)} style={styles.emojiBtn} activeOpacity={0.7}>
+                <Text style={styles.emojiBtnText}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.chatInputRow}>
+            <TextInput
+              style={styles.chatInputField}
+              value={chatInput}
+              onChangeText={setChatInput}
+              placeholder="Nhắn gì với đối thủ..."
+              placeholderTextColor="#AAA"
+              maxLength={120}
+              returnKeyType="send"
+              onSubmitEditing={() => handleSendChat(true)}
+            />
+            <TouchableOpacity onPress={() => handleSendChat(true)} style={styles.chatSendBtn}>
+              <Text style={styles.chatSendBtnText}>Gửi</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -734,4 +958,86 @@ const styles = StyleSheet.create({
   // Waiting
   waitTitle: { fontSize: 20, fontWeight: '500', color: C.navy, marginBottom: 8, textAlign: 'center' },
   waitSub:   { fontSize: 13, color: '#666', textAlign: 'center' },
+
+  // Floating emoji — appears just above the chatBar and floats up along screen edges
+  floatingEmoji: {
+    position: 'absolute',
+    bottom: 54,   // just above chatBar (~52px)
+    fontSize: 36,
+    zIndex: 200,
+    lineHeight: 44,
+  },
+
+  // Chat bar (playing phase)
+  chatBar: {
+    backgroundColor: C.white,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+    paddingHorizontal: 8,
+    paddingTop: 4,
+    paddingBottom: 6,
+  },
+
+  // Chat bubbles
+  chatBubble: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginHorizontal: 4,
+    marginVertical: 2,
+    maxWidth: '75%',
+  },
+  chatBubbleMe:   { alignSelf: 'flex-end', backgroundColor: C.blue },
+  chatBubbleThem: { alignSelf: 'flex-start', backgroundColor: '#ECEEF8' },
+  chatNameMe:   { fontSize: 8, color: 'rgba(255,255,255,0.65)', marginBottom: 1 },
+  chatNameThem: { fontSize: 8, color: '#888', marginBottom: 1 },
+  chatTextMe:   { fontSize: 12, color: C.white },
+  chatTextThem: { fontSize: 12, color: '#333' },
+
+  // Emoji row
+  emojiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 2,
+  },
+  emojiBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  emojiBtnActive: { backgroundColor: '#E8EFFF' },
+  emojiBtnText:   { fontSize: 22 },
+
+  // Text input row
+  chatInputRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 6, paddingHorizontal: 4, paddingVertical: 3,
+  },
+  chatInputField: {
+    flex: 1, height: 36, backgroundColor: '#F4F5F9',
+    borderRadius: 18, paddingHorizontal: 14,
+    fontSize: 13, color: '#333',
+  },
+  chatSendBtn: {
+    backgroundColor: C.blue, borderRadius: 16,
+    paddingHorizontal: 14, paddingVertical: 8,
+  },
+  chatSendBtnText: { color: C.white, fontSize: 12, fontWeight: '500' },
+
+  // Wait chat panel (you_finished phase)
+  waitChatPanel: {
+    backgroundColor: C.white,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+    paddingBottom: 6,
+  },
+  waitChatScroll: {
+    maxHeight: 130,
+    paddingHorizontal: 8,
+    paddingTop: 4,
+  },
+  chatEmptyHint: {
+    fontSize: 11, color: '#AAA',
+    textAlign: 'center', paddingVertical: 12,
+  },
 });

@@ -48,6 +48,8 @@ type WSMessage =
     | { type: "JOIN_QUEUE"; userId: string; token: string; displayName: string; grade?: string; winRate?: number; totalScore?: number }
     | { type: "LEAVE_QUEUE"; userId: string }
     | { type: "SUBMIT_ANSWER"; userId: string; roomId: string; questionIndex: number; answer: string; timeMs: number }
+    | { type: "SEND_EMOJI"; roomId: string; emoji: string }
+    | { type: "SEND_CHAT"; roomId: string; text: string }
     | { type: "PING" };
 
 // ═══════════════════════════════════════════════════════════
@@ -57,6 +59,55 @@ type WSMessage =
 const waitingQueue: Player[] = [];
 const activeRooms = new Map<string, GameRoom>();
 const playerToRoom = new Map<string, string>(); // userId → roomId
+
+// ═══════════════════════════════════════════════════════════
+// CHAT / EMOJI — rate limiting + profanity filter
+// ═══════════════════════════════════════════════════════════
+
+interface ChatRateLimit {
+    emojiTs: number[];
+    chatTs: number[];
+}
+const chatRateLimits = new Map<string, ChatRateLimit>();
+
+const ALLOWED_EMOJIS = new Set(["🔥", "😎", "👍", "😅", "💀", "🎉"]);
+const EMOJI_MAX = 3, EMOJI_WIN_MS = 5_000;
+const CHAT_MAX = 5,  CHAT_WIN_MS  = 30_000;
+const CHAT_MAX_LEN = 120;
+
+function getRateLimit(userId: string): ChatRateLimit {
+    if (!chatRateLimits.has(userId)) chatRateLimits.set(userId, { emojiTs: [], chatTs: [] });
+    return chatRateLimits.get(userId)!;
+}
+
+function canSendEmoji(userId: string): boolean {
+    const rl = getRateLimit(userId);
+    const now = Date.now();
+    rl.emojiTs = rl.emojiTs.filter(t => now - t < EMOJI_WIN_MS);
+    if (rl.emojiTs.length >= EMOJI_MAX) return false;
+    rl.emojiTs.push(now);
+    return true;
+}
+
+function canSendChat(userId: string): boolean {
+    const rl = getRateLimit(userId);
+    const now = Date.now();
+    rl.chatTs = rl.chatTs.filter(t => now - t < CHAT_WIN_MS);
+    if (rl.chatTs.length >= CHAT_MAX) return false;
+    rl.chatTs.push(now);
+    return true;
+}
+
+// Vietnamese + English profanity — substring match for VI, word-boundary for EN
+const VI_BANNED = ["đụ", "địt", "lồn", "cặc", "buồi", "chịch", "đéo", "đĩ", "điếm", "đmm", "clm", "đml", "đcm", "đkm"];
+const EN_BANNED = ["fuck", "shit", "bitch", "bastard", "cunt", "dick", "cock", "pussy", "whore", "slut", "nigga", "nigger"];
+
+function hasProfanity(text: string): boolean {
+    const norm = text.toLowerCase().replace(/1/g, "i").replace(/@/g, "a").replace(/0/g, "o");
+    for (const w of VI_BANNED) if (norm.includes(w)) return true;
+    for (const w of EN_BANNED) if (new RegExp(`\\b${w}\\b`).test(norm)) return true;
+    return false;
+}
 
 // ═══════════════════════════════════════════════════════════
 // RANDOM QUESTION GENERATOR — lớp 1: +, -, ×, ÷ và so sánh
@@ -402,6 +453,8 @@ function finishGame(room: GameRoom) {
 // ═══════════════════════════════════════════════════════════
 
 function handleDisconnect(userId: string) {
+    chatRateLimits.delete(userId);
+
     // Remove from queue
     const queueIdx = waitingQueue.findIndex((p) => p.userId === userId);
     if (queueIdx !== -1) {
@@ -544,6 +597,53 @@ export function setupGameShowWS(httpServer: Server) {
                     ) return;
                     // Always use the authenticated player's id — never the client-supplied userId
                     handleAnswer(currentPlayer.userId, msg.roomId, qIdx, msg.answer, tMs);
+                    break;
+                }
+
+                case "SEND_EMOJI": {
+                    if (!currentPlayer) return;
+                    const emojiRoom = typeof msg.roomId === "string" ? activeRooms.get(msg.roomId) : null;
+                    if (!emojiRoom || emojiRoom.finished) return;
+                    const inRoom = emojiRoom.player1.userId === currentPlayer.userId || emojiRoom.player2.userId === currentPlayer.userId;
+                    if (!inRoom || !ALLOWED_EMOJIS.has(msg.emoji)) return;
+                    if (!canSendEmoji(currentPlayer.userId)) return; // silently drop spam
+                    const emojiPayload = {
+                        type: "EMOJI_RECEIVED",
+                        fromUserId: currentPlayer.userId,
+                        fromName: currentPlayer.displayName,
+                        emoji: msg.emoji,
+                        timestamp: Date.now(),
+                    };
+                    sendToPlayer(emojiRoom.player1, emojiPayload);
+                    sendToPlayer(emojiRoom.player2, emojiPayload);
+                    break;
+                }
+
+                case "SEND_CHAT": {
+                    if (!currentPlayer) return;
+                    const chatRoom = typeof msg.roomId === "string" ? activeRooms.get(msg.roomId) : null;
+                    if (!chatRoom || chatRoom.finished) return;
+                    const inChatRoom = chatRoom.player1.userId === currentPlayer.userId || chatRoom.player2.userId === currentPlayer.userId;
+                    if (!inChatRoom) return;
+                    const text = typeof msg.text === "string" ? msg.text.trim().slice(0, CHAT_MAX_LEN) : "";
+                    if (!text) return;
+                    if (!canSendChat(currentPlayer.userId)) {
+                        sendToPlayer(currentPlayer, { type: "CHAT_RATE_LIMITED" });
+                        return;
+                    }
+                    if (hasProfanity(text)) {
+                        sendToPlayer(currentPlayer, { type: "CHAT_MODERATED" });
+                        return;
+                    }
+                    const chatPayload = {
+                        type: "CHAT_RECEIVED",
+                        fromUserId: currentPlayer.userId,
+                        fromName: currentPlayer.displayName,
+                        text,
+                        timestamp: Date.now(),
+                    };
+                    sendToPlayer(chatRoom.player1, chatPayload);
+                    sendToPlayer(chatRoom.player2, chatPayload);
                     break;
                 }
 

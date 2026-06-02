@@ -19,12 +19,14 @@ interface Stats {
   totalMatches: number; totalWins: number; winRate: number;
   totalScore: number; averageScore: number; bestStreak: number;
   currentStreak: number; level: number; nextLevelProgress: number;
+  accuracyRate: number; avgTimePerMatch: number;
 }
 
 const FALLBACK: Stats = {
   totalMatches: 0, totalWins: 0, winRate: 0,
   totalScore: 0, averageScore: 0, bestStreak: 0,
   currentStreak: 0, level: 1, nextLevelProgress: 0,
+  accuracyRate: 0, avgTimePerMatch: 0,
 };
 
 const BADGES = [
@@ -44,7 +46,7 @@ export default function StatisticsScreen() {
     setLoading(true);
     fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
       .then((r) => r.json())
-      .then(setStats)
+      .then((data) => setStats({ ...FALLBACK, ...data }))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [user]);
@@ -118,8 +120,8 @@ export default function StatisticsScreen() {
           <Text style={styles.sectionTitle}>Hiệu suất</Text>
           <View style={styles.perfCard}>
             <PerfRow icon="🔢" label="Điểm TB / trận" value={`${stats.averageScore}`} />
-            <PerfRow icon="🎯" label="Tỷ lệ trả lời đúng" value="—" />
-            <PerfRow icon="⏱️" label="Trung bình / trận" value="—" isLast />
+            <PerfRow icon="🎯" label="Tỷ lệ trả lời đúng" value={stats.totalMatches > 0 ? `${stats.accuracyRate.toFixed(1)}%` : '—'} />
+            <PerfRow icon="⏱️" label="Trung bình / trận" value={stats.totalMatches > 0 ? `${stats.avgTimePerMatch.toFixed(1)}s` : '—'} isLast />
           </View>
         </View>
 

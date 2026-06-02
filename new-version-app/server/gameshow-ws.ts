@@ -2,7 +2,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
 import fs from "fs";
 import path from "path";
-import { saveGameMatch, saveDisconnectWin, saveMatchRecord } from "./supabase-server";
+import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch } from "./supabase-server";
 
 // ═══════════════════════════════════════════════════════════
 // TYPES
@@ -351,6 +351,22 @@ function finishGame(room: GameRoom) {
             });
             p1Delta = deltas.player1Delta;
             p2Delta = deltas.player2Delta;
+
+            // Update daily task progress for both players (fire-and-forget)
+            updateTasksAfterMatch({
+                userId: room.player1.userId,
+                displayName: room.player1.displayName,
+                won: winnerId === room.player1.userId,
+                correctCount: p1Stats.correct,
+                totalQuestions: room.questions.length,
+            }).catch((e) => console.error("[GameShow WS] daily task p1 error:", e));
+            updateTasksAfterMatch({
+                userId: room.player2.userId,
+                displayName: room.player2.displayName,
+                won: winnerId === room.player2.userId,
+                correctCount: p2Stats.correct,
+                totalQuestions: room.questions.length,
+            }).catch((e) => console.error("[GameShow WS] daily task p2 error:", e));
         } catch (err) {
             console.error("[GameShow WS] Supabase save error:", err);
         }

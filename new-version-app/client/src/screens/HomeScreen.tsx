@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, SafeAreaView,
+  ScrollView, SafeAreaView, Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
+import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
 
 const C = {
   primary:     '#FF6B35',
@@ -24,20 +25,41 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
   const [rankingPoints, setRankingPoints] = useState<number>(0);
+  const [userExp, setUserExp] = useState<number>(0);
+  const [userLevel, setUserLevel] = useState<number>(1);
 
   const displayName = user?.user_metadata?.full_name ?? 'Bạn';
   const initial = displayName[0]?.toUpperCase() ?? 'B';
+
+  const { tasks, loading: tasksLoading, claiming, claimExp, refetch: refetchTasks } =
+    useDailyTasks(user?.id ?? null, displayName);
 
   useEffect(() => {
     if (!user) return;
     supabase
       .from('user_profiles')
-      .select('ranking_points')
+      .select('ranking_points,exp,level')
       .eq('id', user.id)
       .single()
-      .then(({ data }) => { if (data) setRankingPoints(data.ranking_points); })
+      .then(({ data }) => {
+        if (data) {
+          setRankingPoints(data.ranking_points ?? 0);
+          setUserExp(data.exp ?? 0);
+          setUserLevel(data.level ?? 1);
+        }
+      })
       .catch(() => {});
   }, [user]);
+
+  const handleClaim = async (task: DailyTask) => {
+    if (!task.completed || task.exp_claimed || claiming) return;
+    const result = await claimExp(task.task_key);
+    if (result) {
+      setUserExp(result.exp);
+      setUserLevel(result.level);
+      Alert.alert('🎉 Nhận thưởng!', `+${task.exp_reward} EXP\nLevel ${result.level} · ${result.exp} EXP tổng`);
+    }
+  };
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Chào buổi sáng ☀️' : hour < 18 ? 'Chào buổi chiều 🌤️' : 'Chào buổi tối 🌙';
@@ -143,15 +165,85 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* ── Daily Tasks ── */}
+        <View style={styles.section}>
+          <View style={styles.dailyHeader}>
+            <Text style={styles.sectionLabel}>Nhiệm vụ hôm nay</Text>
+            <View style={styles.expPill}>
+              <Text style={styles.expPillText}>⚡ Lv.{userLevel}</Text>
+            </View>
+          </View>
+
+          {/* EXP progress bar */}
+          <View style={styles.expBarWrap}>
+            <View style={styles.expBarBg}>
+              <View style={[styles.expBarFill, { width: `${(userExp % 300) / 300 * 100}%` as any }]} />
+            </View>
+            <Text style={styles.expBarLabel}>{userExp % 300} / 300 EXP</Text>
+          </View>
+
+          {tasksLoading && tasks.length === 0 ? (
+            <View style={styles.tasksPlaceholder}>
+              <Text style={styles.tasksPlaceholderText}>Đang tải nhiệm vụ...</Text>
+            </View>
+          ) : (
+            tasks.map((task) => (
+              <TaskRow
+                key={task.task_key}
+                task={task}
+                claiming={claiming === task.task_key}
+                onClaim={() => handleClaim(task)}
+              />
+            ))
+          )}
+        </View>
+
         {/* ── Tip Banner ── */}
         <View style={styles.tipBanner}>
           <Text style={styles.tipEmoji}>💡</Text>
-          <Text style={styles.tipText}>Chơi mỗi ngày để leo hạng. Điểm luôn ≥ 0!</Text>
+          <Text style={styles.tipText}>Hoàn thành nhiệm vụ mỗi ngày để tích EXP và lên cấp!</Text>
         </View>
 
         <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function TaskRow({
+  task, claiming, onClaim,
+}: { task: DailyTask; claiming: boolean; onClaim: () => void }) {
+  const pct = task.target > 0 ? Math.min(task.progress / task.target, 1) : 0;
+  const canClaim = task.completed && !task.exp_claimed;
+
+  return (
+    <View style={styles.taskRow}>
+      <View style={styles.taskInfo}>
+        <View style={styles.taskTitleRow}>
+          <Text style={styles.taskTitle}>{task.title}</Text>
+          <Text style={styles.taskExp}>+{task.exp_reward} EXP</Text>
+        </View>
+        <Text style={styles.taskDesc}>{task.description}</Text>
+        <View style={styles.taskProgBarBg}>
+          <View style={[styles.taskProgBarFill, { width: `${pct * 100}%` as any, backgroundColor: task.completed ? C.success : C.primary }]} />
+        </View>
+        <Text style={styles.taskProgText}>{task.progress}/{task.target}</Text>
+      </View>
+      {canClaim ? (
+        <TouchableOpacity
+          style={[styles.claimBtn, claiming && styles.claimBtnDisabled]}
+          onPress={onClaim}
+          disabled={claiming}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.claimBtnText}>{claiming ? '...' : 'Nhận'}</Text>
+        </TouchableOpacity>
+      ) : task.exp_claimed ? (
+        <View style={styles.claimedBadge}>
+          <Text style={styles.claimedText}>✓</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -287,6 +379,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
   navCardLabel: { fontSize: 12, fontWeight: '800', color: C.text },
+
+  // Daily tasks
+  dailyHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  expPill: {
+    backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 12,
+  },
+  expPillText:    { fontSize: 12, fontWeight: '800', color: '#2E7D32' },
+  expBarWrap:     { marginBottom: 12 },
+  expBarBg: {
+    height: 8, backgroundColor: '#EEE', borderRadius: 4, overflow: 'hidden', marginBottom: 3,
+  },
+  expBarFill:     { height: '100%', backgroundColor: '#4CAF50', borderRadius: 4 },
+  expBarLabel:    { fontSize: 11, color: C.textLight, fontWeight: '600', textAlign: 'right' },
+  tasksPlaceholder: { paddingVertical: 20, alignItems: 'center' },
+  tasksPlaceholderText: { color: C.textLight, fontSize: 13 },
+  taskRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.card, borderRadius: 18, padding: 14,
+    marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  taskInfo:       { flex: 1 },
+  taskTitleRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+  taskTitle:      { fontSize: 14, fontWeight: '800', color: C.text },
+  taskExp:        { fontSize: 12, fontWeight: '700', color: C.primary },
+  taskDesc:       { fontSize: 12, color: C.textLight, marginBottom: 6 },
+  taskProgBarBg: {
+    height: 5, backgroundColor: '#EEE', borderRadius: 3, overflow: 'hidden', marginBottom: 3,
+  },
+  taskProgBarFill:{ height: '100%', borderRadius: 3 },
+  taskProgText:   { fontSize: 11, color: C.textLight, fontWeight: '600' },
+  claimBtn: {
+    marginLeft: 12, backgroundColor: C.primary,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
+  },
+  claimBtnDisabled: { opacity: 0.5 },
+  claimBtnText:   { fontSize: 13, fontWeight: '900', color: '#fff' },
+  claimedBadge: {
+    marginLeft: 12, width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center',
+  },
+  claimedText:    { fontSize: 14, color: C.success, fontWeight: '900' },
 
   // Tip banner
   tipBanner: {

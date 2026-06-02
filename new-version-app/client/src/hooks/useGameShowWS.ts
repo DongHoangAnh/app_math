@@ -62,8 +62,12 @@ export interface GameShowState {
 // ═══════════════════════════════════════════════════════════
 
 function buildWSUrl() {
-    // Use env variable for React Native (no window.location available)
-    const base = process.env.EXPO_PUBLIC_WS_URL ?? process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+    // EXPO_PUBLIC_WS_URL is the full WS endpoint; use it directly.
+    // Fall back to API URL (HTTP) and derive the WS path.
+    if (process.env.EXPO_PUBLIC_WS_URL) {
+        return process.env.EXPO_PUBLIC_WS_URL;
+    }
+    const base = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
     const url = base.replace(/^http/, 'ws').replace(/^https/, 'wss');
     return `${url}/ws/gameshow`;
 }

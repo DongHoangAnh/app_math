@@ -155,3 +155,272 @@ async function applyRankingDelta(userId: string, delta: number, displayName: str
         throw error;
     }
 }
+
+// ═══════════════════════════════════════════════════════════
+// DAILY TASKS
+// ═══════════════════════════════════════════════════════════
+
+export type DailyTask = {
+    task_key: string;
+    title: string;
+    description: string;
+    exp_reward: number;
+    progress: number;
+    target: number;
+    completed: boolean;
+    exp_claimed: boolean;
+};
+
+// Vietnam UTC+7 local date as YYYY-MM-DD
+function getVnDate(): string {
+    return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
+}
+
+const TASK_DEFINITIONS = [
+    { task_key: "play_1",       title: "Khởi động",            description: "Tham gia 1 trận đấu",           exp_reward: 50,  target: 1 },
+    { task_key: "play_3",       title: "Kiên trì",             description: "Tham gia 3 trận đấu",           exp_reward: 80,  target: 3 },
+    { task_key: "win_1",        title: "Chiến thắng đầu tiên", description: "Thắng 1 trận đấu",              exp_reward: 100, target: 1 },
+    { task_key: "correct_20",   title: "Tập trung",            description: "Trả lời đúng 20 câu hỏi",       exp_reward: 75,  target: 20 },
+    { task_key: "accuracy_70",  title: "Chính xác",            description: "Đạt ≥70% độ chính xác 1 trận", exp_reward: 60,  target: 1 },
+] as const;
+
+export async function getDailyTasks(userId: string): Promise<DailyTask[]> {
+    const db = getSupabaseClient();
+    const today = getVnDate();
+
+    // Ensure all 5 tasks exist for today (upsert rows that are missing)
+    const upserts = TASK_DEFINITIONS.map((t) => ({
+        user_id: userId,
+        task_key: t.task_key,
+        task_date: today,
+        progress: 0,
+        target: t.target,
+        completed: false,
+        exp_claimed: false,
+    }));
+
+    await db
+        .from("user_daily_tasks")
+        .upsert(upserts, { onConflict: "user_id,task_key,task_date", ignoreDuplicates: true });
+
+    const { data, error } = await db
+        .from("user_daily_tasks")
+        .select("task_key,progress,target,completed,exp_claimed")
+        .eq("user_id", userId)
+        .eq("task_date", today);
+
+    if (error || !data) return [];
+
+    return TASK_DEFINITIONS.map((def) => {
+        const row = data.find((r) => r.task_key === def.task_key);
+        return {
+            task_key:    def.task_key,
+            title:       def.title,
+            description: def.description,
+            exp_reward:  def.exp_reward,
+            progress:    row?.progress    ?? 0,
+            target:      row?.target      ?? def.target,
+            completed:   row?.completed   ?? false,
+            exp_claimed: row?.exp_claimed ?? false,
+        };
+    });
+}
+
+export type MatchResultForTasks = {
+    userId: string;
+    displayName: string;
+    won: boolean;
+    correctCount: number;
+    totalQuestions: number;
+};
+
+export async function updateTasksAfterMatch(result: MatchResultForTasks): Promise<void> {
+    const db = getSupabaseClient();
+    const today = getVnDate();
+    const { userId, won, correctCount, totalQuestions } = result;
+
+    // Ensure rows exist first
+    await getDailyTasks(userId);
+
+    const accuracy = totalQuestions > 0 ? correctCount / totalQuestions : 0;
+
+    // For each task, calculate the increment and whether it's now complete
+    const updates: { task_key: string; increment: number; clampTarget: boolean }[] = [
+        { task_key: "play_1",      increment: 1,            clampTarget: true },
+        { task_key: "play_3",      increment: 1,            clampTarget: true },
+        { task_key: "win_1",       increment: won ? 1 : 0,  clampTarget: true },
+        { task_key: "correct_20",  increment: correctCount, clampTarget: true },
+        { task_key: "accuracy_70", increment: accuracy >= 0.7 ? 1 : 0, clampTarget: true },
+    ];
+
+    for (const u of updates) {
+        if (u.increment === 0) continue;
+
+        // Atomic increment + mark completed if progress reaches target
+        const { data: row } = await db
+            .from("user_daily_tasks")
+            .select("progress,target,completed")
+            .eq("user_id", userId)
+            .eq("task_key", u.task_key)
+            .eq("task_date", today)
+            .single();
+
+        if (!row || row.completed) continue;
+
+        const newProgress = u.clampTarget
+            ? Math.min(row.progress + u.increment, row.target)
+            : row.progress + u.increment;
+        const nowCompleted = newProgress >= row.target;
+
+        await db
+            .from("user_daily_tasks")
+            .update({ progress: newProgress, completed: nowCompleted })
+            .eq("user_id", userId)
+            .eq("task_key", u.task_key)
+            .eq("task_date", today);
+    }
+}
+
+export async function claimTaskExp(
+    userId: string,
+    taskKey: string,
+    displayName: string
+): Promise<{ exp: number; level: number } | null> {
+    const db = getSupabaseClient();
+    const today = getVnDate();
+
+    // Verify task is completed but not yet claimed
+    const { data: row } = await db
+        .from("user_daily_tasks")
+        .select("completed,exp_claimed,task_key")
+        .eq("user_id", userId)
+        .eq("task_key", taskKey)
+        .eq("task_date", today)
+        .single();
+
+    if (!row || !row.completed || row.exp_claimed) return null;
+
+    const def = TASK_DEFINITIONS.find((t) => t.task_key === taskKey);
+    if (!def) return null;
+
+    // Mark claimed
+    await db
+        .from("user_daily_tasks")
+        .update({ exp_claimed: true })
+        .eq("user_id", userId)
+        .eq("task_key", taskKey)
+        .eq("task_date", today);
+
+    // Add EXP via RPC
+    const { data, error } = await db.rpc("add_user_exp", {
+        p_user_id: userId,
+        p_exp: def.exp_reward,
+        p_display_name: displayName,
+    });
+
+    if (error || !data?.[0]) {
+        console.error("[Supabase] add_user_exp error:", error?.message);
+        return null;
+    }
+
+    return { exp: data[0].new_exp, level: data[0].new_level };
+}
+
+// ═══════════════════════════════════════════════════════════
+// PLAYER STATS — aggregated from game_matches
+// ═══════════════════════════════════════════════════════════
+
+export type PlayerStats = {
+    totalMatches: number;
+    totalWins: number;
+    winRate: number;
+    totalScore: number;
+    averageScore: number;
+    bestStreak: number;
+    currentStreak: number;
+    level: number;
+    nextLevelProgress: number;
+    accuracyRate: number;
+    avgTimePerMatch: number;
+};
+
+export async function getPlayerStats(userId: string): Promise<PlayerStats> {
+    const fallback: PlayerStats = {
+        totalMatches: 0, totalWins: 0, winRate: 0,
+        totalScore: 0, averageScore: 0, bestStreak: 0,
+        currentStreak: 0, level: 1, nextLevelProgress: 0,
+        accuracyRate: 0, avgTimePerMatch: 0,
+    };
+
+    const { data, error } = await getSupabaseClient()
+        .from("game_matches")
+        .select("player1_id,player2_id,player1_correct,player2_correct,player1_score,player2_score,player1_total_time_ms,player2_total_time_ms,winner_id,questions_count")
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`)
+        .order("played_at", { ascending: true });
+
+    if (error || !data || data.length === 0) return fallback;
+
+    let totalScore = 0;
+    let totalCorrect = 0;
+    let totalQuestions = 0;
+    let totalTimeMs = 0;
+    let totalWins = 0;
+
+    // outcome per match ordered oldest→newest: true=win, false=loss/draw
+    const outcomes: boolean[] = [];
+
+    for (const m of data) {
+        const isP1 = m.player1_id === userId;
+        const correct = isP1 ? m.player1_correct : m.player2_correct;
+        const score   = isP1 ? m.player1_score   : m.player2_score;
+        const timeMs  = isP1 ? m.player1_total_time_ms : m.player2_total_time_ms;
+        const qCount  = m.questions_count ?? 10;
+        const won     = m.winner_id === userId;
+
+        totalScore     += score ?? 0;
+        totalCorrect   += correct ?? 0;
+        totalQuestions += qCount;
+        totalTimeMs    += timeMs ?? 0;
+        if (won) totalWins++;
+        outcomes.push(won);
+    }
+
+    const totalMatches = data.length;
+    const winRate      = totalMatches > 0 ? (totalWins / totalMatches) * 100 : 0;
+    const averageScore = totalMatches > 0 ? Math.round(totalScore / totalMatches) : 0;
+    const accuracyRate = totalQuestions > 0 ? (totalCorrect / totalQuestions) * 100 : 0;
+    const avgTimePerMatch = totalMatches > 0 ? totalTimeMs / totalMatches / 1000 : 0;
+
+    // streak: scan from most recent match backwards
+    let currentStreak = 0;
+    for (let i = outcomes.length - 1; i >= 0; i--) {
+        if (outcomes[i]) currentStreak++;
+        else break;
+    }
+
+    // best streak: scan entire history
+    let bestStreak = 0;
+    let run = 0;
+    for (const won of outcomes) {
+        run = won ? run + 1 : 0;
+        if (run > bestStreak) bestStreak = run;
+    }
+
+    const SCORE_PER_LEVEL = 500;
+    const level            = Math.floor(totalScore / SCORE_PER_LEVEL) + 1;
+    const nextLevelProgress = Math.round((totalScore % SCORE_PER_LEVEL) / SCORE_PER_LEVEL * 100);
+
+    return {
+        totalMatches,
+        totalWins,
+        winRate:         Math.round(winRate * 10) / 10,
+        totalScore,
+        averageScore,
+        bestStreak,
+        currentStreak,
+        level,
+        nextLevelProgress,
+        accuracyRate:    Math.round(accuracyRate * 10) / 10,
+        avgTimePerMatch: Math.round(avgTimePerMatch * 10) / 10,
+    };
+}

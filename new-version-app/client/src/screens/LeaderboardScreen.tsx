@@ -3,22 +3,14 @@ import {
   View, Text, FlatList, StyleSheet, ActivityIndicator,
   SafeAreaView, TouchableOpacity, RefreshControl,
 } from 'react-native';
+import { C, R } from '../theme';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
 
 interface Entry { id: string; display_name: string | null; ranking_points: number }
 
-const C = {
-  primary:   '#FF6B35',
-  secondary: '#FFD23F',
-  bg:        '#FFF8F2',
-  card:      '#FFFFFF',
-  text:      '#2C1810',
-  textLight: '#8B7B74',
-};
-
 const MEDALS     = ['🥇', '🥈', '🥉'];
-const MEDAL_BG   = ['#FFF9C4', '#F5F5F5', '#FFF3E0'];
+const MEDAL_BG   = ['#FFF9C4', '#F5F5F5', C.primaryBg];
 const MEDAL_BD   = ['#FFD54F', '#BDBDBD', '#FFB74D'];
 
 export default function LeaderboardScreen() {
@@ -143,7 +135,7 @@ function EntryRow({ item, index, myId }: { item: Entry; index: number; myId?: st
           : <Text style={styles.rankNum}>{index + 1}</Text>}
       </View>
 
-      <View style={[styles.rowAvatar, { backgroundColor: isTop ? MEDAL_BD[index] : '#FFE5D9' }]}>
+      <View style={[styles.rowAvatar, { backgroundColor: isTop ? MEDAL_BD[index] : C.border }]}>
         <Text style={styles.rowAvatarText}>
           {(item.display_name ?? 'N')[0].toUpperCase()}
         </Text>
@@ -161,7 +153,7 @@ function EntryRow({ item, index, myId }: { item: Entry; index: number; myId?: st
       </View>
 
       <View style={styles.ptsCol}>
-        <Text style={[styles.pts, isTop && { color: C.text, fontSize: 20 }]}>
+        <Text style={[styles.pts, isTop && { color: C.textPrimary, fontSize: 20 }]}>
           {item.ranking_points}
         </Text>
         <Text style={styles.ptsUnit}>điểm</Text>
@@ -171,7 +163,7 @@ function EntryRow({ item, index, myId }: { item: Entry; index: number; myId?: st
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1, backgroundColor: C.background },
 
   header: {
     backgroundColor: C.primary,
@@ -189,13 +181,13 @@ const styles = StyleSheet.create({
   ruleRow:     { flexDirection: 'row', gap: 8, marginTop: 14 },
   rulePill: {
     paddingVertical: 6, paddingHorizontal: 14,
-    borderRadius: 12, alignItems: 'center',
+    borderRadius: R.sm, alignItems: 'center',
   },
   ruleTxt: { fontSize: 12, fontWeight: '800' },
 
   myCard: {
     marginHorizontal: 20, marginTop: 16,
-    backgroundColor: '#2C1810', borderRadius: 22, padding: 16,
+    backgroundColor: C.textPrimary, borderRadius: R.xl, padding: 16,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
@@ -203,21 +195,21 @@ const styles = StyleSheet.create({
   },
   myCardLeft:   { flexDirection: 'row', alignItems: 'center', gap: 14 },
   myRankBadge: {
-    backgroundColor: C.secondary, width: 52, height: 52,
-    borderRadius: 16, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: C.primaryLight, width: 52, height: 52,
+    borderRadius: R.md, justifyContent: 'center', alignItems: 'center',
   },
   myRankText:   { fontSize: 18, fontWeight: '900', color: '#7B5800' },
   myCardName:   { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
   myCardSub:    { fontSize: 16, fontWeight: '900', color: '#fff', marginTop: 2 },
   myCardRight:  { alignItems: 'flex-end' },
-  myCardPoints: { fontSize: 30, fontWeight: '900', color: C.secondary },
+  myCardPoints: { fontSize: 30, fontWeight: '900', color: C.primaryLight },
   myCardUnit:   { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
 
   list: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28 },
 
   row: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.card, borderRadius: 18,
+    backgroundColor: C.surface, borderRadius: R.lg,
     paddingVertical: 13, paddingHorizontal: 14,
     marginBottom: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
@@ -228,16 +220,16 @@ const styles = StyleSheet.create({
 
   rankCol:   { width: 32, alignItems: 'center' },
   medal:     { fontSize: 24 },
-  rankNum:   { fontSize: 15, fontWeight: '900', color: C.textLight },
+  rankNum:   { fontSize: 15, fontWeight: '900', color: C.textSecond },
 
   rowAvatar: {
-    width: 38, height: 38, borderRadius: 12,
+    width: 38, height: 38, borderRadius: R.sm,
     justifyContent: 'center', alignItems: 'center',
   },
   rowAvatarText: { fontSize: 16, fontWeight: '900', color: '#7B5800' },
 
   nameCol: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  nameText: { fontSize: 15, fontWeight: '700', color: C.text, flexShrink: 1 },
+  nameText: { fontSize: 15, fontWeight: '700', color: C.textPrimary, flexShrink: 1 },
   meBadge: {
     backgroundColor: C.primary, borderRadius: 6,
     paddingHorizontal: 6, paddingVertical: 2,
@@ -245,15 +237,15 @@ const styles = StyleSheet.create({
   meBadgeTxt: { fontSize: 9, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
 
   ptsCol:  { alignItems: 'flex-end' },
-  pts:     { fontSize: 17, fontWeight: '900', color: C.text },
-  ptsUnit: { fontSize: 10, color: C.textLight },
+  pts:     { fontSize: 17, fontWeight: '900', color: C.textPrimary },
+  ptsUnit: { fontSize: 10, color: C.textSecond },
 
   errorBox: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  errorTxt: { fontSize: 15, color: C.textLight, marginBottom: 16 },
+  errorTxt: { fontSize: 15, color: C.textSecond, marginBottom: 16 },
   retryBtn: {
     backgroundColor: C.primary, paddingVertical: 12,
-    paddingHorizontal: 28, borderRadius: 16,
+    paddingHorizontal: 28, borderRadius: R.md,
   },
   retryTxt: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  emptyTxt: { textAlign: 'center', color: C.textLight, fontSize: 15, marginTop: 48 },
+  emptyTxt: { textAlign: 'center', color: C.textSecond, fontSize: 15, marginTop: 48 },
 });

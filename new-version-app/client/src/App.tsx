@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { supabase } from './services/supabase';
+import { C, R } from './theme';
 
 // Screens
 import LoginScreen         from './screens/LoginScreen';
@@ -44,8 +45,8 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
     <View style={{
       alignItems: 'center', justifyContent: 'center',
       width: 46, height: 32,
-      backgroundColor: focused ? '#FFE5D9' : 'transparent',
-      borderRadius: 12,
+      backgroundColor: focused ? C.primaryBg : 'transparent',
+      borderRadius: R.md,
     }}>
       <Text style={{ fontSize: focused ? 22 : 20 }}>{icon}</Text>
     </View>
@@ -62,22 +63,22 @@ function MainTabs() {
           height: 72,
           paddingBottom: 10,
           paddingTop: 8,
-          shadowColor: '#FF6B35',
+          shadowColor: C.primary,
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.12,
           shadowRadius: 16,
           elevation: 12,
         },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '800', marginTop: 2 },
-        tabBarActiveTintColor: '#FF6B35',
-        tabBarInactiveTintColor: '#C9B8AF',
+        tabBarActiveTintColor: C.primary,
+        tabBarInactiveTintColor: C.textSecond,
         headerShown: false,
       }}
     >
       <Tab.Screen name="HomeTab"      component={HomeScreen}       options={{ tabBarLabel: 'Trang Chủ', tabBarIcon: ({ focused }) => <TabIcon icon="🏡" focused={focused} /> }} />
       <Tab.Screen name="GameShowTab"  component={GameShowScreen}   options={{ tabBarLabel: 'Đấu',      tabBarIcon: ({ focused }) => <TabIcon icon="🎮" focused={focused} /> }} />
       <Tab.Screen name="LeaderboardTab" component={LeaderboardScreen} options={{ tabBarLabel: 'Xếp Hạng', tabBarIcon: ({ focused }) => <TabIcon icon="🏆" focused={focused} /> }} />
-      <Tab.Screen name="StatsTab"     component={StatisticsScreen} options={{ tabBarLabel: 'Thống Kê', tabBarIcon: ({ focused }) => <TabIcon icon="📈" focused={focused} /> }} />
+      <Tab.Screen name="StatsTab"     component={StatisticsScreen} options={{ tabBarLabel: 'Thống Kê', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon="📈" focused={focused} /> }} />
       <Tab.Screen name="ProfileTab"   component={ProfileScreen}    options={{ tabBarLabel: 'Hồ Sơ',   tabBarIcon: ({ focused }) => <TabIcon icon="😊" focused={focused} /> }} />
     </Tab.Navigator>
   );
@@ -90,7 +91,7 @@ function RootNavigator() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color={C.primary} />
       </View>
     );
   }

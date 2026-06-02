@@ -3,19 +3,10 @@ import {
   View, Text, StyleSheet, ScrollView,
   SafeAreaView, ActivityIndicator,
 } from 'react-native';
+import { C, R } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { LevelCard } from '../components/LevelBadge';
-
-const C = {
-  primary:   '#FF6B35',
-  secondary: '#FFD23F',
-  bg:        '#FFF8F2',
-  card:      '#FFFFFF',
-  text:      '#2C1810',
-  textLight: '#8B7B74',
-  success:   '#4CAF50',
-};
 
 interface Stats {
   totalMatches: number; totalWins: number; winRate: number;
@@ -33,7 +24,7 @@ const FALLBACK: Stats = {
 
 const BADGES = [
   { emoji: '🌟', title: 'Bắt Đầu',  desc: 'Trận đầu tiên',           color: '#FFF9C4' },
-  { emoji: '🔥', title: 'Nóng Lên', desc: '5 trận thắng liên tiếp',   color: '#FFF3E0' },
+  { emoji: '🔥', title: 'Nóng Lên', desc: '5 trận thắng liên tiếp',   color: C.primaryBg },
   { emoji: '🏅', title: 'Nhân Phẩm', desc: 'Đạt 50 điểm xếp hạng',   color: '#E8F5E9' },
   { emoji: '💎', title: 'Kim Cương', desc: 'Level 10',                 color: '#E3F2FD' },
 ];
@@ -99,7 +90,7 @@ export default function StatisticsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chuỗi thắng</Text>
           <View style={styles.streakRow}>
-            <View style={[styles.streakCard, { backgroundColor: '#FFF3E0' }]}>
+            <View style={[styles.streakCard, { backgroundColor: C.primaryBg }]}>
               <Text style={styles.streakIcon}>🔥</Text>
               <Text style={styles.streakValue}>{stats.currentStreak}</Text>
               <Text style={styles.streakLabel}>Hiện tại</Text>
@@ -175,7 +166,7 @@ function PerfRow({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1, backgroundColor: C.background },
 
   header: {
     backgroundColor: C.primary,
@@ -196,54 +187,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 20, gap: 12,
   },
   bigStat: {
-    width: '47%', borderRadius: 22, padding: 18, alignItems: 'center',
+    width: '47%', borderRadius: R.xl, padding: 18, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
   },
   bigStatIconWrap: {
-    width: 52, height: 52, borderRadius: 16,
+    width: 52, height: 52, borderRadius: R.md,
     justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
   bigStatIcon:  { fontSize: 26 },
-  bigStatValue: { fontSize: 28, fontWeight: '900', color: C.text },
-  bigStatLabel: { fontSize: 12, color: C.textLight, marginTop: 2, fontWeight: '700' },
+  bigStatValue: { fontSize: 28, fontWeight: '900', color: C.textPrimary },
+  bigStatLabel: { fontSize: 12, color: C.textSecond, marginTop: 2, fontWeight: '700' },
 
   section:      { paddingHorizontal: 16, marginTop: 22 },
-  sectionTitle: { fontSize: 16, fontWeight: '900', color: C.text, marginBottom: 14 },
+  sectionTitle: { fontSize: 16, fontWeight: '900', color: C.textPrimary, marginBottom: 14 },
 
   streakRow: { flexDirection: 'row', gap: 12 },
   streakCard: {
-    flex: 1, borderRadius: 22, padding: 22, alignItems: 'center',
+    flex: 1, borderRadius: R.xl, padding: 22, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
   streakIcon:  { fontSize: 36, marginBottom: 6 },
-  streakValue: { fontSize: 40, fontWeight: '900', color: C.text },
-  streakLabel: { fontSize: 12, color: C.textLight, fontWeight: '700', marginTop: 4 },
+  streakValue: { fontSize: 40, fontWeight: '900', color: C.textPrimary },
+  streakLabel: { fontSize: 12, color: C.textSecond, fontWeight: '700', marginTop: 4 },
 
 
   perfCard: {
-    backgroundColor: C.card, borderRadius: 22, overflow: 'hidden',
-    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 3 },
+    backgroundColor: C.surface, borderRadius: R.xl, overflow: 'hidden',
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
-    borderWidth: 1.5, borderColor: '#FFE5D9',
+    borderWidth: 1.5, borderColor: C.border,
   },
   perfRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 15, paddingHorizontal: 18,
-    borderBottomWidth: 1, borderBottomColor: '#FFF0E8', gap: 12,
+    borderBottomWidth: 1, borderBottomColor: C.border, gap: 12,
   },
   perfIcon:  { fontSize: 18 },
-  perfLabel: { flex: 1, fontSize: 14, color: C.textLight, fontWeight: '600' },
-  perfValue: { fontSize: 15, fontWeight: '800', color: C.text },
+  perfLabel: { flex: 1, fontSize: 14, color: C.textSecond, fontWeight: '600' },
+  perfValue: { fontSize: 15, fontWeight: '800', color: C.textPrimary },
 
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   badge: {
-    width: '47%', borderRadius: 18, padding: 16, alignItems: 'center',
+    width: '47%', borderRadius: R.lg, padding: 16, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
   },
   badgeEmoji: { fontSize: 36, marginBottom: 8 },
-  badgeTitle: { fontSize: 13, fontWeight: '900', color: C.text },
-  badgeDesc:  { fontSize: 11, color: C.textLight, marginTop: 3, textAlign: 'center' },
+  badgeTitle: { fontSize: 13, fontWeight: '900', color: C.textPrimary },
+  badgeDesc:  { fontSize: 11, color: C.textSecond, marginTop: 3, textAlign: 'center' },
 });

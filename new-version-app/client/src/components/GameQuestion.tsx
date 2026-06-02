@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { C, R } from '../theme';
 
 interface Props {
   question: {
@@ -68,7 +69,7 @@ export default function GameQuestion({
                 style={[
                   styles.optionText,
                   (s === 'correct' || s === 'wrong') && { color: '#fff' },
-                  s === 'selected' && { color: '#4A7FF5' },
+                  s === 'selected' && { color: C.primary },
                   s === 'dimmed'   && { color: '#999' },
                 ]}
                 numberOfLines={2}
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
   container: { gap: 16 },
 
   questionBox: {
-    backgroundColor: '#F0F4FF',
+    backgroundColor: C.primaryBg,
     borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 12,
@@ -97,7 +98,7 @@ const styles = StyleSheet.create({
   },
   questionText: {
     fontWeight: '500',
-    color: '#1A1F4E',
+    color: C.textPrimary,
     textAlign: 'center',
   },
 
@@ -119,16 +120,16 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   optionSelected: {
-    borderColor: '#4A7FF5',
+    borderColor: C.primary,
     backgroundColor: '#EEF3FF',
   },
   optionCorrect: {
-    borderColor: '#1D9E75',
-    backgroundColor: '#1D9E75',
+    borderColor: C.success,
+    backgroundColor: C.success,
   },
   optionWrong: {
-    borderColor: '#E24B4A',
-    backgroundColor: '#E24B4A',
+    borderColor: C.error,
+    backgroundColor: C.error,
   },
   optionDimmed: {
     borderColor: '#E0E8FF',
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#1A1F4E',
+    color: C.textPrimary,
     textAlign: 'center',
   },
 });

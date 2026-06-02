@@ -1,23 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet, Animated,
   ActivityIndicator, SafeAreaView, TextInput,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { C, R, ANIM } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 import { validateDisplayName } from '../utils/validation';
-
-const C = {
-  primary:   '#FF6B35',
-  secondary: '#FFD23F',
-  bg:        '#FFF8F2',
-  card:      '#FFFFFF',
-  text:      '#2C1810',
-  textLight: '#8B7B74',
-  error:     '#FF4444',
-  success:   '#4CAF50',
-};
 
 export default function RegisterScreen() {
   const { signUp, signInWithGoogle, loading } = useAuth();
@@ -33,6 +23,17 @@ export default function RegisterScreen() {
   const [googleLoading, setGoogleLoading]     = useState(false);
   const [error, setError]                     = useState<string | null>(null);
   const [success, setSuccess]                 = useState(false);
+
+  const registerBtnScale = useRef(new Animated.Value(1)).current;
+  const googleBtnScale = useRef(new Animated.Value(1)).current;
+
+  const handleButtonPressIn = (scaleAnim: Animated.Value) => {
+    Animated.timing(scaleAnim, { toValue: 0.92, duration: ANIM.buttonPress, useNativeDriver: true }).start();
+  };
+
+  const handleButtonPressOut = (scaleAnim: Animated.Value) => {
+    Animated.timing(scaleAnim, { toValue: 1, duration: ANIM.buttonPress, useNativeDriver: true }).start();
+  };
 
   const handleNameChange = (text: string) => {
     setFullName(text);
@@ -275,7 +276,7 @@ function translateRegisterError(msg?: string): string {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.bg },
+  safe:   { flex: 1, backgroundColor: C.background },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
 
   hero: { alignItems: 'center', paddingTop: 36, paddingBottom: 28 },
@@ -287,21 +288,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
   },
   mascotEmoji: { fontSize: 40 },
-  appName:     { fontSize: 28, fontWeight: '900', color: C.text },
-  tagline:     { fontSize: 13, color: C.textLight, marginTop: 6, fontWeight: '600' },
+  appName:     { fontSize: 28, fontWeight: '900', color: C.textPrimary },
+  tagline:     { fontSize: 13, color: C.textSecond, marginTop: 6, fontWeight: '600' },
 
   card: {
-    backgroundColor: C.card, borderRadius: 28, padding: 24,
-    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 6 },
+    backgroundColor: C.surface, borderRadius: R.xxl, padding: 24,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12, shadowRadius: 20, elevation: 8,
     gap: 14,
   },
-  cardTitle: { fontSize: 20, fontWeight: '900', color: C.text },
+  cardTitle: { fontSize: 20, fontWeight: '900', color: C.textPrimary },
 
   // Google button
   googleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#fff', borderRadius: 18,
+    backgroundColor: '#fff', borderRadius: R.lg,
     paddingVertical: 14, paddingHorizontal: 20, gap: 10,
     borderWidth: 1.5, borderColor: '#E0E0E0',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
@@ -317,17 +318,17 @@ const styles = StyleSheet.create({
 
   // Divider
   divider:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#FFE5D9' },
-  dividerText: { fontSize: 12, color: C.textLight, fontWeight: '600' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
+  dividerText: { fontSize: 12, color: C.textSecond, fontWeight: '600' },
 
   inputGroup:  { gap: 7 },
-  inputLabel:  { fontSize: 13, fontWeight: '800', color: C.textLight },
+  inputLabel:  { fontSize: 13, fontWeight: '800', color: C.textSecond },
   inputWrap:   { position: 'relative', justifyContent: 'center' },
   input: {
-    backgroundColor: C.bg, borderRadius: 16,
+    backgroundColor: C.background, borderRadius: R.md,
     paddingHorizontal: 16, paddingVertical: 13,
-    fontSize: 15, color: C.text,
-    borderWidth: 2, borderColor: '#FFD8C5',
+    fontSize: 15, color: C.textPrimary,
+    borderWidth: 2, borderColor: C.border,
   },
   inputError: { borderColor: C.error },
   inputOk:    { borderColor: C.success },
@@ -335,11 +336,11 @@ const styles = StyleSheet.create({
   eyeIcon: { fontSize: 18 },
   fieldError: { fontSize: 12, color: C.error, fontWeight: '600', marginTop: 2 },
 
-  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: 14, padding: 12 },
+  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
   errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
 
   loginBtn: {
-    backgroundColor: C.primary, borderRadius: 18, paddingVertical: 17,
+    backgroundColor: C.primary, borderRadius: R.lg, paddingVertical: 17,
     alignItems: 'center', marginTop: 4,
     shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
@@ -350,11 +351,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center',
     marginTop: 28, marginBottom: 8,
   },
-  footerText: { fontSize: 14, color: C.textLight },
+  footerText: { fontSize: 14, color: C.textSecond },
   footerLink: { fontSize: 14, fontWeight: '800', color: C.primary },
 
   successBox:   { alignItems: 'center', gap: 16, paddingVertical: 10 },
   successEmoji: { fontSize: 64 },
   successTitle: { fontSize: 22, fontWeight: '900', color: C.success },
-  successText:  { fontSize: 14, color: C.textLight, textAlign: 'center', lineHeight: 20 },
+  successText:  { fontSize: 14, color: C.textSecond, textAlign: 'center', lineHeight: 20 },
 });

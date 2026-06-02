@@ -1,22 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet, Animated,
   ActivityIndicator, SafeAreaView, TextInput,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { C, R, ANIM } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
-
-const C = {
-  primary:     '#FF6B35',
-  primaryDark: '#E85D28',
-  secondary:   '#FFD23F',
-  bg:          '#FFF8F2',
-  card:        '#FFFFFF',
-  text:        '#2C1810',
-  textLight:   '#8B7B74',
-  error:       '#FF4444',
-};
 
 export default function LoginScreen() {
   const { signInWithEmail, signInWithGoogle, loading } = useAuth();
@@ -29,7 +19,18 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
+  const loginBtnScale = useRef(new Animated.Value(1)).current;
+  const googleBtnScale = useRef(new Animated.Value(1)).current;
+
   const busy = submitting || googleLoading || loading;
+
+  const handleButtonPressIn = (scaleAnim: Animated.Value) => {
+    Animated.timing(scaleAnim, { toValue: 0.92, duration: ANIM.buttonPress, useNativeDriver: true }).start();
+  };
+
+  const handleButtonPressOut = (scaleAnim: Animated.Value) => {
+    Animated.timing(scaleAnim, { toValue: 1, duration: ANIM.buttonPress, useNativeDriver: true }).start();
+  };
 
   const handleEmailLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -91,19 +92,23 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={[styles.googleBtn, busy && { opacity: 0.6 }]}
               onPress={handleGoogleLogin}
+              onPressIn={() => handleButtonPressIn(googleBtnScale)}
+              onPressOut={() => handleButtonPressOut(googleBtnScale)}
               disabled={busy}
-              activeOpacity={0.85}
+              activeOpacity={1}
             >
-              {googleLoading ? (
-                <ActivityIndicator color="#3C4043" size="small" />
-              ) : (
-                <>
-                  <View style={styles.googleIconWrap}>
-                    <Text style={styles.googleG}>G</Text>
+              <Animated.View style={{ transform: [{ scale: googleBtnScale }] }}>
+                {googleLoading ? (
+                  <ActivityIndicator color="#3C4043" size="small" />
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={styles.googleIconWrap}>
+                      <Text style={styles.googleG}>G</Text>
+                    </View>
+                    <Text style={styles.googleText}>Tiếp tục với Google</Text>
                   </View>
-                  <Text style={styles.googleText}>Tiếp tục với Google</Text>
-                </>
-              )}
+                )}
+              </Animated.View>
             </TouchableOpacity>
 
             {/* Divider */}
@@ -168,12 +173,16 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={[styles.loginBtn, busy && { opacity: 0.6 }]}
               onPress={handleEmailLogin}
+              onPressIn={() => handleButtonPressIn(loginBtnScale)}
+              onPressOut={() => handleButtonPressOut(loginBtnScale)}
               disabled={busy}
-              activeOpacity={0.85}
+              activeOpacity={1}
             >
-              {submitting
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.loginBtnText}>Đăng Nhập →</Text>}
+              <Animated.View style={{ transform: [{ scale: loginBtnScale }] }}>
+                {submitting
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.loginBtnText}>Đăng Nhập →</Text>}
+              </Animated.View>
             </TouchableOpacity>
           </View>
 
@@ -205,18 +214,18 @@ function translateAuthError(msg?: string): string {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.bg },
+  safe:   { flex: 1, backgroundColor: C.background },
   scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
 
   // Hero
   hero: { alignItems: 'center', paddingTop: 40, paddingBottom: 36, overflow: 'hidden' },
   heroBg: {
     position: 'absolute', top: -40, width: 300, height: 300, borderRadius: 150,
-    backgroundColor: 'rgba(255,107,53,0.08)',
+    backgroundColor: 'rgba(245,158,11,0.08)',
   },
   heroCircle: {
     position: 'absolute', top: 20, right: -30, width: 100, height: 100, borderRadius: 50,
-    backgroundColor: 'rgba(255,210,63,0.12)',
+    backgroundColor: 'rgba(245,158,11,0.12)',
   },
   mascotWrap: {
     width: 90, height: 90, borderRadius: 30,
@@ -227,22 +236,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 16, elevation: 12,
   },
   mascotEmoji: { fontSize: 48 },
-  appName:     { fontSize: 36, fontWeight: '900', color: C.text },
-  tagline:     { fontSize: 14, color: C.textLight, marginTop: 6, fontWeight: '600' },
+  appName:     { fontSize: 36, fontWeight: '900', color: C.textPrimary },
+  tagline:     { fontSize: 14, color: C.textSecond, marginTop: 6, fontWeight: '600' },
 
   // Card
   card: {
-    backgroundColor: C.card, borderRadius: 28, padding: 24,
-    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 6 },
+    backgroundColor: C.surface, borderRadius: 28, padding: 24,
+    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12, shadowRadius: 20, elevation: 8,
     gap: 16,
   },
-  cardTitle: { fontSize: 22, fontWeight: '900', color: C.text },
+  cardTitle: { fontSize: 22, fontWeight: '900', color: C.textPrimary },
 
   // Google button
   googleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#fff', borderRadius: 18,
+    backgroundColor: '#fff', borderRadius: R.sm,
     paddingVertical: 14, paddingHorizontal: 20, gap: 10,
     borderWidth: 1.5, borderColor: '#E0E0E0',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
@@ -258,30 +267,30 @@ const styles = StyleSheet.create({
 
   // Divider
   divider:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#FFE5D9' },
-  dividerText: { fontSize: 12, color: C.textLight, fontWeight: '600' },
+  dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
+  dividerText: { fontSize: 12, color: C.textSecond, fontWeight: '600' },
 
   // Inputs
   inputGroup: { gap: 8 },
   labelRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textLight },
+  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textSecond },
   forgotLink: { fontSize: 13, fontWeight: '700', color: C.primary },
   inputWrap:  { position: 'relative', justifyContent: 'center' },
   input: {
-    backgroundColor: C.bg, borderRadius: 16,
+    backgroundColor: C.background, borderRadius: R.md,
     paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: C.text,
-    borderWidth: 2, borderColor: '#FFD8C5',
+    fontSize: 15, color: C.textPrimary,
+    borderWidth: 2, borderColor: C.border,
   },
   eyeBtn:  { position: 'absolute', right: 14, padding: 4 },
   eyeIcon: { fontSize: 18 },
 
-  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: 14, padding: 12 },
+  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
   errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
 
   loginBtn: {
-    backgroundColor: C.primary, borderRadius: 18, paddingVertical: 17,
-    alignItems: 'center', marginTop: 4,
+    backgroundColor: C.primary, borderRadius: R.lg, paddingVertical: 14, height: 56,
+    alignItems: 'center', justifyContent: 'center', marginTop: 4,
     shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
   },
@@ -291,6 +300,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center',
     marginTop: 28, marginBottom: 8,
   },
-  footerText: { fontSize: 14, color: C.textLight },
+  footerText: { fontSize: 14, color: C.textSecond },
   footerLink: { fontSize: 14, fontWeight: '800', color: C.primary },
 });

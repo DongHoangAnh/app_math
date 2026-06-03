@@ -102,7 +102,6 @@ const server = http.createServer(async (req, res) => {
     const statsMatch     = pathname.match(/^\/api\/gameshow\/stats\/([^/]+)$/);
     const profileMatch   = pathname.match(/^\/api\/gameshow\/profile\/([^/]+)$/);
     const matchesMatch   = pathname.match(/^\/api\/gameshow\/matches\/([^/]+)$/);
-    const profileMatch   = pathname.match(/^\/api\/gameshow\/profile\/([^/]+)$/);
     const dailyTasksMatch = pathname.match(/^\/api\/daily-tasks\/([^/]+)$/);
     const claimTaskMatch  = pathname.match(/^\/api\/daily-tasks\/([^/]+)\/claim\/([^/]+)$/);
 

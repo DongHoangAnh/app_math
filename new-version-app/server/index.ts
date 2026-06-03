@@ -4,6 +4,7 @@ import { setupGameShowWS } from "./gameshow-ws";
 import {
     testSupabaseConnection,
     getPlayerStats,
+    getPublicProfile,
     getMatchHistory,
     getDailyTasks,
     claimTaskExp,
@@ -99,6 +100,7 @@ const server = http.createServer(async (req, res) => {
     const pathname = parsedUrl.pathname;
 
     const statsMatch     = pathname.match(/^\/api\/gameshow\/stats\/([^/]+)$/);
+    const profileMatch   = pathname.match(/^\/api\/gameshow\/profile\/([^/]+)$/);
     const matchesMatch   = pathname.match(/^\/api\/gameshow\/matches\/([^/]+)$/);
     const dailyTasksMatch = pathname.match(/^\/api\/daily-tasks\/([^/]+)$/);
     const claimTaskMatch  = pathname.match(/^\/api\/daily-tasks\/([^/]+)\/claim\/([^/]+)$/);
@@ -113,6 +115,22 @@ const server = http.createServer(async (req, res) => {
         try {
             const stats = await getPlayerStats(userId);
             json(res, 200, stats);
+        } catch {
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+    // GET /api/gameshow/profile/:userId  — public; stats included only if opted-in
+    if (req.method === "GET" && profileMatch) {
+        const userId = profileMatch[1];
+        if (!isValidUuid(userId)) {
+            json(res, 400, { error: "invalid userId" });
+            return;
+        }
+        try {
+            const profile = await getPublicProfile(userId);
+            json(res, 200, profile);
         } catch {
             json(res, 500, { error: "internal" });
         }

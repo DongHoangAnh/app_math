@@ -347,6 +347,7 @@ export type MatchHistoryItem = {
     playedAt: string;
     opponentId: string;
     opponentName: string;
+    opponentAvatarUrl: string | null;
     myScore: number;
     opponentScore: number;
     myCorrect: number;
@@ -370,7 +371,7 @@ export async function getMatchHistory(
 
     if (error || !data) return [];
 
-    return data.map((m) => {
+    const items = data.map((m) => {
         const isP1 = m.player1_id === userId;
         const outcome: "win" | "lose" | "draw" =
             m.winner_id == null ? "draw" : m.winner_id === userId ? "win" : "lose";
@@ -382,6 +383,7 @@ export async function getMatchHistory(
             playedAt: m.played_at,
             opponentId: (isP1 ? m.player2_id : m.player1_id) ?? "",
             opponentName: (isP1 ? m.player2_display_name : m.player1_display_name) ?? "Đối thủ",
+            opponentAvatarUrl: null as string | null,
             myScore: (isP1 ? m.player1_score : m.player2_score) ?? 0,
             opponentScore: (isP1 ? m.player2_score : m.player1_score) ?? 0,
             myCorrect: (isP1 ? m.player1_correct : m.player2_correct) ?? 0,
@@ -391,6 +393,23 @@ export async function getMatchHistory(
             questionsCount: m.questions_count ?? 10,
         };
     });
+
+    // Gắn avatar đối thủ bằng MỘT truy vấn gộp (tránh N+1)
+    const opponentIds = [...new Set(items.map((it) => it.opponentId).filter((id): id is string => !!id))];
+    if (opponentIds.length > 0) {
+        const { data: profiles } = await getSupabaseClient()
+            .from("user_profiles")
+            .select("id,avatar_url")
+            .in("id", opponentIds);
+        if (profiles) {
+            const avatarById = new Map(profiles.map((p) => [p.id, p.avatar_url as string | null]));
+            for (const it of items) {
+                if (it.opponentId) it.opponentAvatarUrl = avatarById.get(it.opponentId) ?? null;
+            }
+        }
+    }
+
+    return items;
 }
 
 // ═══════════════════════════════════════════════════════════

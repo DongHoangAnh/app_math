@@ -4,8 +4,8 @@ import { setupGameShowWS } from "./gameshow-ws";
 import {
     testSupabaseConnection,
     getPlayerStats,
-    getMatchHistory,
     getPublicProfile,
+    getMatchHistory,
     getDailyTasks,
     claimTaskExp,
     verifyToken,
@@ -100,6 +100,7 @@ const server = http.createServer(async (req, res) => {
     const pathname = parsedUrl.pathname;
 
     const statsMatch     = pathname.match(/^\/api\/gameshow\/stats\/([^/]+)$/);
+    const profileMatch   = pathname.match(/^\/api\/gameshow\/profile\/([^/]+)$/);
     const matchesMatch   = pathname.match(/^\/api\/gameshow\/matches\/([^/]+)$/);
     const profileMatch   = pathname.match(/^\/api\/gameshow\/profile\/([^/]+)$/);
     const dailyTasksMatch = pathname.match(/^\/api\/daily-tasks\/([^/]+)$/);

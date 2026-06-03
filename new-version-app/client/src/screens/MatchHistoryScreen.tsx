@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView,
-  FlatList, TouchableOpacity, ActivityIndicator,
+  FlatList, TouchableOpacity, ActivityIndicator, Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { C, R, F, shadow } from '../theme';
@@ -17,6 +17,7 @@ interface MatchItem {
   playedAt: string;
   opponentId: string;
   opponentName: string;
+  opponentAvatarUrl: string | null;
   myScore: number;
   opponentScore: number;
   myCorrect: number;
@@ -101,6 +102,7 @@ export default function MatchHistoryScreen() {
     const o = OUTCOME[item.outcome];
     const deltaColor = item.rankingDelta > 0 ? C.success : item.rankingDelta < 0 ? C.error : C.textSecond;
     const deltaTxt = `${item.rankingDelta >= 0 ? '+' : ''}${item.rankingDelta}`;
+    const initial = (item.opponentName.trim()[0] ?? 'M').toUpperCase();
     return (
       <TouchableOpacity
         style={s.card}
@@ -113,7 +115,16 @@ export default function MatchHistoryScreen() {
         </View>
 
         <View style={s.cardMid}>
-          <Text style={s.opponent} numberOfLines={1}>vs {item.opponentName}</Text>
+          <View style={s.oppRow}>
+            {item.opponentAvatarUrl ? (
+              <Image source={{ uri: item.opponentAvatarUrl }} style={s.oppAvatar} />
+            ) : (
+              <View style={s.oppAvatarPlaceholder}>
+                <Text style={s.oppAvatarInitial}>{initial}</Text>
+              </View>
+            )}
+            <Text style={s.opponent} numberOfLines={1}>{item.opponentName}</Text>
+          </View>
           <Text style={s.meta}>
             Đúng {item.myCorrect}/{item.questionsCount} · {fmtDate(item.playedAt)}
           </Text>

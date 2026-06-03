@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated,
-  ActivityIndicator, SafeAreaView, TextInput,
+  View, Text, TouchableOpacity, StyleSheet,
+  SafeAreaView, TextInput,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
-import { C, R, ANIM } from '../theme';
+import { C, R, F, hardShadow } from '../theme';
+import { Tactile, TactileButton } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 import { validateDisplayName } from '../utils/validation';
@@ -23,17 +24,6 @@ export default function RegisterScreen() {
   const [googleLoading, setGoogleLoading]     = useState(false);
   const [error, setError]                     = useState<string | null>(null);
   const [success, setSuccess]                 = useState(false);
-
-  const registerBtnScale = useRef(new Animated.Value(1)).current;
-  const googleBtnScale = useRef(new Animated.Value(1)).current;
-
-  const handleButtonPressIn = (scaleAnim: Animated.Value) => {
-    Animated.timing(scaleAnim, { toValue: 0.92, duration: ANIM.buttonPress, useNativeDriver: true }).start();
-  };
-
-  const handleButtonPressOut = (scaleAnim: Animated.Value) => {
-    Animated.timing(scaleAnim, { toValue: 1, duration: ANIM.buttonPress, useNativeDriver: true }).start();
-  };
 
   const handleNameChange = (text: string) => {
     setFullName(text);
@@ -102,62 +92,30 @@ export default function RegisterScreen() {
         >
           {/* Hero */}
           <View style={styles.hero}>
-            <View style={styles.mascotWrap}>
+            <View style={[styles.mascot, hardShadow(C.orangeDark, 6, 0.25)]}>
               <Text style={styles.mascotEmoji}>🌟</Text>
             </View>
             <Text style={styles.appName}>Tạo Tài Khoản</Text>
             <Text style={styles.tagline}>Tham gia cộng đồng MathUp 🚀</Text>
           </View>
 
-          {/* Form card */}
-          <View style={styles.card}>
-            {success ? (
-              <View style={styles.successBox}>
-                <Text style={styles.successEmoji}>🎉</Text>
-                <Text style={styles.successTitle}>Đăng ký thành công!</Text>
-                <Text style={styles.successText}>
-                  Kiểm tra email để xác nhận tài khoản (nếu có).
-                </Text>
-                <TouchableOpacity
-                  style={styles.loginBtn}
-                  onPress={() => navigation.navigate('Login')}
-                >
-                  <Text style={styles.loginBtnText}>Đăng Nhập Ngay →</Text>
-                </TouchableOpacity>
+          {success ? (
+            <View style={styles.successBox}>
+              <Text style={styles.successEmoji}>🎉</Text>
+              <Text style={styles.successTitle}>Đăng ký thành công!</Text>
+              <Text style={styles.successText}>
+                Kiểm tra email để xác nhận tài khoản (nếu có).
+              </Text>
+              <View style={{ width: '100%', marginTop: 8 }}>
+                <TactileButton title="Đăng nhập ngay" iconRight="→" onPress={() => navigation.navigate('Login')} />
               </View>
-            ) : (
-              <>
-                <Text style={styles.cardTitle}>Tạo tài khoản</Text>
-
-                {/* Google button */}
-                <TouchableOpacity
-                  style={[styles.googleBtn, busy && { opacity: 0.6 }]}
-                  onPress={handleGoogleRegister}
-                  disabled={busy}
-                  activeOpacity={0.85}
-                >
-                  {googleLoading ? (
-                    <ActivityIndicator color="#3C4043" size="small" />
-                  ) : (
-                    <>
-                      <View style={styles.googleIconWrap}>
-                        <Text style={styles.googleG}>G</Text>
-                      </View>
-                      <Text style={styles.googleText}>Đăng ký với Google</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                {/* Divider */}
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>hoặc điền form</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
+            </View>
+          ) : (
+            <>
+              <View style={styles.form}>
                 {/* Full name */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>😊  Họ và tên</Text>
+                  <Text style={styles.inputLabel}>Họ và tên</Text>
                   <TextInput
                     style={[styles.input, nameError ? styles.inputError : null]}
                     value={fullName}
@@ -168,14 +126,12 @@ export default function RegisterScreen() {
                     editable={!busy}
                     maxLength={30}
                   />
-                  {nameError ? (
-                    <Text style={styles.fieldError}>{nameError}</Text>
-                  ) : null}
+                  {nameError ? <Text style={styles.fieldError}>{nameError}</Text> : null}
                 </View>
 
                 {/* Email */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>✉️  Email</Text>
+                  <Text style={styles.inputLabel}>Email</Text>
                   <TextInput
                     style={styles.input}
                     value={email}
@@ -191,10 +147,10 @@ export default function RegisterScreen() {
 
                 {/* Password */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>🔑  Mật khẩu</Text>
+                  <Text style={styles.inputLabel}>Mật khẩu</Text>
                   <View style={styles.inputWrap}>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, { paddingRight: 48 }]}
                       value={password}
                       onChangeText={(t) => { setPassword(t); setError(null); }}
                       placeholder="Tối thiểu 8 ký tự"
@@ -210,7 +166,7 @@ export default function RegisterScreen() {
 
                 {/* Confirm password */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>🗝️  Xác nhận mật khẩu</Text>
+                  <Text style={styles.inputLabel}>Xác nhận mật khẩu</Text>
                   <TextInput
                     style={[
                       styles.input,
@@ -233,27 +189,46 @@ export default function RegisterScreen() {
                   </View>
                 )}
 
-                <TouchableOpacity
-                  style={[styles.loginBtn, busy && { opacity: 0.6 }]}
+                <TactileButton
+                  title="Đăng ký"
+                  iconRight="🎉"
                   onPress={handleRegister}
+                  loading={submitting}
                   disabled={busy}
-                  activeOpacity={0.85}
-                >
-                  {submitting
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.loginBtnText}>Đăng Ký 🎉</Text>}
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+                  style={{ marginTop: 4 }}
+                />
+              </View>
 
-          {!success && (
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Đã có tài khoản?</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                <Text style={styles.footerLink}> Đăng nhập →</Text>
-              </TouchableOpacity>
-            </View>
+              {/* Divider */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>HOẶC</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Google */}
+              <Tactile
+                slabColor="#D4D7DA"
+                depth={4}
+                radius={R.pill}
+                onPress={handleGoogleRegister}
+                disabled={busy}
+                style={styles.googleFace}
+                accessibilityLabel="Đăng ký với Google"
+              >
+                <View style={styles.googleIconWrap}>
+                  <Text style={styles.googleG}>G</Text>
+                </View>
+                <Text style={styles.googleText}>Đăng ký với Google</Text>
+              </Tactile>
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Đã có tài khoản? </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+                  <Text style={styles.footerLink}>Đăng nhập →</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -276,86 +251,57 @@ function translateRegisterError(msg?: string): string {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.background },
-  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
+  safe:   { flex: 1, backgroundColor: C.bg },
+  scroll: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 36, paddingBottom: 32 },
 
-  hero: { alignItems: 'center', paddingTop: 36, paddingBottom: 28 },
-  mascotWrap: {
-    width: 80, height: 80, borderRadius: 26,
-    backgroundColor: C.primary,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 14,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
+  hero: { alignItems: 'center', paddingBottom: 24, gap: 8 },
+  mascot: {
+    width: 80, height: 80, borderRadius: R.pill, backgroundColor: C.orange,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 6,
   },
-  mascotEmoji: { fontSize: 40 },
-  appName:     { fontSize: 28, fontWeight: '900', color: C.textPrimary },
-  tagline:     { fontSize: 13, color: C.textSecond, marginTop: 6, fontWeight: '600' },
+  mascotEmoji: { fontSize: 38 },
+  appName: { fontFamily: F.display, fontSize: 28, color: C.orangeDark },
+  tagline: { fontFamily: F.body, fontSize: 14, color: C.inkBrown },
 
-  card: {
-    backgroundColor: C.surface, borderRadius: R.xxl, padding: 24,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12, shadowRadius: 20, elevation: 8,
-    gap: 14,
-  },
-  cardTitle: { fontSize: 20, fontWeight: '900', color: C.textPrimary },
-
-  // Google button
-  googleBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#fff', borderRadius: R.lg,
-    paddingVertical: 14, paddingHorizontal: 20, gap: 10,
-    borderWidth: 1.5, borderColor: '#E0E0E0',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 6, elevation: 2,
-  },
-  googleIconWrap: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#4285F4',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  googleG:    { fontSize: 14, fontWeight: '900', color: '#fff' },
-  googleText: { fontSize: 15, fontWeight: '700', color: '#3C4043' },
-
-  // Divider
-  divider:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
-  dividerText: { fontSize: 12, color: C.textSecond, fontWeight: '600' },
-
-  inputGroup:  { gap: 7 },
-  inputLabel:  { fontSize: 13, fontWeight: '800', color: C.textSecond },
-  inputWrap:   { position: 'relative', justifyContent: 'center' },
+  form: { gap: 14 },
+  inputGroup: { gap: 8 },
+  inputLabel: { fontFamily: F.display, fontSize: 14, color: C.inkBrown, marginLeft: 4 },
+  inputWrap:  { position: 'relative', justifyContent: 'center' },
   input: {
-    backgroundColor: C.background, borderRadius: R.md,
-    paddingHorizontal: 16, paddingVertical: 13,
-    fontSize: 15, color: C.textPrimary,
-    borderWidth: 2, borderColor: C.border,
+    height: 54, backgroundColor: C.surfaceSunken, borderRadius: R.pill,
+    paddingHorizontal: 20, fontFamily: F.body, fontSize: 16, color: C.ink,
+    borderWidth: 2, borderColor: C.peachBorder,
   },
   inputError: { borderColor: C.error },
   inputOk:    { borderColor: C.success },
-  eyeBtn:  { position: 'absolute', right: 14, padding: 4 },
+  eyeBtn:  { position: 'absolute', right: 16, padding: 4 },
   eyeIcon: { fontSize: 18 },
-  fieldError: { fontSize: 12, color: C.error, fontWeight: '600', marginTop: 2 },
+  fieldError: { fontFamily: F.bodyMedium, fontSize: 12, color: C.error, marginLeft: 4 },
 
-  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
-  errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
+  errorBox:  { backgroundColor: C.errorSoft, borderRadius: R.md, padding: 12 },
+  errorText: { fontFamily: F.bodyMedium, fontSize: 13, color: C.error, textAlign: 'center' },
 
-  loginBtn: {
-    backgroundColor: C.primary, borderRadius: R.lg, paddingVertical: 17,
-    alignItems: 'center', marginTop: 4,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
+  divider:     { flexDirection: 'row', alignItems: 'center', gap: 16, marginVertical: 24 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: C.peachBorder },
+  dividerText: { fontFamily: F.display, fontSize: 14, color: C.inkBrown },
+
+  googleFace: {
+    height: 56, backgroundColor: C.bg, borderWidth: 2, borderColor: C.inkSlateDeep,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
   },
-  loginBtnText: { fontSize: 17, fontWeight: '900', color: '#fff' },
-
-  footer: {
-    flexDirection: 'row', justifyContent: 'center',
-    marginTop: 28, marginBottom: 8,
+  googleIconWrap: {
+    width: 26, height: 26, borderRadius: R.pill, backgroundColor: '#4285F4',
+    justifyContent: 'center', alignItems: 'center',
   },
-  footerText: { fontSize: 14, color: C.textSecond },
-  footerLink: { fontSize: 14, fontWeight: '800', color: C.primary },
+  googleG:    { fontFamily: F.displayBold, fontSize: 14, color: '#fff' },
+  googleText: { fontFamily: F.display, fontSize: 14, color: C.ink },
 
-  successBox:   { alignItems: 'center', gap: 16, paddingVertical: 10 },
+  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
+  footerText: { fontFamily: F.body, fontSize: 14, color: C.inkBrown },
+  footerLink: { fontFamily: F.display, fontSize: 14, color: C.orangeDark },
+
+  successBox:   { alignItems: 'center', gap: 14, paddingVertical: 20 },
   successEmoji: { fontSize: 64 },
-  successTitle: { fontSize: 22, fontWeight: '900', color: C.success },
-  successText:  { fontSize: 14, color: C.textSecond, textAlign: 'center', lineHeight: 20 },
+  successTitle: { fontFamily: F.display, fontSize: 24, color: C.successDeep },
+  successText:  { fontFamily: F.body, fontSize: 14, color: C.inkBrown, textAlign: 'center', lineHeight: 20 },
 });

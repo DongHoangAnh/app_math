@@ -4,7 +4,9 @@ import {
   SafeAreaView, Animated, TextInput, KeyboardAvoidingView,
   Platform, ScrollView,
 } from 'react-native';
-import { C, R, ANIM } from '../theme';
+import { useNavigation } from '@react-navigation/native';
+import { C, R, F, shadow, hardShadow } from '../theme';
+import { TactileButton } from '../components/ui';
 import { useGameShowWS } from '../hooks/useGameShowWS';
 import { useAuth } from '../hooks/useAuth';
 import GameResults from '../components/GameResults';
@@ -27,13 +29,19 @@ function countCorrect(answers: Record<number, { isCorrect: boolean }>) {
 function sumTime(answers: Record<number, { timeMs: number }>) {
   return Object.values(answers).reduce((s, a) => s + a.timeMs, 0);
 }
+const COMPARISON_OPS = ['<', '=', '>'];
 function adaptQuestion(q: any) {
+  const correctAnswer = String(q.correctAnswer ?? '');
+  // Nhận diện câu so sánh: ưu tiên trường type, nhưng vẫn nhận ra kể cả khi
+  // server cũ chưa gửi type — bằng cách kiểm tra đáp án đúng là <, > hoặc =.
+  const isComparison =
+    q.type === 'comparison' || COMPARISON_OPS.includes(correctAnswer);
   return {
     id: q.id ?? String(Math.random()),
     text: q.question ?? q.text ?? '',
     options: q.options ?? [],
-    correctAnswer: q.correctAnswer ?? '',
-    type: (q.type ?? 'arithmetic') as 'arithmetic' | 'comparison',
+    correctAnswer,
+    type: (isComparison ? 'comparison' : 'arithmetic') as 'arithmetic' | 'comparison',
   };
 }
 function initials(name: string) {
@@ -42,7 +50,7 @@ function initials(name: string) {
 
 // Highlight the "?" in comparison questions with amber color
 function QuestionDisplay({ text, type }: { text: string; type: string }) {
-  if (type === 'comparison') {
+  if (type === 'comparison' && text.includes('?')) {
     const parts = text.split('?');
     return (
       <Text style={s.questionText}>
@@ -57,6 +65,7 @@ function QuestionDisplay({ text, type }: { text: string; type: string }) {
 
 // ── Component ────────────────────────────────────────────────────
 export default function GameShowScreen() {
+  const navigation = useNavigation<any>();
   const { user } = useAuth();
   const userId      = user?.id ?? null;
   const displayName = user?.user_metadata?.full_name
@@ -249,7 +258,7 @@ export default function GameShowScreen() {
     setSelectedAnswer(null);
     setRevealState('hidden');
     setNumericInput('');
-    joinQueue();
+    joinQueue(selectedMode);
   };
 
   const myScore = countCorrect(state.myAnswers);
@@ -262,7 +271,7 @@ export default function GameShowScreen() {
   if (state.phase === 'idle') {
     return (
       <SafeAreaView style={s.bg}>
-        <View style={s.idleWrap}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={s.idleWrap} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           <Text style={s.idleTitle}>⚔️ Chế Độ PK</Text>
           <Text style={s.idleSub}>Thách đấu toàn server · Real-time 1v1</Text>
 
@@ -304,19 +313,25 @@ export default function GameShowScreen() {
             </View>
           ) : null}
 
-          <TouchableOpacity
-            style={[s.bigBtn, !userId && { opacity: 0.5 }]}
-            onPress={joinQueue}
+          <TactileButton
+            title="Vào trận ngay"
+            icon="⚔️"
+            onPress={() => joinQueue(selectedMode)}
             disabled={!userId}
-            activeOpacity={0.85}
+          />
+
+          <TouchableOpacity
+            style={s.historyBtn}
+            onPress={() => navigation.navigate('MatchHistoryTab')}
+            activeOpacity={0.8}
           >
-            <Text style={s.bigBtnTxt}>Vào trận ngay ⚔️</Text>
+            <Text style={s.historyBtnTxt}>📜 Lịch sử đấu</Text>
           </TouchableOpacity>
 
           {!userId && (
             <Text style={s.loginHint}>Vui lòng đăng nhập để chơi</Text>
           )}
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -470,9 +485,11 @@ export default function GameShowScreen() {
             </View>
           )}
 
-          {/* Question Card */}
+          {/* Question Card — the navy "game" surface */}
           <View style={s.qCard}>
-            <Text style={s.qCounter}>Câu {current + 1} / {total}</Text>
+            <View style={s.qCounterPill}>
+              <Text style={s.qCounterTxt}>Câu {current + 1}/{total}</Text>
+            </View>
             <QuestionDisplay text={adaptedQ.text} type={adaptedQ.type} />
           </View>
 
@@ -500,7 +517,7 @@ export default function GameShowScreen() {
         {isComparison ? (
           // Three wide amber buttons for comparison questions
           <View style={s.compRow}>
-            {['<', '=', '>'].map(op => {
+            {COMPARISON_OPS.map(op => {
               const isSel = selectedAnswer === op;
               const isOk  = isSel && revealState === 'revealed' && op === adaptedQ.correctAnswer;
               const isBad = isSel && revealState === 'revealed' && op !== adaptedQ.correctAnswer;
@@ -522,49 +539,47 @@ export default function GameShowScreen() {
             })}
           </View>
         ) : (
-          // Numeric keypad
+          // Numeric keypad — 4 rows with fixed height keys
           <View style={s.keypadWrap}>
             {/* Input display */}
             <View style={s.inputDisplay}>
               <Text style={s.inputDisplayTxt}>{numericInput || '—'}</Text>
             </View>
 
-            {/* Keys 1–9 */}
-            <View style={s.keyGrid}>
-              {[1,2,3,4,5,6,7,8,9].map(n => (
-                <TouchableOpacity
-                  key={n}
-                  style={s.key}
-                  onPress={() => handleNumericKey(String(n))}
-                  disabled={!!selectedAnswer}
-                  activeOpacity={0.7}
-                >
-                  <Text style={s.keyTxt}>{n}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {/* Rows 1–9 */}
+            {([[1,2,3],[4,5,6],[7,8,9]] as number[][]).map((row, ri) => (
+              <View key={ri} style={s.keyRow}>
+                {row.map(n => (
+                  <TouchableOpacity
+                    key={n}
+                    style={s.key}
+                    onPress={() => handleNumericKey(String(n))}
+                    disabled={!!selectedAnswer}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.keyTxt}>{n}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
 
-            {/* Row: 0 */}
-            <View style={s.keyRow0}>
-              <TouchableOpacity
-                style={[s.key, { flex: 1 }]}
-                onPress={() => handleNumericKey('0')}
-                disabled={!!selectedAnswer}
-                activeOpacity={0.7}
-              >
-                <Text style={s.keyTxt}>0</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Bottom: XOÁ + NHẬP */}
-            <View style={s.keyRowBottom}>
+            {/* Bottom row: XOÁ · 0 · NHẬP ✓ */}
+            <View style={s.keyRow}>
               <TouchableOpacity
                 style={[s.keyXoa, !numericInput && { opacity: 0.4 }]}
                 onPress={() => handleNumericKey('⌫')}
                 disabled={!numericInput}
                 activeOpacity={0.7}
               >
-                <Text style={s.keyXoaTxt}>XOÁ</Text>
+                <Text style={s.keyXoaTxt}>⌫</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.key}
+                onPress={() => handleNumericKey('0')}
+                disabled={!!selectedAnswer}
+                activeOpacity={0.7}
+              >
+                <Text style={s.keyTxt}>0</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.keySubmit, !numericInput && { opacity: 0.4 }]}
@@ -572,7 +587,7 @@ export default function GameShowScreen() {
                 disabled={!numericInput || !!selectedAnswer}
                 activeOpacity={0.85}
               >
-                <Text style={s.keySubmitTxt}>NHẬP ✓</Text>
+                <Text style={s.keySubmitTxt}>✓</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -765,9 +780,9 @@ export default function GameShowScreen() {
               +{state.myRankingDelta} điểm xếp hạng
             </Text>
           )}
-          <TouchableOpacity style={[s.bigBtn, { width: '80%' }]} onPress={handlePlayAgain} activeOpacity={0.85}>
-            <Text style={s.bigBtnTxt}>Chơi Trận Mới ⚔️</Text>
-          </TouchableOpacity>
+          <View style={{ width: '80%' }}>
+            <TactileButton title="Chơi Trận Mới" icon="⚔️" onPress={handlePlayAgain} />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -782,22 +797,22 @@ const s = StyleSheet.create({
   centerFlex: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
 
   // ── IDLE ──
-  idleWrap:      { flex: 1, paddingHorizontal: 24, paddingTop: 24 },
-  idleTitle:     { fontSize: 24, fontWeight: '900', color: C.textPrimary, textAlign: 'center', marginBottom: 6 },
-  idleSub:       { fontSize: 13, color: C.textSecond, textAlign: 'center', marginBottom: 36 },
-  idleVsRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 28, marginBottom: 10 },
+  idleWrap:      { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
+  idleTitle:     { fontSize: 24, fontFamily: F.display, color: C.textPrimary, textAlign: 'center', marginBottom: 4 },
+  idleSub:       { fontSize: 13, fontFamily: F.body, color: C.textSecond, textAlign: 'center', marginBottom: 24 },
+  idleVsRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24, marginBottom: 10 },
   idleAvatar: {
-    width: 76, height: 76, borderRadius: 38, borderWidth: 3,
+    width: 64, height: 64, borderRadius: 32, borderWidth: 2.5,
     justifyContent: 'center', alignItems: 'center',
     backgroundColor: C.surface,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1, shadowRadius: 10, elevation: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
   },
-  idleAvatarEmoji: { fontSize: 38 },
-  idleVsLabel:     { fontSize: 22, fontWeight: '900', color: C.textPrimary },
-  idlePts:         { fontSize: 12, color: C.textSecond, textAlign: 'center', marginBottom: 32 },
-  sectionLabel:    { fontSize: 12, fontWeight: '700', color: C.textSecond, marginBottom: 10 },
-  modeRow:  { flexDirection: 'row', gap: 10, marginBottom: 32 },
+  idleAvatarEmoji: { fontSize: 30 },
+  idleVsLabel:     { fontSize: 19, fontWeight: '900', color: C.textPrimary },
+  idlePts:         { fontSize: 12, color: C.textSecond, textAlign: 'center', marginBottom: 20 },
+  sectionLabel:    { fontSize: 12, fontWeight: '700', color: C.textSecond, marginBottom: 8 },
+  modeRow:  { flexDirection: 'row', gap: 10, marginBottom: 24 },
   modeCard: {
     flex: 1, alignItems: 'center', gap: 6,
     backgroundColor: C.surface, borderRadius: R.lg,
@@ -811,33 +826,33 @@ const s = StyleSheet.create({
   modeDiff:   { fontSize: 10, color: C.textSecond },
   errBox:     { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12, marginBottom: 14 },
   errTxt:     { color: C.error, fontSize: 13, textAlign: 'center' },
-  bigBtn: {
-    backgroundColor: C.primary, borderRadius: R.xl, paddingVertical: 18, alignItems: 'center',
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3, shadowRadius: 14, elevation: 8,
+  historyBtn: {
+    marginTop: 12, paddingVertical: 13, alignItems: 'center',
+    backgroundColor: C.surface, borderRadius: R.pill,
+    borderWidth: 1.5, borderColor: C.border,
   },
-  bigBtnTxt: { fontSize: 16, fontWeight: '900', color: '#fff' },
+  historyBtnTxt: { fontSize: 14, fontFamily: F.display, color: C.textPrimary },
   loginHint: { fontSize: 12, color: C.textSecond, textAlign: 'center', marginTop: 12 },
 
   // ── QUEUED / MATCH FOUND ──
   centered:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
   queueAvatarRow: { flexDirection: 'row', alignItems: 'center', gap: 28, marginBottom: 24 },
   bigRing: {
-    width: 84, height: 84, borderRadius: 42, borderWidth: 3,
+    width: 72, height: 72, borderRadius: 36, borderWidth: 2.5,
     justifyContent: 'center', alignItems: 'center',
     backgroundColor: C.surface,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1, shadowRadius: 14, elevation: 5,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 4,
   },
-  bigEmoji:    { fontSize: 42 },
-  vsHuge:      { fontSize: 24, fontWeight: '900', color: C.primaryDark },
+  bigEmoji:    { fontSize: 34 },
+  vsHuge:      { fontSize: 20, fontFamily: F.displayBold, color: C.primaryDark },
   matchPlayer: { alignItems: 'center', gap: 10 },
-  matchName:   { fontSize: 12, fontWeight: '600', color: C.textSecond, maxWidth: 90, textAlign: 'center' },
-  readyTitle:  { fontSize: 26, fontWeight: '900', color: C.primaryDark, marginBottom: 8 },
-  searchSub:   { fontSize: 14, color: C.textSecond, marginBottom: 32 },
+  matchName:   { fontSize: 12, fontFamily: F.bodyMedium, color: C.textSecond, maxWidth: 90, textAlign: 'center' },
+  readyTitle:  { fontSize: 28, fontFamily: F.display, color: C.primaryDark, marginBottom: 8 },
+  searchSub:   { fontSize: 14, fontFamily: F.body, color: C.textSecond, marginBottom: 32 },
   cancelBtn:   { paddingVertical: 10, paddingHorizontal: 20 },
-  cancelTxt:   { fontSize: 14, color: C.primary, fontWeight: '600', textDecorationLine: 'underline' },
-  countdownBig:{ fontSize: 72, fontWeight: '900', color: C.primary },
+  cancelTxt:   { fontSize: 14, color: C.primary, fontFamily: F.bodyMedium, textDecorationLine: 'underline' },
+  countdownBig:{ fontSize: 64, fontFamily: F.displayBold, color: C.primary },
 
   // ── PLAYING: Battle Header ──
   battleBar: {
@@ -855,16 +870,16 @@ const s = StyleSheet.create({
   battleEmoji:    { fontSize: 22 },
   battleWho:      { fontSize: 11, color: C.textSecond, fontWeight: '600' },
   battleScoreRow: { flexDirection: 'row', alignItems: 'baseline' },
-  battleScoreNum: { fontSize: 20, fontWeight: '900', color: C.textPrimary },
-  battleScoreOf:  { fontSize: 12, color: C.textSecond, fontWeight: '600' },
-  battleVs:       { fontSize: 14, fontWeight: '900', color: C.textSecond },
+  battleScoreNum: { fontSize: 22, fontFamily: F.displayBold, color: C.textPrimary },
+  battleScoreOf:  { fontSize: 12, color: C.textSecond, fontFamily: F.bodyMedium },
+  battleVs:       { fontSize: 14, fontFamily: F.displayBold, color: C.inkSlate },
 
   // Timer bar (thin line below header)
   timerTrack: { height: 3, backgroundColor: C.border },
   timerFill:  { height: 3 },
 
   // Body
-  playBody: { flex: 1, paddingHorizontal: 16, paddingTop: 18, paddingBottom: 8, gap: 14 },
+  playBody: { flex: 1, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, gap: 10 },
   opDoneBanner: {
     backgroundColor: '#FFFBEB', borderRadius: R.xs,
     paddingVertical: 8, paddingHorizontal: 12,
@@ -872,16 +887,20 @@ const s = StyleSheet.create({
   },
   opDoneTxt: { fontSize: 12, fontWeight: '600', color: '#856404' },
 
-  // Question card
+  // Question card — the navy "game" surface
   qCard: {
-    backgroundColor: C.surface, borderRadius: R.xl,
-    paddingTop: 10, paddingBottom: 28, paddingHorizontal: 20,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07, shadowRadius: 12, elevation: 4,
-    minHeight: 110,
+    backgroundColor: C.navy, borderRadius: R.xl,
+    paddingTop: 16, paddingBottom: 22, paddingHorizontal: 18,
+    alignItems: 'center', gap: 16, minHeight: 110,
+    ...hardShadow(C.navy, 8, 0.2),
   },
-  qCounter:     { fontSize: 11, color: C.textSecond, textAlign: 'right', marginBottom: 10 },
-  questionText: { fontSize: 26, fontWeight: '700', color: C.textPrimary, textAlign: 'center', lineHeight: 38 },
+  qCounterPill: {
+    backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)', borderRadius: R.pill,
+    paddingHorizontal: 18, paddingVertical: 6,
+  },
+  qCounterTxt:  { fontFamily: F.display, fontSize: 14, color: C.successBright },
+  questionText: { fontFamily: F.display, fontSize: 34, color: '#fff', textAlign: 'center', lineHeight: 42 },
 
   // Progress dots
   dots:      { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4 },
@@ -894,49 +913,43 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 24, paddingTop: 8,
   },
   compBtn: {
-    flex: 1, paddingVertical: 24, borderRadius: R.xl,
-    backgroundColor: C.primaryBg, alignItems: 'center',
-    borderWidth: 2, borderColor: C.primary,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15, shadowRadius: 8, elevation: 3,
+    flex: 1, paddingVertical: 18, borderRadius: R.xl,
+    backgroundColor: C.peachBg, alignItems: 'center',
+    borderWidth: 2, borderColor: C.orange, ...shadow('#000', 1),
   },
-  compBtnTxt: { fontSize: 30, fontWeight: '900', color: C.primaryDark },
+  compBtnTxt: { fontSize: 26, fontFamily: F.displayBold, color: C.orangeDark },
 
-  // Numeric keypad
-  keypadWrap: { paddingHorizontal: 16, paddingBottom: 8, gap: 10 },
+  // Numeric keypad — recessed sheet, large rounded keys
+  keypadWrap: {
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16, gap: 10,
+    backgroundColor: C.bgKeypad, borderTopLeftRadius: R.sheet, borderTopRightRadius: R.sheet,
+    borderWidth: 1, borderColor: C.lineSoft,
+  },
   inputDisplay: {
-    backgroundColor: C.primaryBg, borderRadius: R.md,
-    height: 52, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: C.primary,
+    backgroundColor: C.peachBg, borderRadius: R.pill,
+    height: 48, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: C.orange,
   },
-  inputDisplayTxt: { fontSize: 26, fontWeight: '800', color: C.textPrimary },
-  keyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  inputDisplayTxt: { fontSize: 24, fontFamily: F.displayBold, color: C.ink, letterSpacing: 2 },
+  keyRow: { flexDirection: 'row', gap: 10 },
   key: {
-    width: '30%', aspectRatio: 1.3,
-    backgroundColor: C.surface, borderRadius: R.md,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: C.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 5, elevation: 2,
+    flex: 1, height: 56,
+    backgroundColor: C.surface, borderRadius: R.lg,
+    justifyContent: 'center', alignItems: 'center', ...shadow('#000', 1),
   },
-  keyTxt:  { fontSize: 24, fontWeight: '700', color: C.textPrimary },
-  keyRow0: { flexDirection: 'row', justifyContent: 'center', gap: 10 },
-  keyRowBottom: { flexDirection: 'row', gap: 10 },
+  keyTxt: { fontSize: 24, fontFamily: F.display, color: C.ink },
   keyXoa: {
-    flex: 1, paddingVertical: 14,
-    backgroundColor: '#FFEBEB', borderRadius: R.md,
+    flex: 1, height: 56,
+    backgroundColor: C.line, borderRadius: R.lg,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: '#FFCDD2',
   },
-  keyXoaTxt: { fontSize: 15, fontWeight: '700', color: C.error },
+  keyXoaTxt: { fontSize: 20, color: C.inkBrown },
   keySubmit: {
-    flex: 2, paddingVertical: 14,
-    backgroundColor: C.primary, borderRadius: R.md,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+    flex: 1, height: 56,
+    backgroundColor: C.orange, borderRadius: R.lg,
+    alignItems: 'center', justifyContent: 'center', ...shadow(C.orangeDark, 2),
   },
-  keySubmitTxt: { fontSize: 15, fontWeight: '900', color: '#fff' },
+  keySubmitTxt: { fontSize: 22, fontFamily: F.displayBold, color: '#fff' },
 
   // ── Floating emoji ──
   floatingEmoji: {
@@ -1021,6 +1034,6 @@ const s = StyleSheet.create({
   },
 
   // Waiting / disconnected
-  waitTitle: { fontSize: 22, fontWeight: '700', color: C.textPrimary, textAlign: 'center', marginBottom: 8 },
-  waitSub:   { fontSize: 14, color: C.textSecond, textAlign: 'center' },
+  waitTitle: { fontSize: 24, fontFamily: F.display, color: C.textPrimary, textAlign: 'center', marginBottom: 8 },
+  waitSub:   { fontSize: 14, fontFamily: F.body, color: C.textSecond, textAlign: 'center' },
 });

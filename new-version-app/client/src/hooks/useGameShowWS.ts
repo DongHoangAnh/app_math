@@ -12,6 +12,7 @@ export interface GameQuestion {
     options: string[];
     correctAnswer: string;
     difficulty: number;
+    type?: "arithmetic" | "comparison";
 }
 
 export interface OpponentInfo {
@@ -294,7 +295,7 @@ export function useGameShowWS(
     }, []);
 
     // ─── Join queue ─────────────────────────────────────────
-    const joinQueue = useCallback(async () => {
+    const joinQueue = useCallback(async (mode?: string) => {
         if (!userId) return;
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token ?? "";
@@ -302,7 +303,7 @@ export function useGameShowWS(
         connect();
         const tryJoin = () => {
             if (wsRef.current?.readyState === WebSocket.OPEN) {
-                send({ type: "JOIN_QUEUE", userId, token, displayName, grade, winRate, totalScore });
+                send({ type: "JOIN_QUEUE", userId, token, displayName, grade, winRate, totalScore, mode });
             } else {
                 setTimeout(tryJoin, 200);
             }

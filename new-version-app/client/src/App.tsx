@@ -3,9 +3,20 @@ import { Text, View, ActivityIndicator, Linking, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+  useFonts as useJakarta,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import {
+  BeVietnamPro_400Regular,
+  BeVietnamPro_500Medium,
+  BeVietnamPro_700Bold,
+} from '@expo-google-fonts/be-vietnam-pro';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { supabase } from './services/supabase';
-import { C, R } from './theme';
+import { C, R, F } from './theme';
 
 // Screens
 import LoginScreen         from './screens/LoginScreen';
@@ -17,6 +28,7 @@ import GameShowScreen      from './screens/GameShowScreen';
 import ProfileScreen       from './screens/ProfileScreen';
 import StatisticsScreen    from './screens/StatisticsScreen';
 import LeaderboardScreen   from './screens/LeaderboardScreen';
+import MatchHistoryScreen  from './screens/MatchHistoryScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -44,9 +56,9 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
   return (
     <View style={{
       alignItems: 'center', justifyContent: 'center',
-      width: 46, height: 32,
-      backgroundColor: focused ? C.primaryBg : 'transparent',
-      borderRadius: R.md,
+      width: 52, height: 34,
+      backgroundColor: focused ? C.peachBg : 'transparent',
+      borderRadius: R.squircle,
     }}>
       <Text style={{ fontSize: focused ? 22 : 20 }}>{icon}</Text>
     </View>
@@ -58,20 +70,23 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopWidth: 0,
-          height: 72,
-          paddingBottom: 10,
-          paddingTop: 8,
-          shadowColor: C.primary,
+          backgroundColor: C.bg,
+          borderTopWidth: 1,
+          borderTopColor: C.peachBorder,
+          borderTopLeftRadius: R.sheet,
+          borderTopRightRadius: R.sheet,
+          height: 81,
+          paddingBottom: 12,
+          paddingTop: 10,
+          shadowColor: '#000',
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
+          shadowOpacity: 0.05,
+          shadowRadius: 12,
           elevation: 12,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '800', marginTop: 2 },
-        tabBarActiveTintColor: C.primary,
-        tabBarInactiveTintColor: C.textSecond,
+        tabBarLabelStyle: { fontSize: 11, fontFamily: F.bodyMedium, marginTop: 2 },
+        tabBarActiveTintColor: C.orange,
+        tabBarInactiveTintColor: C.inkSlate2,
         headerShown: false,
       }}
     >
@@ -79,6 +94,7 @@ function MainTabs() {
       <Tab.Screen name="GameShowTab"  component={GameShowScreen}   options={{ tabBarLabel: 'Đấu',      tabBarIcon: ({ focused }) => <TabIcon icon="🎮" focused={focused} /> }} />
       <Tab.Screen name="LeaderboardTab" component={LeaderboardScreen} options={{ tabBarLabel: 'Xếp Hạng', tabBarIcon: ({ focused }) => <TabIcon icon="🏆" focused={focused} /> }} />
       <Tab.Screen name="StatsTab"     component={StatisticsScreen} options={{ tabBarLabel: 'Thống Kê', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon="📈" focused={focused} /> }} />
+      <Tab.Screen name="MatchHistoryTab" component={MatchHistoryScreen} options={{ tabBarLabel: 'Lịch Sử', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon="📜" focused={focused} /> }} />
       <Tab.Screen name="ProfileTab"   component={ProfileScreen}    options={{ tabBarLabel: 'Hồ Sơ',   tabBarIcon: ({ focused }) => <TabIcon icon="😊" focused={focused} /> }} />
     </Tab.Navigator>
   );
@@ -117,6 +133,25 @@ function RootNavigator() {
 }
 
 export default function App() {
+  // Load the MathUp brand fonts. Render a warm splash until they're ready;
+  // if loading errors, fall back to system fonts rather than blocking the app.
+  const [fontsLoaded, fontError] = useJakarta({
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    BeVietnamPro_400Regular,
+    BeVietnamPro_500Medium,
+    BeVietnamPro_700Bold,
+  });
+
+  if (!fontsLoaded && !fontError) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: C.bg }}>
+        <ActivityIndicator size="large" color={C.orange} />
+      </View>
+    );
+  }
+
   return (
     <AuthProvider>
       <NavigationContainer>

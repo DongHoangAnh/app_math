@@ -3,10 +3,12 @@ import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, SafeAreaView, Image,
 } from 'react-native';
-import { C, R } from '../theme';
+import { C, R, F, shadow, hardShadow } from '../theme';
+import { ProgressBar } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { authFetch } from '../utils/authFetch';
+import { getLevelProgress, getTier, TIER_LABEL } from '../utils/levelUtils';
 import EditProfileModal from '../components/EditProfileModal';
 
 interface UserStats {
@@ -18,32 +20,43 @@ const FALLBACK: UserStats = {
   totalScore: 0, totalMatches: 0, wins: 0, winRate: 0, streak: 0, level: 1,
 };
 
+const ACHIEVEMENTS = [
+  { emoji: '🏆', label: 'Vô địch' },
+  { emoji: '🔥', label: 'Streak 5' },
+  { emoji: '⚡', label: 'Tốc độ' },
+  { emoji: '🎯', label: 'Bách phát' },
+];
+
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
-  const [stats, setStats]               = useState<UserStats>(FALLBACK);
+  const [stats, setStats]                 = useState<UserStats>(FALLBACK);
   const [rankingPoints, setRankingPoints] = useState(0);
-  const [avatarUrl, setAvatarUrl]       = useState<string | null>(null);
-  const [editVisible, setEditVisible]   = useState(false);
+  const [userExp, setUserExp]             = useState(0);
+  const [userLevel, setUserLevel]         = useState(1);
+  const [avatarUrl, setAvatarUrl]         = useState<string | null>(null);
+  const [editVisible, setEditVisible]     = useState(false);
 
   const displayName = user?.user_metadata?.full_name ?? 'Người chơi';
   const initial     = displayName[0]?.toUpperCase() ?? 'M';
   const grade       = user?.user_metadata?.grade;
+  const tierLabel   = TIER_LABEL[getTier(userLevel)];
 
   useEffect(() => {
     if (!user) return;
 
     supabase
       .from('user_profiles')
-      .select('ranking_points, avatar_url')
+      .select('ranking_points, avatar_url, exp, level')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
         if (data) {
-          setRankingPoints(data.ranking_points);
+          setRankingPoints(data.ranking_points ?? 0);
           setAvatarUrl(data.avatar_url ?? null);
+          setUserExp(data.exp ?? 0);
+          setUserLevel(data.level ?? 1);
         }
-      })
-      .catch(() => {});
+      }, () => {});
 
     authFetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
       .then((r) => r.json())
@@ -58,23 +71,24 @@ export default function ProfileScreen() {
       .catch(() => {});
   }, [user]);
 
-  const handleProfileSaved = (newName: string, newAvatarUrl: string | null) => {
+  const handleProfileSaved = (_newName: string, newAvatarUrl: string | null) => {
     setAvatarUrl(newAvatarUrl);
     setEditVisible(false);
   };
 
+  const lp = getLevelProgress(userExp);
+
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
 
-        {/* ── Header ── */}
+        {/* ── Header band ── */}
         <View style={styles.header}>
-          <View style={styles.headerDeco1} />
-          <View style={styles.headerDeco2} />
+          <Text style={[styles.glyph, { left: '8%', top: '20%', fontSize: 70 }]}>π</Text>
+          <Text style={[styles.glyph, { right: '10%', top: '50%', fontSize: 54 }]}>∑</Text>
 
-          {/* Avatar với nút edit */}
           <TouchableOpacity
-            style={styles.avatarRing}
+            style={[styles.avatarRing, hardShadow('#5F1900', 6, 0.25)]}
             onPress={() => setEditVisible(true)}
             activeOpacity={0.85}
           >
@@ -91,47 +105,53 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <Text style={styles.name}>{displayName}</Text>
-          {grade && <Text style={styles.grade}>Lớp {grade}</Text>}
-
-          <View style={styles.headerStats}>
-            <HeaderStat label="Xếp Hạng" value={rankingPoints} icon="🏆" />
-            <View style={styles.divider} />
-            <HeaderStat label="Level" value={stats.level} icon="⭐" />
-            <View style={styles.divider} />
-            <HeaderStat label="Streak" value={stats.streak} icon="🔥" />
+          <View style={styles.chipRow}>
+            <View style={styles.chipLight}><Text style={styles.chipLightTxt}>Cấp {userLevel}</Text></View>
+            <View style={styles.chipDeep}><Text style={styles.chipDeepTxt}>{tierLabel}</Text></View>
+            {grade ? <View style={styles.chipLight}><Text style={styles.chipLightTxt}>Lớp {grade}</Text></View> : null}
           </View>
         </View>
 
-        {/* ── Stats grid ── */}
-        <View style={styles.sectionTitle}>
-          <Text style={styles.sectionText}>Thống kê</Text>
-        </View>
-        <View style={styles.statsGrid}>
-          <StatCard icon="🎮" label="Trận chơi"   value={stats.totalMatches}            bg="#FFF3E0" iconColor={C.primary} />
-          <StatCard icon="🥇" label="Thắng"       value={stats.wins}                    bg="#E8F5E9" iconColor="#4CAF50" />
-          <StatCard icon="📈" label="Tỷ lệ thắng" value={`${stats.winRate?.toFixed(0) ?? 0}%`} bg="#E3F2FD" iconColor="#2196F3" />
-          <StatCard icon="⭐" label="Tổng điểm"   value={stats.totalScore}              bg="#F3E5F5" iconColor="#9C27B0" />
-        </View>
+        <View style={styles.body}>
+          {/* XP card */}
+          <View style={styles.card}>
+            <View style={styles.xpTopRow}>
+              <Text style={styles.label}>Tiến độ lên cấp {userLevel + 1}</Text>
+              <Text style={styles.xpText}>{lp.expInLevel} / {lp.expForNext} XP</Text>
+            </View>
+            <ProgressBar pct={lp.percent} />
+          </View>
 
-        {/* ── Menu ── */}
-        <View style={styles.sectionTitle}>
-          <Text style={styles.sectionText}>Cài đặt</Text>
-        </View>
-        <View style={styles.menu}>
-          <MenuItem icon="👤" label="Chỉnh sửa hồ sơ" onPress={() => setEditVisible(true)} />
-          <MenuItem icon="💬" label="Trợ Giúp"         onPress={() => {}} />
-          <MenuItem icon="📋" label="Điều Khoản"       onPress={() => {}} isLast />
-        </View>
+          {/* Stats grid */}
+          <View style={styles.statRow}>
+            <ProfileStat value={`${stats.wins}`} label="Trận thắng" color={C.successDeep} />
+            <ProfileStat value={`${stats.streak}`} label="Chuỗi thắng" color={C.orange} />
+            <ProfileStat value={`${stats.winRate?.toFixed(0) ?? 0}%`} label="Tỷ lệ thắng" color={C.orangeDark} />
+          </View>
 
-        {/* ── Sign out ── */}
-        <TouchableOpacity style={styles.signOutBtn} onPress={signOut} activeOpacity={0.85}>
-          <Text style={styles.signOutText}>🚪  Đăng Xuất</Text>
-        </TouchableOpacity>
+          {/* Achievements */}
+          <View style={{ gap: 12 }}>
+            <Text style={styles.h3}>Thành tích</Text>
+            <View style={styles.achRow}>
+              {ACHIEVEMENTS.map((a) => (
+                <View key={a.label} style={styles.achCard}>
+                  <Text style={{ fontSize: 24 }}>{a.emoji}</Text>
+                  <Text style={styles.achLabel}>{a.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
 
-        <View style={{ height: 32 }} />
+          {/* Settings */}
+          <View style={styles.settings}>
+            <SettingRow icon="✏️" label="Chỉnh sửa hồ sơ" onPress={() => setEditVisible(true)} />
+            <SettingRow icon="💬" label="Trợ giúp" onPress={() => {}} />
+            <SettingRow icon="📋" label="Điều khoản" onPress={() => {}} />
+            <SettingRow icon="🚪" label="Đăng xuất" onPress={signOut} danger isLast />
+          </View>
+        </View>
       </ScrollView>
 
-      {/* ── Edit Profile Modal ── */}
       <EditProfileModal
         visible={editVisible}
         currentName={displayName}
@@ -143,150 +163,110 @@ export default function ProfileScreen() {
   );
 }
 
-function HeaderStat({ label, value, icon }: { label: string; value: any; icon: string }) {
+function ProfileStat({ value, label, color }: { value: string; label: string; color: string }) {
   return (
-    <View style={styles.headerStatItem}>
-      <Text style={styles.headerStatIcon}>{icon}</Text>
-      <Text style={styles.headerStatValue}>{value}</Text>
-      <Text style={styles.headerStatLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function StatCard({
-  icon, label, value, bg, iconColor,
-}: { icon: string; label: string; value: any; bg: string; iconColor: string }) {
-  return (
-    <View style={[styles.statCard, { backgroundColor: bg }]}>
-      <View style={[styles.statIconWrap, { backgroundColor: iconColor }]}>
-        <Text style={styles.statIcon}>{icon}</Text>
-      </View>
-      <Text style={styles.statValue}>{value}</Text>
+    <View style={styles.statCard}>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
 
-function MenuItem({
-  icon, label, onPress, isLast,
-}: { icon: string; label: string; onPress: () => void; isLast?: boolean }) {
+function SettingRow({
+  icon, label, onPress, danger, isLast,
+}: { icon: string; label: string; onPress: () => void; danger?: boolean; isLast?: boolean }) {
   return (
     <TouchableOpacity
-      style={[styles.menuItem, isLast && { borderBottomWidth: 0 }]}
+      style={[styles.settingRow, isLast && { borderBottomWidth: 0 }]}
       onPress={onPress} activeOpacity={0.7}
     >
-      <View style={styles.menuIconWrap}><Text style={{ fontSize: 18 }}>{icon}</Text></View>
-      <Text style={styles.menuLabel}>{label}</Text>
-      <Text style={styles.menuArrow}>›</Text>
+      <View style={[styles.settingIcon, { backgroundColor: danger ? C.errorSoft : C.peachBg }]}>
+        <Text style={{ fontSize: 16 }}>{icon}</Text>
+      </View>
+      <Text style={[styles.settingLabel, danger && { color: C.error }]}>{label}</Text>
+      {!danger && <Text style={styles.settingArrow}>›</Text>}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.background },
+  safe: { flex: 1, backgroundColor: C.bg },
 
-  // Header
+  // Header band
   header: {
-    backgroundColor: C.primary, alignItems: 'center',
-    paddingBottom: 28, paddingTop: 24,
-    borderBottomLeftRadius: 36, borderBottomRightRadius: 36,
-    overflow: 'hidden',
+    backgroundColor: C.orange, alignItems: 'center',
+    paddingTop: 64, paddingBottom: 28, overflow: 'hidden',
   },
-  headerDeco1: {
-    position: 'absolute', top: -50, right: -50,
-    width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  headerDeco2: {
-    position: 'absolute', bottom: -30, left: -30,
-    width: 120, height: 120, borderRadius: 60,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
+  glyph: { position: 'absolute', fontFamily: F.displayBold, color: '#fff', opacity: 0.1 },
   avatarRing: {
-    width: 96, height: 96, borderRadius: 48,
-    borderWidth: 4, borderColor: C.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 12, position: 'relative',
+    width: 88, height: 88, borderRadius: R.pill,
+    borderWidth: 3, borderColor: '#fff',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 10, position: 'relative',
   },
-  avatarImg: {
-    width: 84, height: 84, borderRadius: 42,
-  },
+  avatarImg: { width: 78, height: 78, borderRadius: R.pill },
   avatar: {
-    width: 84, height: 84, borderRadius: 42,
-    backgroundColor: C.primaryLight,
+    width: 78, height: 78, borderRadius: R.pill, backgroundColor: C.peachGlow,
     justifyContent: 'center', alignItems: 'center',
   },
-  avatarText: { fontSize: 36, fontWeight: '900', color: '#7B5800' },
+  avatarText: { fontFamily: F.displayBold, fontSize: 30, color: C.orangeDeepest },
   editBadge: {
     position: 'absolute', bottom: -2, right: -2,
-    width: 28, height: 28, borderRadius: R.sm,
-    backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: C.primaryLight,
+    width: 30, height: 30, borderRadius: R.pill, backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: C.orange,
   },
-  editBadgeIcon: { fontSize: 12 },
-  name:  { fontSize: 22, fontWeight: '900', color: '#fff' },
-  grade: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+  editBadgeIcon: { fontSize: 13 },
+  name: { fontFamily: F.displayBold, fontSize: 24, color: '#fff' },
+  chipRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' },
+  chipLight: { backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 4 },
+  chipLightTxt: { fontFamily: F.display, fontSize: 13, color: C.orangeDeepest },
+  chipDeep: { backgroundColor: C.orangeDeepest, borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 4 },
+  chipDeepTxt: { fontFamily: F.display, fontSize: 13, color: '#fff' },
 
-  headerStats: {
-    flexDirection: 'row', marginTop: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: R.xl, paddingVertical: 14, paddingHorizontal: 8,
-    width: '88%',
+  body: { padding: 20, marginTop: -16, gap: 20 },
+
+  card: {
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.line,
+    borderRadius: R.md, padding: 16, ...shadow('#000', 2),
   },
-  headerStatItem: { flex: 1, alignItems: 'center' },
-  headerStatIcon:  { fontSize: 18, marginBottom: 2 },
-  headerStatValue: { fontSize: 20, fontWeight: '900', color: '#fff' },
-  headerStatLabel: { fontSize: 10, color: 'rgba(255,255,255,0.75)', marginTop: 2, fontWeight: '700' },
-  divider: { width: 1, backgroundColor: 'rgba(255,255,255,0.3)' },
+  xpTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 },
+  label:  { fontFamily: F.display, fontSize: 14, color: C.ink },
+  xpText: { fontFamily: F.bodyBold, fontSize: 12, color: C.inkBrown },
 
-  // Stats
-  sectionTitle: { paddingHorizontal: 20, marginTop: 22, marginBottom: 12 },
-  sectionText:  { fontSize: 15, fontWeight: '900', color: C.textSecond },
-
-  statsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: 16, gap: 12,
-  },
+  // Stat grid
+  statRow: { flexDirection: 'row', gap: 12 },
   statCard: {
-    width: '47%', borderRadius: R.xl, padding: 18, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
+    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line,
+    borderRadius: R.md, paddingVertical: 16, paddingHorizontal: 8,
+    alignItems: 'center', gap: 2, ...shadow('#000', 1),
   },
-  statIconWrap: {
-    width: 48, height: 48, borderRadius: R.md,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
-  },
-  statIcon:  { fontSize: 24 },
-  statValue: { fontSize: 26, fontWeight: '900', color: C.textPrimary },
-  statLabel: { fontSize: 11, color: C.textSecond, marginTop: 2, fontWeight: '700' },
+  statValue: { fontFamily: F.displayBold, fontSize: 24 },
+  statLabel: { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkSlate, textAlign: 'center' },
 
-  // Menu
-  menu: {
-    marginHorizontal: 16,
-    backgroundColor: C.surface, borderRadius: R.xl, overflow: 'hidden',
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-    borderWidth: 1.5, borderColor: C.border,
-  },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 17, paddingHorizontal: 20,
-    borderBottomWidth: 1, borderBottomColor: C.border, gap: 14,
-  },
-  menuIconWrap: {
-    width: 38, height: 38, borderRadius: R.sm,
-    backgroundColor: C.border, justifyContent: 'center', alignItems: 'center',
-  },
-  menuLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: C.textPrimary },
-  menuArrow: { fontSize: 22, color: '#FFB89A' },
+  h3: { fontFamily: F.display, fontSize: 20, color: C.ink, marginLeft: 4 },
 
-  // Sign out
-  signOutBtn: {
-    marginHorizontal: 16, marginTop: 16,
-    backgroundColor: '#FFEBEE', borderRadius: R.xl,
-    paddingVertical: 17, alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#FFCDD2',
+  // Achievements
+  achRow: { flexDirection: 'row', gap: 12 },
+  achCard: {
+    flex: 1, aspectRatio: 1, borderRadius: R.md, backgroundColor: C.peachBg,
+    borderWidth: 1, borderColor: C.peachBorder,
+    justifyContent: 'center', alignItems: 'center', gap: 4,
   },
-  signOutText: { fontSize: 16, fontWeight: '900', color: C.error },
+  achLabel: { fontFamily: F.bodyMedium, fontSize: 10, color: C.orangeDark },
+
+  // Settings
+  settings: {
+    borderRadius: R.md, overflow: 'hidden',
+    borderWidth: 1, borderColor: C.line, ...shadow('#000', 1),
+  },
+  settingRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    paddingVertical: 16, paddingHorizontal: 16,
+    backgroundColor: C.surface, borderBottomWidth: 1, borderBottomColor: C.line,
+  },
+  settingIcon: {
+    width: 36, height: 36, borderRadius: R.sm,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  settingLabel: { flex: 1, fontFamily: F.display, fontSize: 14, color: C.ink },
+  settingArrow: { fontFamily: F.display, fontSize: 22, color: C.inkSlate },
 });

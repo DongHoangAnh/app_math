@@ -1,7 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
-import fs from "fs";
-import path from "path";
 import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch, verifyToken } from "./supabase-server";
 
 // ═══════════════════════════════════════════════════════════
@@ -15,6 +13,7 @@ interface GameQuestion {
     options: string[];
     correctAnswer: string;
     difficulty: number;
+    type: "arithmetic" | "comparison";
 }
 
 interface Player {
@@ -24,6 +23,7 @@ interface Player {
     grade?: string;
     winRate?: number;
     totalScore?: number;
+    mode?: string;
     roomId?: string;
 }
 
@@ -45,7 +45,7 @@ interface GameRoom {
 }
 
 type WSMessage =
-    | { type: "JOIN_QUEUE"; userId: string; token: string; displayName: string; grade?: string; winRate?: number; totalScore?: number }
+    | { type: "JOIN_QUEUE"; userId: string; token: string; displayName: string; grade?: string; winRate?: number; totalScore?: number; mode?: string }
     | { type: "LEAVE_QUEUE"; userId: string }
     | { type: "SUBMIT_ANSWER"; userId: string; roomId: string; questionIndex: number; answer: string; timeMs: number }
     | { type: "SEND_EMOJI"; roomId: string; emoji: string }
@@ -110,8 +110,16 @@ function hasProfanity(text: string): boolean {
 }
 
 // ═══════════════════════════════════════════════════════════
-// RANDOM QUESTION GENERATOR — lớp 1: +, -, ×, ÷ và so sánh
+// RANDOM QUESTION GENERATOR — lớp 1: +, -, ×, ÷ và so sánh <, >, =
 // ═══════════════════════════════════════════════════════════
+
+// Chế độ chơi quyết định phép tính của câu số học. Câu so sánh (<, >, =)
+// luôn xuất hiện ở mọi chế độ (cứ 3 câu thì có 1 câu so sánh).
+type GameMode = "add_sub" | "mul_div" | "mixed";
+
+function normalizeMode(m?: string): GameMode {
+    return m === "add_sub" || m === "mul_div" || m === "mixed" ? m : "mixed";
+}
 
 let _qCounter = 0;
 function nextQId() { return `q_${++_qCounter}`; }
@@ -141,8 +149,15 @@ function numericOptions(correct: number): string[] {
     return shuffleArr([...pool].slice(0, 4).map(String));
 }
 
-function makeArithmeticQ(): GameQuestion {
-    const op = shuffleArr(["+", "-", "×", "÷"])[0];
+// Các phép tính được phép theo từng chế độ
+function opsForMode(mode: GameMode): string[] {
+    if (mode === "add_sub") return ["+", "-"];
+    if (mode === "mul_div") return ["×", "÷"];
+    return ["+", "-", "×", "÷"];
+}
+
+function makeArithmeticQ(mode: GameMode): GameQuestion {
+    const op = shuffleArr(opsForMode(mode))[0];
     let a: number, b: number, answer: number, text: string;
 
     if (op === "+") {
@@ -163,7 +178,11 @@ function makeArithmeticQ(): GameQuestion {
         text = `${a} ÷ ${b} = ?`;
     }
 
-    return { id: nextQId(), level: 1, question: text, options: numericOptions(answer), correctAnswer: String(answer), difficulty: 1 };
+    return {
+        id: nextQId(), level: 1, question: text,
+        options: numericOptions(answer), correctAnswer: String(answer),
+        difficulty: 1, type: "arithmetic",
+    };
 }
 
 function makeComparisonQ(): GameQuestion {
@@ -171,51 +190,19 @@ function makeComparisonQ(): GameQuestion {
     const correct = a > b ? ">" : a < b ? "<" : "=";
     return {
         id: nextQId(), level: 1,
-        question: `${a}  □  ${b}`,
-        options: shuffleArr([">", "<", "="]),
+        question: `${a}  ?  ${b}`,
+        options: ["<", "=", ">"],
         correctAnswer: correct,
         difficulty: 1,
+        type: "comparison",
     };
 }
 
-function generateGrade1Questions(count: number): GameQuestion[] {
+// Tạo bộ câu hỏi: cứ mỗi 3 câu thì có 1 câu so sánh, còn lại là số học theo mode
+function generateQuestions(count: number, mode: GameMode): GameQuestion[] {
     return Array.from({ length: count }, (_, i) =>
-        i % 3 === 2 ? makeComparisonQ() : makeArithmeticQ()
+        i % 3 === 2 ? makeComparisonQ() : makeArithmeticQ(mode)
     );
-}
-
-// ═══════════════════════════════════════════════════════════
-// LOAD QUESTIONS FROM data.json (fallback: random gen)
-// ═══════════════════════════════════════════════════════════
-
-function loadGameQuestions(count = 10): GameQuestion[] {
-    try {
-        const dataPath = path.join(process.cwd(), "data.json");
-        const raw = fs.readFileSync(dataPath, "utf-8");
-        const json = JSON.parse(raw);
-        const allQuestions = json.questions as any[];
-
-        const valid = allQuestions.filter(
-            (q) =>
-                Array.isArray(q.choices) &&
-                q.choices.length === 4 &&
-                typeof q.correct_answer === "number"
-        );
-
-        const shuffled = [...valid].sort(() => Math.random() - 0.5);
-        const selected = shuffled.slice(0, count);
-
-        return selected.map((q, i) => ({
-            id: q.id,
-            level: i + 1,
-            question: q.content,
-            options: q.choices,
-            correctAnswer: q.choices[q.correct_answer],
-            difficulty: q.difficulty === "N" ? 1 : q.difficulty === "T" ? 2 : q.difficulty === "V" ? 3 : 4,
-        }));
-    } catch {
-        return generateGrade1Questions(count);
-    }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -258,7 +245,9 @@ function tryMatch() {
     const p2 = waitingQueue.shift()!;
 
     const roomId = generateRoomId();
-    const questions = loadGameQuestions(10);
+    // Dùng chế độ của người vào hàng đợi trước (p1) để cả hai cùng một bộ câu hỏi
+    const mode = normalizeMode(p1.mode);
+    const questions = generateQuestions(10, mode);
 
     const makeProgress = (): PlayerProgress => ({ answers: {}, finished: false });
 
@@ -547,6 +536,7 @@ export function setupGameShowWS(httpServer: Server) {
                         grade: msg.grade,
                         winRate: msg.winRate,
                         totalScore: msg.totalScore,
+                        mode: msg.mode,
                     };
 
                     // Reconnect to active room if exists

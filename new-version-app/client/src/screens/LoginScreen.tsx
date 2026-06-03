@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated,
-  ActivityIndicator, SafeAreaView, TextInput,
+  View, Text, TouchableOpacity, StyleSheet,
+  SafeAreaView, TextInput,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
-import { C, R, ANIM } from '../theme';
+import { C, R, F, hardShadow } from '../theme';
+import { Tactile, TactileButton } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 
@@ -19,18 +20,7 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError]           = useState<string | null>(null);
 
-  const loginBtnScale = useRef(new Animated.Value(1)).current;
-  const googleBtnScale = useRef(new Animated.Value(1)).current;
-
   const busy = submitting || googleLoading || loading;
-
-  const handleButtonPressIn = (scaleAnim: Animated.Value) => {
-    Animated.timing(scaleAnim, { toValue: 0.92, duration: ANIM.buttonPress, useNativeDriver: true }).start();
-  };
-
-  const handleButtonPressOut = (scaleAnim: Animated.Value) => {
-    Animated.timing(scaleAnim, { toValue: 1, duration: ANIM.buttonPress, useNativeDriver: true }).start();
-  };
 
   const handleEmailLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -64,6 +54,9 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* faint mascot glyph */}
+      <Text style={styles.mascotGlyph}>÷</Text>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
@@ -75,83 +68,40 @@ export default function LoginScreen() {
         >
           {/* Hero */}
           <View style={styles.hero}>
-            <View style={styles.heroBg} />
-            <View style={styles.heroCircle} />
-            <View style={styles.mascotWrap}>
+            <View style={[styles.mascot, hardShadow(C.orangeDark, 8, 0.25)]}>
               <Text style={styles.mascotEmoji}>✏️</Text>
             </View>
-            <Text style={styles.appName}>MathUp</Text>
+            <Text style={styles.appName}>MATHUP</Text>
             <Text style={styles.tagline}>Thách đấu toán học 1v1 🔥</Text>
           </View>
 
-          {/* Form card */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Đăng nhập</Text>
-
-            {/* Google button */}
-            <TouchableOpacity
-              style={[styles.googleBtn, busy && { opacity: 0.6 }]}
-              onPress={handleGoogleLogin}
-              onPressIn={() => handleButtonPressIn(googleBtnScale)}
-              onPressOut={() => handleButtonPressOut(googleBtnScale)}
-              disabled={busy}
-              activeOpacity={1}
-            >
-              <Animated.View style={{ transform: [{ scale: googleBtnScale }] }}>
-                {googleLoading ? (
-                  <ActivityIndicator color="#3C4043" size="small" />
-                ) : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View style={styles.googleIconWrap}>
-                      <Text style={styles.googleG}>G</Text>
-                    </View>
-                    <Text style={styles.googleText}>Tiếp tục với Google</Text>
-                  </View>
-                )}
-              </Animated.View>
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>hoặc dùng email</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Email */}
+          {/* Form */}
+          <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>✉️  Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={(t) => { setEmail(t); setError(null); }}
-                placeholder="email@example.com"
-                placeholderTextColor="#C9B8AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!busy}
-              />
-            </View>
-
-            {/* Password */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={styles.inputLabel}>🔑  Mật khẩu</Text>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('ForgotPassword')}
-                  activeOpacity={0.7}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.forgotLink}>Quên mật khẩu?</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.inputLabel}>Email</Text>
               <View style={styles.inputWrap}>
                 <TextInput
                   style={styles.input}
+                  value={email}
+                  onChangeText={(t) => { setEmail(t); setError(null); }}
+                  placeholder="example@email.com"
+                  placeholderTextColor="#C9B8AF"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!busy}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Mật khẩu</Text>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  style={[styles.input, { paddingRight: 48 }]}
                   value={password}
                   onChangeText={(t) => { setPassword(t); setError(null); }}
-                  placeholder="••••••"
+                  placeholder="••••••••"
                   placeholderTextColor="#C9B8AF"
                   secureTextEntry={!showPwd}
                   editable={!busy}
@@ -164,33 +114,59 @@ export default function LoginScreen() {
               </View>
             </View>
 
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ForgotPassword')}
+              activeOpacity={0.7}
+              style={{ alignSelf: 'flex-end' }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.forgotLink}>Quên mật khẩu?</Text>
+            </TouchableOpacity>
+
             {error && (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>⚠️  {error}</Text>
               </View>
             )}
 
-            <TouchableOpacity
-              style={[styles.loginBtn, busy && { opacity: 0.6 }]}
+            <TactileButton
+              title="Đăng nhập"
+              iconRight="→"
               onPress={handleEmailLogin}
-              onPressIn={() => handleButtonPressIn(loginBtnScale)}
-              onPressOut={() => handleButtonPressOut(loginBtnScale)}
+              loading={submitting}
               disabled={busy}
-              activeOpacity={1}
-            >
-              <Animated.View style={{ transform: [{ scale: loginBtnScale }] }}>
-                {submitting
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.loginBtnText}>Đăng Nhập →</Text>}
-              </Animated.View>
-            </TouchableOpacity>
+              style={{ marginTop: 4 }}
+            />
           </View>
+
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>HOẶC</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Google */}
+          <Tactile
+            slabColor="#D4D7DA"
+            depth={4}
+            radius={R.pill}
+            onPress={handleGoogleLogin}
+            disabled={busy}
+            style={styles.googleFace}
+            accessibilityLabel="Tiếp tục với Google"
+          >
+            <View style={styles.googleIconWrap}>
+              <Text style={styles.googleG}>G</Text>
+            </View>
+            <Text style={styles.googleText}>Tiếp tục với Google</Text>
+          </Tactile>
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Chưa có tài khoản?</Text>
+            <Text style={styles.footerText}>Chưa có tài khoản? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')} activeOpacity={0.7}>
-              <Text style={styles.footerLink}> Đăng ký ngay 🎉</Text>
+              <Text style={styles.footerLink}>Đăng ký ngay 🎉</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -214,92 +190,64 @@ function translateAuthError(msg?: string): string {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.background },
-  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
+  safe:   { flex: 1, backgroundColor: C.bg },
+  scroll: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 64, paddingBottom: 32 },
+
+  mascotGlyph: {
+    position: 'absolute', right: -34, bottom: 30, fontSize: 210,
+    fontFamily: F.displayBold, color: C.orangeDark, opacity: 0.07,
+  },
 
   // Hero
-  hero: { alignItems: 'center', paddingTop: 40, paddingBottom: 36, overflow: 'hidden' },
-  heroBg: {
-    position: 'absolute', top: -40, width: 300, height: 300, borderRadius: 150,
-    backgroundColor: 'rgba(245,158,11,0.08)',
+  hero: { alignItems: 'center', marginTop: 12, marginBottom: 28, gap: 8 },
+  mascot: {
+    width: 96, height: 96, borderRadius: R.pill,
+    backgroundColor: C.orange,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 6,
   },
-  heroCircle: {
-    position: 'absolute', top: 20, right: -30, width: 100, height: 100, borderRadius: 50,
-    backgroundColor: 'rgba(245,158,11,0.12)',
-  },
-  mascotWrap: {
-    width: 90, height: 90, borderRadius: 30,
-    backgroundColor: C.primary,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 14,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35, shadowRadius: 16, elevation: 12,
-  },
-  mascotEmoji: { fontSize: 48 },
-  appName:     { fontSize: 36, fontWeight: '900', color: C.textPrimary },
-  tagline:     { fontSize: 14, color: C.textSecond, marginTop: 6, fontWeight: '600' },
+  mascotEmoji: { fontSize: 44 },
+  appName: { fontFamily: F.display, fontSize: 40, letterSpacing: -0.8, color: C.orangeDark, marginTop: 8 },
+  tagline: { fontFamily: F.display, fontSize: 20, color: C.inkBrown },
 
-  // Card
-  card: {
-    backgroundColor: C.surface, borderRadius: 28, padding: 24,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12, shadowRadius: 20, elevation: 8,
-    gap: 16,
-  },
-  cardTitle: { fontSize: 22, fontWeight: '900', color: C.textPrimary },
-
-  // Google button
-  googleBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#fff', borderRadius: R.sm,
-    paddingVertical: 14, paddingHorizontal: 20, gap: 10,
-    borderWidth: 1.5, borderColor: '#E0E0E0',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 6, elevation: 2,
-  },
-  googleIconWrap: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#4285F4',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  googleG:    { fontSize: 14, fontWeight: '900', color: '#fff' },
-  googleText: { fontSize: 15, fontWeight: '700', color: '#3C4043' },
-
-  // Divider
-  divider:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: C.border },
-  dividerText: { fontSize: 12, color: C.textSecond, fontWeight: '600' },
-
-  // Inputs
+  // Form
+  form: { gap: 16 },
   inputGroup: { gap: 8 },
-  labelRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textSecond },
-  forgotLink: { fontSize: 13, fontWeight: '700', color: C.primary },
+  inputLabel: { fontFamily: F.display, fontSize: 14, color: C.inkBrown, marginLeft: 4 },
   inputWrap:  { position: 'relative', justifyContent: 'center' },
   input: {
-    backgroundColor: C.background, borderRadius: R.md,
-    paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: C.textPrimary,
-    borderWidth: 2, borderColor: C.border,
+    height: 56, backgroundColor: C.surfaceSunken, borderRadius: R.pill,
+    paddingHorizontal: 20, fontFamily: F.body, fontSize: 16, color: C.ink,
+    borderWidth: 2, borderColor: C.peachBorder,
   },
-  eyeBtn:  { position: 'absolute', right: 14, padding: 4 },
+  eyeBtn:  { position: 'absolute', right: 16, padding: 4 },
   eyeIcon: { fontSize: 18 },
+  forgotLink: { fontFamily: F.display, fontSize: 14, color: C.orangeDark, marginRight: 4 },
 
-  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
-  errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
+  errorBox:  { backgroundColor: C.errorSoft, borderRadius: R.md, padding: 12 },
+  errorText: { fontFamily: F.bodyMedium, fontSize: 13, color: C.error, textAlign: 'center' },
 
-  loginBtn: {
-    backgroundColor: C.primary, borderRadius: R.lg, paddingVertical: 14, height: 56,
-    alignItems: 'center', justifyContent: 'center', marginTop: 4,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
+  // Divider
+  divider:     { flexDirection: 'row', alignItems: 'center', gap: 16, marginVertical: 24 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: C.peachBorder },
+  dividerText: { fontFamily: F.display, fontSize: 14, color: C.inkBrown },
+
+  // Google
+  googleFace: {
+    height: 56, backgroundColor: C.bg, borderWidth: 2, borderColor: C.inkSlateDeep,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
   },
-  loginBtnText: { fontSize: 17, fontWeight: '900', color: '#fff' },
+  googleIconWrap: {
+    width: 26, height: 26, borderRadius: R.pill, backgroundColor: '#4285F4',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  googleG:    { fontFamily: F.displayBold, fontSize: 14, color: '#fff' },
+  googleText: { fontFamily: F.display, fontSize: 14, color: C.ink },
 
+  // Footer
   footer: {
-    flexDirection: 'row', justifyContent: 'center',
-    marginTop: 28, marginBottom: 8,
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    marginTop: 'auto', paddingTop: 28,
   },
-  footerText: { fontSize: 14, color: C.textSecond },
-  footerLink: { fontSize: 14, fontWeight: '800', color: C.primary },
+  footerText: { fontFamily: F.body, fontSize: 14, color: C.inkBrown },
+  footerLink: { fontFamily: F.display, fontSize: 14, color: C.orangeDark },
 });

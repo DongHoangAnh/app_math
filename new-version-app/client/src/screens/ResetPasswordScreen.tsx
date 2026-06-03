@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, SafeAreaView, TextInput,
+  SafeAreaView, TextInput,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
-import { C, R } from '../theme';
+import { C, R, F, hardShadow } from '../theme';
+import { TactileButton } from '../components/ui';
 
 const PASSWORD_MIN = 8;
 
@@ -20,9 +21,9 @@ function getPasswordStrength(pwd: string): { score: number; label: string; color
 
   if (score <= 1) return { score, label: 'Rất yếu',  color: C.error };
   if (score === 2) return { score, label: 'Yếu',      color: '#FF8C00' };
-  if (score === 3) return { score, label: 'Trung bình', color: C.primaryLight };
+  if (score === 3) return { score, label: 'Trung bình', color: C.orangeLight };
   if (score === 4) return { score, label: 'Mạnh',     color: C.success };
-  return { score, label: 'Rất mạnh', color: '#1B8A3E' };
+  return { score, label: 'Rất mạnh', color: C.successDeep };
 }
 
 export default function ResetPasswordScreen() {
@@ -87,18 +88,17 @@ export default function ResetPasswordScreen() {
         >
           {/* Hero */}
           <View style={styles.hero}>
-            <View style={styles.iconWrap}>
+            <View style={[styles.iconWrap, hardShadow(C.orangeDark, 6, 0.25)]}>
               <Text style={styles.iconEmoji}>🔑</Text>
             </View>
             <Text style={styles.title}>Đặt mật khẩu mới</Text>
             <Text style={styles.subtitle}>Chọn một mật khẩu mạnh mà bạn chưa dùng ở nơi khác.</Text>
           </View>
 
-          {/* Form card */}
-          <View style={styles.card}>
+          <View style={styles.form}>
             {/* New password */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>🔒  Mật khẩu mới</Text>
+              <Text style={styles.inputLabel}>Mật khẩu mới</Text>
               <View style={styles.inputWrap}>
                 <TextInput
                   style={styles.input}
@@ -138,7 +138,7 @@ export default function ResetPasswordScreen() {
 
             {/* Confirm password */}
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>🔐  Xác nhận mật khẩu</Text>
+              <Text style={styles.inputLabel}>Xác nhận mật khẩu</Text>
               <View style={styles.inputWrap}>
                 <TextInput
                   style={[
@@ -170,16 +170,13 @@ export default function ResetPasswordScreen() {
               </View>
             )}
 
-            <TouchableOpacity
-              style={[styles.resetBtn, !canSubmit && { opacity: 0.5 }]}
+            <TactileButton
+              title="Lưu mật khẩu mới"
+              iconRight="✓"
               onPress={handleReset}
+              loading={submitting}
               disabled={!canSubmit}
-              activeOpacity={0.85}
-            >
-              {submitting
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.resetBtnText}>Lưu mật khẩu mới ✓</Text>}
-            </TouchableOpacity>
+            />
           </View>
 
           {/* Cancel */}
@@ -202,78 +199,57 @@ function PwdHint({ ok, text }: { ok: boolean; text: string }) {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.background },
-  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
+  safe:   { flex: 1, backgroundColor: C.bg },
+  scroll: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 36, paddingBottom: 40 },
 
-  hero: { alignItems: 'center', paddingTop: 36, paddingBottom: 28 },
+  hero: { alignItems: 'center', paddingBottom: 28, gap: 10 },
   iconWrap: {
-    width: 88, height: 88, borderRadius: R.xxl,
-    backgroundColor: C.primary,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 18,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35, shadowRadius: 16, elevation: 12,
+    width: 88, height: 88, borderRadius: R.pill, backgroundColor: C.orange,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
-  iconEmoji: { fontSize: 44 },
-  title:    { fontSize: 26, fontWeight: '900', color: C.textPrimary, marginBottom: 8 },
-  subtitle: { fontSize: 13, color: C.textSecond, textAlign: 'center', lineHeight: 20 },
+  iconEmoji: { fontSize: 42 },
+  title:    { fontFamily: F.display, fontSize: 26, color: C.ink },
+  subtitle: { fontFamily: F.body, fontSize: 13, color: C.inkBrown, textAlign: 'center', lineHeight: 20 },
 
-  card: {
-    backgroundColor: C.surface, borderRadius: R.xxl, padding: 24,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12, shadowRadius: 20, elevation: 8,
-    gap: 18,
-  },
-
+  form: { gap: 18 },
   inputGroup: { gap: 8 },
-  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textSecond },
+  inputLabel: { fontFamily: F.display, fontSize: 14, color: C.inkBrown, marginLeft: 4 },
   inputWrap:  { position: 'relative', justifyContent: 'center' },
   input: {
-    backgroundColor: C.background, borderRadius: R.md,
-    paddingHorizontal: 16, paddingVertical: 14,
-    paddingRight: 50,
-    fontSize: 15, color: C.textPrimary,
-    borderWidth: 2, borderColor: C.border,
+    height: 56, backgroundColor: C.surfaceSunken, borderRadius: R.pill,
+    paddingHorizontal: 20, paddingRight: 50,
+    fontFamily: F.body, fontSize: 16, color: C.ink,
+    borderWidth: 2, borderColor: C.peachBorder,
   },
   inputError: { borderColor: C.error },
   inputOk:    { borderColor: C.success },
-  eyeBtn: {
-    position: 'absolute', right: 14,
-    padding: 4,
-  },
+  eyeBtn: { position: 'absolute', right: 16, padding: 4 },
   eyeIcon: { fontSize: 18 },
-  matchError: { fontSize: 12, color: C.error, fontWeight: '600', marginTop: 2 },
+  matchError: { fontFamily: F.bodyMedium, fontSize: 12, color: C.error, marginLeft: 4 },
 
   // Strength
   strengthRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
-  strengthBarBg:  { flex: 1, height: 5, backgroundColor: '#F0E8E0', borderRadius: 3 },
-  strengthBarFill: { height: 5, borderRadius: 3 },
-  strengthLabel:  { fontSize: 11, fontWeight: '800', width: 64, textAlign: 'right' },
+  strengthBarBg:  { flex: 1, height: 6, backgroundColor: C.surfaceSunken, borderRadius: R.pill, overflow: 'hidden' },
+  strengthBarFill: { height: 6, borderRadius: R.pill },
+  strengthLabel:  { fontFamily: F.display, fontSize: 11, width: 64, textAlign: 'right' },
 
   // Password hints
   pwdHints: { gap: 4, marginTop: 4 },
   hintRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  hintDot:  { fontSize: 13, color: '#CCC', width: 16, textAlign: 'center' },
+  hintDot:  { fontSize: 13, color: C.inkSlate, width: 16, textAlign: 'center' },
   hintDotOk: { color: C.success },
-  hintText:  { fontSize: 12, color: C.textSecond },
-  hintTextOk: { color: C.textPrimary },
+  hintText:  { fontFamily: F.body, fontSize: 12, color: C.inkSlate },
+  hintTextOk: { color: C.ink },
 
-  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
-  errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
-
-  resetBtn: {
-    backgroundColor: C.primary, borderRadius: R.lg, paddingVertical: 17,
-    alignItems: 'center',
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
-  },
-  resetBtnText: { fontSize: 16, fontWeight: '900', color: '#fff' },
+  errorBox:  { backgroundColor: C.errorSoft, borderRadius: R.md, padding: 12 },
+  errorText: { fontFamily: F.bodyMedium, fontSize: 13, color: C.error, textAlign: 'center' },
 
   cancelWrap: { alignItems: 'center', marginTop: 24 },
-  cancelText: { fontSize: 13, color: C.textSecond, fontWeight: '600' },
+  cancelText: { fontFamily: F.bodyMedium, fontSize: 13, color: C.inkSlate },
 
   // Done state
   doneWrap:  { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, gap: 16 },
   doneEmoji: { fontSize: 72 },
-  doneTitle: { fontSize: 24, fontWeight: '900', color: C.success, textAlign: 'center' },
-  doneText:  { fontSize: 14, color: C.textSecond, textAlign: 'center', lineHeight: 22 },
+  doneTitle: { fontFamily: F.display, fontSize: 24, color: C.successDeep, textAlign: 'center' },
+  doneText:  { fontFamily: F.body, fontSize: 14, color: C.inkBrown, textAlign: 'center', lineHeight: 22 },
 });

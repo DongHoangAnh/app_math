@@ -3,13 +3,13 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, SafeAreaView, Alert,
 } from 'react-native';
-import { C, R } from '../theme';
+import { C, R, F, shadow, hardShadow } from '../theme';
+import { Tactile, ProgressBar } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { authFetch } from '../utils/authFetch';
 import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
-import { LevelBadge } from '../components/LevelBadge';
 import { getLevelProgress } from '../utils/levelUtils';
 
 export default function HomeScreen() {
@@ -24,7 +24,7 @@ export default function HomeScreen() {
   const displayName = user?.user_metadata?.full_name ?? 'Bạn';
   const initial = displayName[0]?.toUpperCase() ?? 'B';
 
-  const { tasks, loading: tasksLoading, claiming, claimExp, refetch: refetchTasks } =
+  const { tasks, loading: tasksLoading, claiming, claimExp } =
     useDailyTasks(user?.id ?? null, displayName);
 
   useEffect(() => {
@@ -40,8 +40,7 @@ export default function HomeScreen() {
           setUserExp(data.exp ?? 0);
           setUserLevel(data.level ?? 1);
         }
-      })
-      .catch(() => {});
+      }, () => {});
 
     authFetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
       .then((r) => r.json())
@@ -63,128 +62,108 @@ export default function HomeScreen() {
   };
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Chào buổi sáng ☀️' : hour < 18 ? 'Chào buổi chiều 🌤️' : 'Chào buổi tối 🌙';
+  const greeting = hour < 12 ? 'Chào buổi sáng' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+  const greetingEmoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌙';
+
+  const lp = getLevelProgress(userExp);
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <View style={styles.headerDeco1} />
-          <View style={styles.headerDeco2} />
-
-          <View style={styles.headerRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initial}</Text>
-            </View>
-            <View style={styles.headerInfo}>
-              <Text style={styles.greeting}>{greeting}</Text>
-              <Text style={styles.username} numberOfLines={1}>{displayName}</Text>
-            </View>
-            <View style={styles.rankPill}>
-              <Text style={styles.rankPillIcon}>🏆</Text>
-              <Text style={styles.rankPillValue}>{rankingPoints}</Text>
-            </View>
+      {/* ── Top app bar ── */}
+      <View style={styles.topbar}>
+        <View style={styles.brandRow}>
+          <View style={styles.brandAvatar}>
+            <Text style={styles.brandAvatarText}>{initial}</Text>
           </View>
+          <Text style={styles.wordmark}>MathUp</Text>
+        </View>
+        <View style={styles.pointsPill}>
+          <Text style={styles.pointsPillIcon}>🏆</Text>
+          <Text style={styles.pointsPillValue}>{rankingPoints.toLocaleString()} pts</Text>
+        </View>
+      </View>
 
-          {/* Points display */}
-          <View style={styles.pointsRow}>
-            <View style={styles.pointCard}>
-              <Text style={styles.pointIcon}>⭐</Text>
-              <Text style={styles.pointValue}>{rankingPoints}</Text>
-              <Text style={styles.pointLabel}>Điểm</Text>
-            </View>
-            <View style={styles.pointDivider} />
-            <View style={styles.pointCard}>
-              <Text style={styles.pointIcon}>🔥</Text>
-              <Text style={styles.pointValue}>{streak}</Text>
-              <Text style={styles.pointLabel}>Streak</Text>
-            </View>
-            <View style={styles.pointDivider} />
-            <View style={styles.pointCard}>
-              <Text style={styles.pointIcon}>🎯</Text>
-              <Text style={styles.pointValue}>{wins ?? '—'}</Text>
-              <Text style={styles.pointLabel}>Thắng</Text>
-            </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 24 }} showsVerticalScrollIndicator={false}>
+
+        {/* ── Hero greeting card ── */}
+        <View style={[styles.hero, hardShadow(C.orange, 8, 0.3)]}>
+          <View style={styles.heroDots} />
+          <Text style={[styles.heroGlyph, { right: '6%', top: '8%', fontSize: 64 }]}>÷</Text>
+          <Text style={[styles.heroGlyph, { right: '32%', top: '46%', fontSize: 40 }]}>×</Text>
+          <View style={styles.heroGreetRow}>
+            <Text style={styles.heroGreet}>{greeting}</Text>
+            <Text style={{ fontSize: 18 }}>{greetingEmoji}</Text>
           </View>
+          <Text style={styles.heroName} numberOfLines={1}>{displayName}</Text>
         </View>
 
-        {/* ── Main Battle Button ── */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.battleCard}
-            onPress={() => navigation.navigate('GameShowTab')}
-            activeOpacity={0.92}
-          >
-            <View style={styles.battleDeco1} />
-            <View style={styles.battleDeco2} />
-            <View style={styles.battleInner}>
-              <View style={styles.battleIconWrap}>
-                <Text style={styles.battleIcon}>🎮</Text>
-              </View>
-              <View style={styles.battleText}>
-                <Text style={styles.battleTitle}>Đấu 1v1</Text>
-                <Text style={styles.battleSub}>Thách đấu trực tiếp · 10 câu hỏi</Text>
-              </View>
-              <View style={styles.playBtn}>
-                <Text style={styles.playBtnText}>Chơi</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
+        {/* ── 3 metrics ── */}
+        <View style={styles.statRow}>
+          <StatBadge emoji="⭐" label="ĐIỂM" value={rankingPoints.toLocaleString()} />
+          <StatBadge emoji="🔥" label="STREAK" value={`${streak}`} />
+          <StatBadge emoji="🎯" label="THẮNG" value={wins != null ? `${wins}` : '—'} />
         </View>
 
-        {/* ── Rule Chips ── */}
+        {/* ── Battle CTA (navy "game" surface) ── */}
+        <Tactile
+          slabColor="#0A0F1C"
+          depth={8}
+          radius={R.xl}
+          onPress={() => navigation.navigate('GameShowTab')}
+          style={styles.battleFace}
+          accessibilityLabel="Đấu 1v1"
+        >
+          <Text style={[styles.heroGlyph, { color: '#fff', opacity: 0.05, left: '4%', top: '6%', fontSize: 70 }]}>∑</Text>
+          <Text style={[styles.heroGlyph, { color: '#fff', opacity: 0.05, left: '40%', bottom: '8%', fontSize: 48 }]}>√</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.battleTitle}>Đấu 1v1</Text>
+            <Text style={styles.battleSub}>Tìm đối thủ ngang sức ngay!</Text>
+          </View>
+          <View style={styles.battleBolt}>
+            <Text style={{ fontSize: 30 }}>⚡</Text>
+          </View>
+        </Tactile>
+
+        {/* ── Rule chips ── */}
         <View style={styles.ruleRow}>
-          <View style={[styles.ruleChip, { backgroundColor: '#E8F5E9' }]}>
-            <Text style={[styles.ruleChipText, { color: '#2E7D32' }]}>🏅 Thắng +5</Text>
+          <View style={[styles.ruleChip, { backgroundColor: '#E7F6E8' }]}>
+            <Text style={[styles.ruleChipText, { color: C.successDeep }]}>🏅 Thắng +5</Text>
           </View>
-          <View style={[styles.ruleChip, { backgroundColor: '#FFEBEE' }]}>
-            <Text style={[styles.ruleChipText, { color: '#C62828' }]}>💔 Thua −3</Text>
+          <View style={[styles.ruleChip, { backgroundColor: C.errorSoft }]}>
+            <Text style={[styles.ruleChipText, { color: C.error }]}>💔 Thua −3</Text>
           </View>
-          <View style={[styles.ruleChip, { backgroundColor: '#F5F5F5' }]}>
-            <Text style={[styles.ruleChipText, { color: '#616161' }]}>🤝 Hoà ±0</Text>
+          <View style={[styles.ruleChip, { backgroundColor: C.surfaceSunken }]}>
+            <Text style={[styles.ruleChipText, { color: C.inkSlate }]}>🤝 Hoà ±0</Text>
           </View>
         </View>
 
-        {/* ── Explore Grid ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Khám phá</Text>
+        {/* ── Explore ── */}
+        <View style={{ gap: 12 }}>
+          <Text style={styles.h3}>Khám phá</Text>
           <View style={styles.navGrid}>
-            <NavCard
-              icon="🏆" label="Xếp Hạng" bg="#FFF3E0" iconBg={C.primary}
-              onPress={() => navigation.navigate('LeaderboardTab')}
-            />
-            <NavCard
-              icon="📈" label="Thống Kê" bg="#E3F2FD" iconBg="#2196F3"
-              onPress={() => navigation.navigate('StatsTab')}
-            />
-            <NavCard
-              icon="😊" label="Hồ Sơ" bg="#F3E5F5" iconBg="#9C27B0"
-              onPress={() => navigation.navigate('ProfileTab')}
-            />
+            <NavCard emoji="🏆" label="Xếp Hạng" onPress={() => navigation.navigate('LeaderboardTab')} />
+            <NavCard emoji="📈" label="Thống Kê" onPress={() => navigation.navigate('StatsTab')} />
+            <NavCard emoji="😊" label="Hồ Sơ" onPress={() => navigation.navigate('ProfileTab')} />
           </View>
         </View>
 
-        {/* ── Daily Tasks ── */}
-        <View style={styles.section}>
-          <View style={styles.dailyHeader}>
-            <Text style={styles.sectionLabel}>Nhiệm vụ hôm nay</Text>
-            <LevelBadge level={userLevel} size="sm" />
-          </View>
+        {/* ── Daily tasks ── */}
+        <View style={{ gap: 14 }}>
+          <Text style={styles.h3}>Nhiệm vụ hàng ngày</Text>
 
-          {/* EXP progress bar */}
-          {(() => {
-            const lp = getLevelProgress(userExp);
-            return (
-              <View style={styles.expBarWrap}>
-                <View style={styles.expBarBg}>
-                  <View style={[styles.expBarFill, { width: `${lp.percent}%` as any }]} />
-                </View>
-                <Text style={styles.expBarLabel}>{lp.expInLevel} / {lp.expForNext} EXP</Text>
+          {/* level progress card */}
+          <View style={styles.levelCard}>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelBadgeText}>{userLevel}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.levelTopRow}>
+                <Text style={styles.levelLabel}>Cấp {userLevel}</Text>
+                <Text style={styles.levelXp}>{lp.expInLevel} / {lp.expForNext} XP</Text>
               </View>
-            );
-          })()}
+              <ProgressBar pct={lp.percent} />
+            </View>
+          </View>
 
           {tasksLoading && tasks.length === 0 ? (
             <View style={styles.tasksPlaceholder}>
@@ -207,235 +186,206 @@ export default function HomeScreen() {
           <Text style={styles.tipEmoji}>💡</Text>
           <Text style={styles.tipText}>Hoàn thành nhiệm vụ mỗi ngày để tích EXP và lên cấp!</Text>
         </View>
-
-        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function StatBadge({ emoji, label, value }: { emoji: string; label: string; value: string }) {
+  return (
+    <View style={styles.statBadge}>
+      <Text style={{ fontSize: 22, lineHeight: 26 }}>{emoji}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
+    </View>
+  );
+}
+
+function NavCard({ emoji, label, onPress }: { emoji: string; label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.navCard} onPress={onPress} activeOpacity={0.85}>
+      <Text style={{ fontSize: 24 }}>{emoji}</Text>
+      <Text style={styles.navCardLabel}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
 function TaskRow({
   task, claiming, onClaim,
 }: { task: DailyTask; claiming: boolean; onClaim: () => void }) {
-  const pct = task.target > 0 ? Math.min(task.progress / task.target, 1) : 0;
   const canClaim = task.completed && !task.exp_claimed;
+  const done = task.exp_claimed;
 
   return (
-    <View style={styles.taskRow}>
+    <View style={[styles.taskRow, done && styles.taskRowDone]}>
+      <View style={[styles.taskIcon, { backgroundColor: done ? C.line : C.successBright }]}>
+        <Text style={{ fontSize: 18, color: done ? C.inkSlate : C.successDeep }}>
+          {done ? '✓' : task.completed ? '🎯' : '⚡'}
+        </Text>
+      </View>
       <View style={styles.taskInfo}>
         <View style={styles.taskTitleRow}>
-          <Text style={styles.taskTitle}>{task.title}</Text>
+          <Text style={[styles.taskTitle, done && { textDecorationLine: 'line-through', color: C.inkSlate }]}>
+            {task.title}
+          </Text>
           <Text style={styles.taskExp}>+{task.exp_reward} EXP</Text>
         </View>
-        <Text style={styles.taskDesc}>{task.description}</Text>
-        <View style={styles.taskProgBarBg}>
-          <View style={[styles.taskProgBarFill, { width: `${pct * 100}%` as any, backgroundColor: task.completed ? C.success : C.primary }]} />
-        </View>
-        <Text style={styles.taskProgText}>{task.progress}/{task.target}</Text>
+        <Text style={styles.taskSub}>{task.progress}/{task.target} hoàn thành</Text>
       </View>
       {canClaim ? (
         <TouchableOpacity
-          style={[styles.claimBtn, claiming && styles.claimBtnDisabled]}
+          style={[styles.claimBtn, claiming && { opacity: 0.5 }]}
           onPress={onClaim}
           disabled={claiming}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
           <Text style={styles.claimBtnText}>{claiming ? '...' : 'Nhận'}</Text>
         </TouchableOpacity>
-      ) : task.exp_claimed ? (
-        <View style={styles.claimedBadge}>
-          <Text style={styles.claimedText}>✓</Text>
+      ) : done ? (
+        <View style={styles.taskCheck}>
+          <Text style={{ fontSize: 16, color: '#fff' }}>✓</Text>
         </View>
-      ) : null}
+      ) : (
+        <View style={styles.taskCheckEmpty} />
+      )}
     </View>
   );
 }
 
-function NavCard({
-  icon, label, bg, iconBg, onPress,
-}: { icon: string; label: string; bg: string; iconBg: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={[styles.navCard, { backgroundColor: bg }]} onPress={onPress} activeOpacity={0.8}>
-      <View style={[styles.navCardIcon, { backgroundColor: iconBg }]}>
-        <Text style={{ fontSize: 22 }}>{icon}</Text>
-      </View>
-      <Text style={styles.navCardLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.background },
+  safe:   { flex: 1, backgroundColor: C.bg },
   scroll: { flex: 1 },
 
-  // Header
-  header: {
-    backgroundColor: C.primary,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    overflow: 'hidden',
+  // Top app bar
+  topbar: {
+    height: 64, paddingHorizontal: 20,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: C.bg, ...shadow('#000', 1),
   },
-  headerDeco1: {
-    position: 'absolute', top: -40, right: -40,
-    width: 150, height: 150, borderRadius: 75,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  headerDeco2: {
-    position: 'absolute', bottom: -20, left: -20,
-    width: 100, height: 100, borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-  headerRow:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: C.primaryLight,
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)',
-  },
-  avatarText:  { fontSize: 22, fontWeight: '900', color: '#7B5800' },
-  headerInfo:  { flex: 1 },
-  greeting:    { fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
-  username:    { fontSize: 19, fontWeight: '900', color: '#fff' },
-  rankPill: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: R.lg, alignItems: 'center',
-  },
-  rankPillIcon:  { fontSize: 14 },
-  rankPillValue: { fontSize: 16, fontWeight: '900', color: C.primaryLight },
-
-  // Points row
-  pointsRow: {
-    flexDirection: 'row', marginTop: 18,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: R.lg, paddingVertical: 14,
-  },
-  pointCard:   { flex: 1, alignItems: 'center' },
-  pointIcon:   { fontSize: 20, marginBottom: 2 },
-  pointValue:  { fontSize: 20, fontWeight: '900', color: '#fff' },
-  pointLabel:  { fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: '600', marginTop: 1 },
-  pointDivider:{ width: 1, backgroundColor: 'rgba(255,255,255,0.3)' },
-
-  // Section
-  section:      { paddingHorizontal: 20, marginTop: 24 },
-  sectionLabel: { fontSize: 15, fontWeight: '800', color: C.textSecond, marginBottom: 12 },
-
-  // Battle card
-  battleCard: {
-    backgroundColor: C.textPrimary,
-    borderRadius: R.xl, padding: 22, overflow: 'hidden',
-    shadowColor: C.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
-  },
-  battleDeco1: {
-    position: 'absolute', right: -30, top: -30,
-    width: 140, height: 140, borderRadius: 70,
-    backgroundColor: 'rgba(255,107,53,0.15)',
-  },
-  battleDeco2: {
-    position: 'absolute', right: 50, bottom: -40,
-    width: 100, height: 100, borderRadius: 50,
-    backgroundColor: 'rgba(255,210,63,0.1)',
-  },
-  battleInner:  { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  battleIconWrap: {
-    width: 58, height: 58, borderRadius: R.lg,
-    backgroundColor: 'rgba(255,107,53,0.2)',
+  brandRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brandAvatar: {
+    width: 40, height: 40, borderRadius: R.pill,
+    backgroundColor: C.peachBg, borderWidth: 2, borderColor: C.orange,
     justifyContent: 'center', alignItems: 'center',
   },
-  battleIcon:   { fontSize: 30 },
-  battleText:   { flex: 1 },
-  battleTitle:  { fontSize: 24, fontWeight: '900', color: '#fff' },
-  battleSub:    { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
-  playBtn: {
-    backgroundColor: C.primary, paddingVertical: 12,
-    paddingHorizontal: 20, borderRadius: R.md,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5, shadowRadius: 8, elevation: 6,
+  brandAvatarText: { fontFamily: F.displayBold, fontSize: 18, color: C.orangeDark },
+  wordmark:    { fontFamily: F.display, fontSize: 20, color: C.orangeDark },
+  pointsPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: C.peachBg, borderRadius: R.pill,
+    paddingHorizontal: 14, paddingVertical: 7, ...shadow('#000', 1),
   },
-  playBtnText: { fontSize: 14, fontWeight: '900', color: '#fff' },
+  pointsPillIcon:  { fontSize: 14 },
+  pointsPillValue: { fontFamily: F.display, fontSize: 14, color: C.orange },
+
+  // Hero greeting card
+  hero: {
+    position: 'relative', overflow: 'hidden', borderRadius: R.xl,
+    backgroundColor: C.orange, padding: 18, minHeight: 132,
+    justifyContent: 'flex-end',
+  },
+  heroDots: { ...StyleSheet.absoluteFillObject, opacity: 0.12 },
+  heroGlyph: {
+    position: 'absolute', fontFamily: F.displayBold,
+    color: '#fff', opacity: 0.2,
+  },
+  heroGreetRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroGreet: { fontFamily: F.body, fontSize: 16, color: C.orangeDeepest },
+  heroName:  { fontFamily: F.display, fontSize: 24, color: '#fff', marginTop: 4 },
+
+  // Stat badges
+  statRow: { flexDirection: 'row', gap: 12 },
+  statBadge: {
+    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line,
+    borderRadius: R.md, paddingVertical: 14, paddingHorizontal: 8,
+    alignItems: 'center', gap: 2, ...shadow('#000', 1),
+  },
+  statLabel: { fontFamily: F.bodyMedium, fontSize: 11, letterSpacing: 0.8, color: C.inkSlate, marginTop: 2 },
+  statValue: { fontFamily: F.displayBold, fontSize: 18, color: C.ink },
+
+  // Battle CTA
+  battleFace: {
+    backgroundColor: C.navy, padding: 24,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  battleTitle: { fontFamily: F.display, fontSize: 28, color: '#fff' },
+  battleSub:   { fontFamily: F.body, fontSize: 15, color: C.navyMuted, marginTop: 6 },
+  battleBolt: {
+    width: 64, height: 64, borderRadius: R.md, backgroundColor: C.orange,
+    justifyContent: 'center', alignItems: 'center',
+  },
 
   // Rule chips
-  ruleRow: {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: 20, marginTop: 16,
-  },
-  ruleChip: {
-    flex: 1, paddingVertical: 8, borderRadius: R.sm, alignItems: 'center',
-  },
-  ruleChipText: { fontSize: 12, fontWeight: '800' },
+  ruleRow:  { flexDirection: 'row', gap: 8 },
+  ruleChip: { flex: 1, paddingVertical: 9, borderRadius: R.pill, alignItems: 'center' },
+  ruleChipText: { fontFamily: F.bodyBold, fontSize: 12 },
+
+  // Headings
+  h3: { fontFamily: F.display, fontSize: 20, color: C.ink, marginLeft: 4 },
 
   // Nav grid
-  navGrid:     { flexDirection: 'row', gap: 12 },
+  navGrid: { flexDirection: 'row', gap: 12 },
   navCard: {
-    flex: 1, borderRadius: R.xl, padding: 16, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08, shadowRadius: 10, elevation: 3,
+    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line,
+    borderRadius: R.md, paddingVertical: 18, alignItems: 'center', gap: 8,
+    ...shadow('#000', 1),
   },
-  navCardIcon: {
-    width: 52, height: 52, borderRadius: R.md,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
-  },
-  navCardLabel: { fontSize: 12, fontWeight: '800', color: C.textPrimary },
+  navCardLabel: { fontFamily: F.bodyBold, fontSize: 12, color: C.ink },
 
-  // Daily tasks
-  dailyHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  expPill: {
-    backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: R.sm,
+  // Level card
+  levelCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.line,
+    borderRadius: R.md, padding: 16, ...shadow('#000', 1),
   },
-  expPillText:    { fontSize: 12, fontWeight: '800', color: '#2E7D32' },
-  expBarWrap:     { marginBottom: 12 },
-  expBarBg: {
-    height: 8, backgroundColor: '#EEE', borderRadius: 4, overflow: 'hidden', marginBottom: 3,
+  levelBadge: {
+    width: 64, height: 64, borderRadius: R.pill, backgroundColor: C.orange,
+    justifyContent: 'center', alignItems: 'center', ...shadow(C.orangeDark, 3),
   },
-  expBarFill:     { height: '100%', backgroundColor: C.success, borderRadius: 4 },
-  expBarLabel:    { fontSize: 11, color: C.textSecond, fontWeight: '600', textAlign: 'right' },
+  levelBadgeText: { fontFamily: F.displayBold, fontSize: 24, color: '#fff' },
+  levelTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 },
+  levelLabel:  { fontFamily: F.display, fontSize: 14, color: C.ink },
+  levelXp:     { fontFamily: F.bodyBold, fontSize: 12, color: C.inkBrown },
+
   tasksPlaceholder: { paddingVertical: 20, alignItems: 'center' },
-  tasksPlaceholderText: { color: C.textSecond, fontSize: 13 },
+  tasksPlaceholderText: { fontFamily: F.body, color: C.inkSlate, fontSize: 13 },
+
+  // Task rows (squircle)
   taskRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface, borderRadius: R.lg, padding: 14,
-    marginBottom: 10,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.peachBorder,
+    borderRadius: R.squircle, padding: 12, ...shadow('#000', 1),
   },
-  taskInfo:       { flex: 1 },
-  taskTitleRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-  taskTitle:      { fontSize: 14, fontWeight: '800', color: C.textPrimary },
-  taskExp:        { fontSize: 12, fontWeight: '700', color: C.primary },
-  taskDesc:       { fontSize: 12, color: C.textSecond, marginBottom: 6 },
-  taskProgBarBg: {
-    height: 5, backgroundColor: '#EEE', borderRadius: 3, overflow: 'hidden', marginBottom: 3,
+  taskRowDone: { backgroundColor: C.surfaceSunken, borderColor: C.line, opacity: 0.8 },
+  taskIcon: {
+    width: 48, height: 48, borderRadius: R.pill,
+    justifyContent: 'center', alignItems: 'center',
   },
-  taskProgBarFill:{ height: '100%', borderRadius: 3 },
-  taskProgText:   { fontSize: 11, color: C.textSecond, fontWeight: '600' },
+  taskInfo:     { flex: 1 },
+  taskTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  taskTitle:    { fontFamily: F.display, fontSize: 14, color: C.ink, flexShrink: 1 },
+  taskExp:      { fontFamily: F.bodyBold, fontSize: 12, color: C.orange, marginLeft: 8 },
+  taskSub:      { fontFamily: F.body, fontSize: 12, color: C.inkBrown, marginTop: 2 },
   claimBtn: {
-    marginLeft: 12, backgroundColor: C.primary,
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: R.sm,
+    backgroundColor: C.orange, borderRadius: R.pill,
+    paddingHorizontal: 16, paddingVertical: 9,
   },
-  claimBtnDisabled: { opacity: 0.5 },
-  claimBtnText:   { fontSize: 13, fontWeight: '900', color: '#fff' },
-  claimedBadge: {
-    marginLeft: 12, width: 32, height: 32, borderRadius: R.md,
-    backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center',
+  claimBtnText: { fontFamily: F.display, fontSize: 13, color: '#fff' },
+  taskCheck: {
+    width: 32, height: 32, borderRadius: R.pill, backgroundColor: C.successDeep,
+    justifyContent: 'center', alignItems: 'center', ...shadow('#000', 2),
   },
-  claimedText:    { fontSize: 14, color: C.success, fontWeight: '900' },
+  taskCheckEmpty: {
+    width: 32, height: 32, borderRadius: R.pill,
+    borderWidth: 2, borderColor: C.peachBorder,
+  },
 
   // Tip banner
   tipBanner: {
-    marginHorizontal: 20, marginTop: 20,
-    backgroundColor: '#FFF9C4',
-    borderRadius: R.lg, padding: 16,
+    backgroundColor: '#FFF6D9', borderRadius: R.md, padding: 16,
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1, borderColor: '#FFE082',
+    borderWidth: 1, borderColor: '#FCE08A',
   },
   tipEmoji: { fontSize: 22 },
-  tipText:  { flex: 1, fontSize: 13, color: '#6D4C00', lineHeight: 20, fontWeight: '600' },
+  tipText:  { flex: 1, fontFamily: F.body, fontSize: 13, color: '#6D4C00', lineHeight: 20 },
 });

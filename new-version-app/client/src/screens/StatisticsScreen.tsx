@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView,
   SafeAreaView, ActivityIndicator,
 } from 'react-native';
-import { C, R } from '../theme';
+import { C, R, F, shadow } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { LevelCard } from '../components/LevelBadge';
@@ -23,10 +23,10 @@ const FALLBACK: Stats = {
 };
 
 const BADGES = [
-  { emoji: '🌟', title: 'Bắt Đầu',  desc: 'Trận đầu tiên',           color: '#FFF9C4' },
-  { emoji: '🔥', title: 'Nóng Lên', desc: '5 trận thắng liên tiếp',   color: C.primaryBg },
-  { emoji: '🏅', title: 'Nhân Phẩm', desc: 'Đạt 50 điểm xếp hạng',   color: '#E8F5E9' },
-  { emoji: '💎', title: 'Kim Cương', desc: 'Level 10',                 color: '#E3F2FD' },
+  { emoji: '🌟', title: 'Bắt Đầu',   desc: 'Trận đầu tiên' },
+  { emoji: '🔥', title: 'Nóng Lên',  desc: '5 trận thắng liên tiếp' },
+  { emoji: '🏅', title: 'Nhân Phẩm', desc: 'Đạt 50 điểm xếp hạng' },
+  { emoji: '💎', title: 'Kim Cương', desc: 'Level 10' },
 ];
 
 export default function StatisticsScreen() {
@@ -55,63 +55,61 @@ export default function StatisticsScreen() {
           setUserExp(data.exp ?? 0);
           setUserLevel(data.level ?? 1);
         }
-      })
-      .catch(() => {});
+      }, () => {});
   }, [user]);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <ActivityIndicator color={C.primary} size="large" style={{ marginTop: 60 }} />
+        <ActivityIndicator color={C.orange} size="large" style={{ marginTop: 60 }} />
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 64, paddingBottom: 32 }}>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerDeco} />
-          <Text style={styles.headerTitle}>📈 Thống Kê</Text>
-          <Text style={styles.headerSub}>Tổng quan hiệu suất của bạn</Text>
+        {/* Title */}
+        <View style={styles.titleWrap}>
+          <Text style={styles.title}>📈 Thống Kê</Text>
+          <Text style={styles.subtitle}>Tổng quan hiệu suất của bạn</Text>
         </View>
 
         {/* Main stats 2x2 */}
-        <View style={styles.bigGrid}>
-          <BigStat icon="🎮" value={stats.totalMatches}              label="Trận chơi"    bg="#FFF3E0" iconBg={C.primary} />
-          <BigStat icon="🥇" value={stats.totalWins}                 label="Chiến thắng"  bg="#E8F5E9" iconBg="#4CAF50" />
-          <BigStat icon="📈" value={`${stats.winRate.toFixed(1)}%`}  label="Tỷ lệ thắng"  bg="#E3F2FD" iconBg="#2196F3" />
-          <BigStat icon="⭐" value={stats.totalScore}                label="Tổng điểm"    bg="#F3E5F5" iconBg="#9C27B0" />
+        <View style={styles.grid}>
+          <BigStat emoji="🎮" value={`${stats.totalMatches}`}        label="Trận chơi" />
+          <BigStat emoji="🥇" value={`${stats.totalWins}`}           label="Chiến thắng" valueColor={C.successDeep} />
+          <BigStat emoji="📈" value={`${stats.winRate.toFixed(1)}%`} label="Tỷ lệ thắng" valueColor={C.orange} />
+          <BigStat emoji="⭐" value={`${stats.totalScore}`}          label="Tổng điểm" valueColor={C.orangeDark} />
         </View>
 
-        {/* Streak section */}
+        {/* Streak */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chuỗi thắng</Text>
+          <Text style={styles.h3}>Chuỗi thắng</Text>
           <View style={styles.streakRow}>
-            <View style={[styles.streakCard, { backgroundColor: C.primaryBg }]}>
-              <Text style={styles.streakIcon}>🔥</Text>
+            <View style={[styles.streakCard, { backgroundColor: C.peachBg, borderColor: C.peachBorder }]}>
+              <Text style={{ fontSize: 26 }}>🔥</Text>
               <Text style={styles.streakValue}>{stats.currentStreak}</Text>
               <Text style={styles.streakLabel}>Hiện tại</Text>
             </View>
-            <View style={[styles.streakCard, { backgroundColor: '#FFF9C4' }]}>
-              <Text style={styles.streakIcon}>⚡</Text>
+            <View style={[styles.streakCard, { backgroundColor: '#FFF6D9', borderColor: '#FCE08A' }]}>
+              <Text style={{ fontSize: 26 }}>⚡</Text>
               <Text style={styles.streakValue}>{stats.bestStreak}</Text>
               <Text style={styles.streakLabel}>Tốt nhất</Text>
             </View>
           </View>
         </View>
 
-        {/* Level section — QQ-style */}
+        {/* Level */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cấp độ</Text>
+          <Text style={styles.h3}>Cấp độ</Text>
           <LevelCard level={userLevel} totalExp={userExp} />
         </View>
 
         {/* Performance */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Hiệu suất</Text>
+          <Text style={styles.h3}>Hiệu suất</Text>
           <View style={styles.perfCard}>
             <PerfRow icon="🔢" label="Điểm TB / trận" value={`${stats.averageScore}`} />
             <PerfRow icon="🎯" label="Tỷ lệ trả lời đúng" value={stats.totalMatches > 0 ? `${stats.accuracyRate.toFixed(1)}%` : '—'} />
@@ -121,33 +119,29 @@ export default function StatisticsScreen() {
 
         {/* Achievements */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thành tựu</Text>
+          <Text style={styles.h3}>Thành tựu</Text>
           <View style={styles.badgeGrid}>
             {BADGES.map((b) => (
-              <View key={b.title} style={[styles.badge, { backgroundColor: b.color }]}>
-                <Text style={styles.badgeEmoji}>{b.emoji}</Text>
+              <View key={b.title} style={styles.badge}>
+                <Text style={{ fontSize: 34, marginBottom: 6 }}>{b.emoji}</Text>
                 <Text style={styles.badgeTitle}>{b.title}</Text>
                 <Text style={styles.badgeDesc}>{b.desc}</Text>
               </View>
             ))}
           </View>
         </View>
-
-        <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 function BigStat({
-  icon, value, label, bg, iconBg,
-}: { icon: string; value: any; label: string; bg: string; iconBg: string }) {
+  emoji, value, label, valueColor,
+}: { emoji: string; value: string; label: string; valueColor?: string }) {
   return (
-    <View style={[styles.bigStat, { backgroundColor: bg }]}>
-      <View style={[styles.bigStatIconWrap, { backgroundColor: iconBg }]}>
-        <Text style={styles.bigStatIcon}>{icon}</Text>
-      </View>
-      <Text style={styles.bigStatValue}>{value}</Text>
+    <View style={styles.bigStat}>
+      <Text style={{ fontSize: 26 }}>{emoji}</Text>
+      <Text style={[styles.bigStatValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
       <Text style={styles.bigStatLabel}>{label}</Text>
     </View>
   );
@@ -158,7 +152,7 @@ function PerfRow({
 }: { icon: string; label: string; value: string; isLast?: boolean }) {
   return (
     <View style={[styles.perfRow, isLast && { borderBottomWidth: 0 }]}>
-      <Text style={styles.perfIcon}>{icon}</Text>
+      <Text style={{ fontSize: 18 }}>{icon}</Text>
       <Text style={styles.perfLabel}>{label}</Text>
       <Text style={styles.perfValue}>{value}</Text>
     </View>
@@ -166,75 +160,49 @@ function PerfRow({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.background },
+  safe: { flex: 1, backgroundColor: C.bg },
 
-  header: {
-    backgroundColor: C.primary,
-    paddingVertical: 22, paddingHorizontal: 20,
-    alignItems: 'center', overflow: 'hidden',
-    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
-  },
-  headerDeco: {
-    position: 'absolute', top: -50, right: -50,
-    width: 150, height: 150, borderRadius: 75,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  headerTitle: { fontSize: 24, fontWeight: '900', color: '#fff' },
-  headerSub:   { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 4, fontWeight: '600' },
+  titleWrap: { alignItems: 'center', marginBottom: 8 },
+  title:     { fontFamily: F.display, fontSize: 24, color: C.ink },
+  subtitle:  { fontFamily: F.body, fontSize: 14, color: C.inkSlate, marginTop: 4 },
 
-  bigGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: 16, paddingTop: 20, gap: 12,
-  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, paddingTop: 16, gap: 12 },
   bigStat: {
-    width: '47%', borderRadius: R.xl, padding: 18, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07, shadowRadius: 10, elevation: 3,
+    width: '47%', flexGrow: 1, backgroundColor: C.surface,
+    borderWidth: 1, borderColor: C.line, borderRadius: R.md,
+    paddingVertical: 16, alignItems: 'center', gap: 2, ...shadow('#000', 1),
   },
-  bigStatIconWrap: {
-    width: 52, height: 52, borderRadius: R.md,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
-  },
-  bigStatIcon:  { fontSize: 26 },
-  bigStatValue: { fontSize: 28, fontWeight: '900', color: C.textPrimary },
-  bigStatLabel: { fontSize: 12, color: C.textSecond, marginTop: 2, fontWeight: '700' },
+  bigStatValue: { fontFamily: F.displayBold, fontSize: 24, color: C.ink },
+  bigStatLabel: { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkSlate },
 
-  section:      { paddingHorizontal: 16, marginTop: 22 },
-  sectionTitle: { fontSize: 16, fontWeight: '900', color: C.textPrimary, marginBottom: 14 },
+  section: { paddingHorizontal: 20, marginTop: 24, gap: 12 },
+  h3:      { fontFamily: F.display, fontSize: 20, color: C.ink, marginLeft: 4 },
 
   streakRow: { flexDirection: 'row', gap: 12 },
   streakCard: {
-    flex: 1, borderRadius: R.xl, padding: 22, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    flex: 1, borderRadius: R.md, borderWidth: 1, padding: 16, alignItems: 'center', gap: 2,
   },
-  streakIcon:  { fontSize: 36, marginBottom: 6 },
-  streakValue: { fontSize: 40, fontWeight: '900', color: C.textPrimary },
-  streakLabel: { fontSize: 12, color: C.textSecond, fontWeight: '700', marginTop: 4 },
-
+  streakValue: { fontFamily: F.displayBold, fontSize: 30, color: C.ink },
+  streakLabel: { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkBrown, marginTop: 2 },
 
   perfCard: {
-    backgroundColor: C.surface, borderRadius: R.xl, overflow: 'hidden',
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08, shadowRadius: 12, elevation: 3,
-    borderWidth: 1.5, borderColor: C.border,
+    backgroundColor: C.surface, borderRadius: R.md, overflow: 'hidden',
+    borderWidth: 1, borderColor: C.line, ...shadow('#000', 1),
   },
   perfRow: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 15, paddingHorizontal: 18,
-    borderBottomWidth: 1, borderBottomColor: C.border, gap: 12,
+    borderBottomWidth: 1, borderBottomColor: C.line,
   },
-  perfIcon:  { fontSize: 18 },
-  perfLabel: { flex: 1, fontSize: 14, color: C.textSecond, fontWeight: '600' },
-  perfValue: { fontSize: 15, fontWeight: '800', color: C.textPrimary },
+  perfLabel: { flex: 1, fontFamily: F.body, fontSize: 14, color: C.inkBrown },
+  perfValue: { fontFamily: F.display, fontSize: 15, color: C.ink },
 
   badgeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   badge: {
-    width: '47%', borderRadius: R.lg, padding: 16, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    width: '47%', flexGrow: 1, backgroundColor: C.peachBg,
+    borderWidth: 1, borderColor: C.peachBorder, borderRadius: R.md,
+    padding: 16, alignItems: 'center',
   },
-  badgeEmoji: { fontSize: 36, marginBottom: 8 },
-  badgeTitle: { fontSize: 13, fontWeight: '900', color: C.textPrimary },
-  badgeDesc:  { fontSize: 11, color: C.textSecond, marginTop: 3, textAlign: 'center' },
+  badgeTitle: { fontFamily: F.display, fontSize: 13, color: C.ink },
+  badgeDesc:  { fontFamily: F.body, fontSize: 11, color: C.inkBrown, marginTop: 3, textAlign: 'center' },
 });

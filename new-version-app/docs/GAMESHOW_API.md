@@ -23,9 +23,16 @@ Joins the matchmaking queue to find an opponent.
   "displayName": "string (required)",
   "grade": "string (optional)",
   "winRate": "number (optional, 0-100)",
-  "totalScore": "number (optional)"
+  "totalScore": "number (optional)",
+  "mode": "string (optional: 'add_sub' | 'mul_div' | 'mixed', default 'mixed')"
 }
 ```
+
+> **`mode`** chọn loại phép tính cho câu số học: `add_sub` (+, −), `mul_div` (×, ÷),
+> `mixed` (cả bốn). Mọi chế độ đều xen kẽ câu so sánh (`<`, `>`, `=`) — cứ 3 câu có 1 câu
+> so sánh. Cả phòng dùng `mode` của người vào hàng đợi trước để hai bên nhận cùng bộ câu hỏi.
+> Mỗi câu hỏi trong `MATCH_FOUND` có thêm trường `type: "arithmetic" | "comparison"` để client
+> chọn dạng nhập (bàn phím số cho số học, ba nút `< = >` cho so sánh).
 
 **Example:**
 ```json

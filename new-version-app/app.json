@@ -7,6 +7,12 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B35"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -23,7 +29,9 @@
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           }
         ]
       }
@@ -42,6 +50,9 @@
         "backgroundColor": "#FF6B35"
       }
     },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "plugins": [
       [
         "expo-image-picker",
@@ -50,7 +61,8 @@
           "cameraPermission": "Cho phép dùng camera để chụp ảnh đại diện"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ]
   }
 }

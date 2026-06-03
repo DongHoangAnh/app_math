@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, SafeAreaView, TextInput,
+  SafeAreaView, TextInput,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
-import { C, R } from '../theme';
+import { C, R, F, hardShadow } from '../theme';
+import { TactileButton } from '../components/ui';
 
 export default function ForgotPasswordScreen() {
   const { sendPasswordResetEmail } = useAuth();
@@ -52,14 +53,13 @@ export default function ForgotPasswordScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Back button */}
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
             <Text style={styles.backText}>← Quay lại</Text>
           </TouchableOpacity>
 
           {/* Hero */}
           <View style={styles.hero}>
-            <View style={styles.iconWrap}>
+            <View style={[styles.iconWrap, hardShadow(C.orangeDark, 6, 0.25)]}>
               <Text style={styles.iconEmoji}>🔐</Text>
             </View>
             <Text style={styles.title}>Quên mật khẩu?</Text>
@@ -68,75 +68,63 @@ export default function ForgotPasswordScreen() {
             </Text>
           </View>
 
-          {/* Form card */}
-          <View style={styles.card}>
-            {sent ? (
-              // Success state
-              <View style={styles.successBox}>
-                <Text style={styles.successEmoji}>📬</Text>
-                <Text style={styles.successTitle}>Kiểm tra hộp thư!</Text>
-                <Text style={styles.successText}>
-                  Nếu địa chỉ{' '}
-                  <Text style={{ fontWeight: '800', color: C.primary }}>{email}</Text>
-                  {' '}tồn tại trong hệ thống, bạn sẽ nhận được email hướng dẫn đặt lại mật khẩu trong vài phút.
-                </Text>
-                <Text style={styles.spamHint}>
-                  Không thấy email? Hãy kiểm tra thư mục Spam/Junk.
-                </Text>
-                <TouchableOpacity
-                  style={styles.resendBtn}
-                  onPress={() => { setSent(false); setEmail(''); }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.resendText}>Gửi lại với email khác</Text>
-                </TouchableOpacity>
+          {sent ? (
+            <View style={styles.successBox}>
+              <Text style={styles.successEmoji}>📬</Text>
+              <Text style={styles.successTitle}>Kiểm tra hộp thư!</Text>
+              <Text style={styles.successText}>
+                Nếu địa chỉ <Text style={{ fontFamily: F.display, color: C.orangeDark }}>{email}</Text>
+                {' '}tồn tại trong hệ thống, bạn sẽ nhận được email hướng dẫn đặt lại mật khẩu trong vài phút.
+              </Text>
+              <Text style={styles.spamHint}>Không thấy email? Hãy kiểm tra thư mục Spam/Junk.</Text>
+              <TouchableOpacity
+                style={styles.resendBtn}
+                onPress={() => { setSent(false); setEmail(''); }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.resendText}>Gửi lại với email khác</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Địa chỉ email</Text>
+                <TextInput
+                  style={[styles.input, error ? styles.inputError : null]}
+                  value={email}
+                  onChangeText={(t) => { setEmail(t); setError(null); }}
+                  placeholder="email@example.com"
+                  placeholderTextColor="#C9B8AF"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!submitting}
+                  returnKeyType="send"
+                  onSubmitEditing={handleSend}
+                />
               </View>
-            ) : (
-              <>
-                <Text style={styles.cardTitle}>Đặt lại mật khẩu</Text>
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>✉️  Địa chỉ email</Text>
-                  <TextInput
-                    style={[styles.input, error ? styles.inputError : null]}
-                    value={email}
-                    onChangeText={(t) => { setEmail(t); setError(null); }}
-                    placeholder="email@example.com"
-                    placeholderTextColor="#C9B8AF"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!submitting}
-                    returnKeyType="send"
-                    onSubmitEditing={handleSend}
-                  />
+              {error && (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>⚠️  {error}</Text>
                 </View>
+              )}
 
-                {error && (
-                  <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>⚠️  {error}</Text>
-                  </View>
-                )}
-
-                <TouchableOpacity
-                  style={[styles.sendBtn, (submitting || !email.trim()) && { opacity: 0.55 }]}
-                  onPress={handleSend}
-                  disabled={submitting || !email.trim()}
-                  activeOpacity={0.85}
-                >
-                  {submitting
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.sendBtnText}>Gửi liên kết đặt lại →</Text>}
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+              <TactileButton
+                title="Gửi liên kết đặt lại"
+                iconRight="→"
+                onPress={handleSend}
+                loading={submitting}
+                disabled={submitting || !email.trim()}
+              />
+            </View>
+          )}
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Nhớ ra mật khẩu rồi?</Text>
+            <Text style={styles.footerText}>Nhớ ra mật khẩu rồi? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')} activeOpacity={0.7}>
-              <Text style={styles.footerLink}> Đăng nhập ngay →</Text>
+              <Text style={styles.footerLink}>Đăng nhập ngay →</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -146,74 +134,46 @@ export default function ForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: C.background },
-  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 32 },
+  safe:   { flex: 1, backgroundColor: C.bg },
+  scroll: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 32 },
 
   backBtn:  { marginTop: 16, alignSelf: 'flex-start' },
-  backText: { fontSize: 14, fontWeight: '700', color: C.primary },
+  backText: { fontFamily: F.display, fontSize: 14, color: C.orangeDark },
 
-  // Hero
-  hero: { alignItems: 'center', paddingTop: 28, paddingBottom: 32 },
+  hero: { alignItems: 'center', paddingTop: 20, paddingBottom: 28, gap: 10 },
   iconWrap: {
-    width: 88, height: 88, borderRadius: R.xxl,
-    backgroundColor: C.primary,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 18,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35, shadowRadius: 16, elevation: 12,
+    width: 88, height: 88, borderRadius: R.pill, backgroundColor: C.orange,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
   },
-  iconEmoji: { fontSize: 44 },
-  title:    { fontSize: 28, fontWeight: '900', color: C.textPrimary, marginBottom: 10 },
-  subtitle: {
-    fontSize: 14, color: C.textSecond, textAlign: 'center',
-    lineHeight: 20, paddingHorizontal: 8,
-  },
+  iconEmoji: { fontSize: 42 },
+  title:    { fontFamily: F.display, fontSize: 28, color: C.ink },
+  subtitle: { fontFamily: F.body, fontSize: 14, color: C.inkBrown, textAlign: 'center', lineHeight: 20, paddingHorizontal: 8 },
 
-  // Card
-  card: {
-    backgroundColor: C.surface, borderRadius: R.xxl, padding: 24,
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.12, shadowRadius: 20, elevation: 8,
-    gap: 16,
-  },
-  cardTitle: { fontSize: 20, fontWeight: '900', color: C.textPrimary },
-
+  form: { gap: 16 },
   inputGroup: { gap: 8 },
-  inputLabel: { fontSize: 13, fontWeight: '800', color: C.textSecond },
+  inputLabel: { fontFamily: F.display, fontSize: 14, color: C.inkBrown, marginLeft: 4 },
   input: {
-    backgroundColor: C.background, borderRadius: R.md,
-    paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, color: C.textPrimary,
-    borderWidth: 2, borderColor: C.border,
+    height: 56, backgroundColor: C.surfaceSunken, borderRadius: R.pill,
+    paddingHorizontal: 20, fontFamily: F.body, fontSize: 16, color: C.ink,
+    borderWidth: 2, borderColor: C.peachBorder,
   },
   inputError: { borderColor: C.error },
 
-  errorBox:  { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
-  errorText: { fontSize: 13, color: C.error, textAlign: 'center', fontWeight: '600' },
+  errorBox:  { backgroundColor: C.errorSoft, borderRadius: R.md, padding: 12 },
+  errorText: { fontFamily: F.bodyMedium, fontSize: 13, color: C.error, textAlign: 'center' },
 
-  sendBtn: {
-    backgroundColor: C.primary, borderRadius: R.lg, paddingVertical: 17,
-    alignItems: 'center',
-    shadowColor: C.primary, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35, shadowRadius: 14, elevation: 10,
-  },
-  sendBtnText: { fontSize: 16, fontWeight: '900', color: '#fff' },
-
-  // Success
   successBox: { alignItems: 'center', gap: 14, paddingVertical: 8 },
   successEmoji: { fontSize: 64 },
-  successTitle: { fontSize: 22, fontWeight: '900', color: C.success },
-  successText: { fontSize: 14, color: C.textSecond, textAlign: 'center', lineHeight: 22 },
-  spamHint:   { fontSize: 12, color: C.textSecond, textAlign: 'center', fontStyle: 'italic' },
+  successTitle: { fontFamily: F.display, fontSize: 24, color: C.successDeep },
+  successText: { fontFamily: F.body, fontSize: 14, color: C.inkBrown, textAlign: 'center', lineHeight: 22 },
+  spamHint:   { fontFamily: F.body, fontSize: 12, color: C.inkSlate, textAlign: 'center', fontStyle: 'italic' },
   resendBtn: {
-    marginTop: 4, paddingVertical: 10, paddingHorizontal: 24,
-    borderRadius: R.sm, borderWidth: 1.5, borderColor: C.primary,
+    marginTop: 4, paddingVertical: 11, paddingHorizontal: 24,
+    borderRadius: R.pill, borderWidth: 1.5, borderColor: C.orange,
   },
-  resendText: { fontSize: 13, fontWeight: '700', color: C.primary },
+  resendText: { fontFamily: F.display, fontSize: 13, color: C.orangeDark },
 
-  footer: {
-    flexDirection: 'row', justifyContent: 'center',
-    marginTop: 28, marginBottom: 8,
-  },
-  footerText: { fontSize: 14, color: C.textSecond },
-  footerLink: { fontSize: 14, fontWeight: '800', color: C.primary },
+  footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 28 },
+  footerText: { fontFamily: F.body, fontSize: 14, color: C.inkBrown },
+  footerLink: { fontFamily: F.display, fontSize: 14, color: C.orangeDark },
 });

@@ -4,6 +4,7 @@ import { setupGameShowWS } from "./gameshow-ws";
 import {
     testSupabaseConnection,
     getPlayerStats,
+    getMatchHistory,
     getDailyTasks,
     claimTaskExp,
     verifyToken,
@@ -98,6 +99,7 @@ const server = http.createServer(async (req, res) => {
     const pathname = parsedUrl.pathname;
 
     const statsMatch     = pathname.match(/^\/api\/gameshow\/stats\/([^/]+)$/);
+    const matchesMatch   = pathname.match(/^\/api\/gameshow\/matches\/([^/]+)$/);
     const dailyTasksMatch = pathname.match(/^\/api\/daily-tasks\/([^/]+)$/);
     const claimTaskMatch  = pathname.match(/^\/api\/daily-tasks\/([^/]+)\/claim\/([^/]+)$/);
 
@@ -111,6 +113,31 @@ const server = http.createServer(async (req, res) => {
         try {
             const stats = await getPlayerStats(userId);
             json(res, 200, stats);
+        } catch {
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+    // GET /api/gameshow/matches/:userId?limit=&offset=  — requires auth (own matches only)
+    if (req.method === "GET" && matchesMatch) {
+        const userId = matchesMatch[1];
+        if (!isValidUuid(userId)) {
+            json(res, 400, { error: "invalid userId" });
+            return;
+        }
+        const authedId = await authenticate(req);
+        if (!authedId || authedId !== userId) {
+            json(res, 401, { error: "unauthorized" });
+            return;
+        }
+        const limitRaw  = Number(parsedUrl.searchParams.get("limit"));
+        const offsetRaw = Number(parsedUrl.searchParams.get("offset"));
+        const limit  = Number.isFinite(limitRaw)  ? Math.min(Math.max(Math.floor(limitRaw), 1), 20) : 5;
+        const offset = Number.isFinite(offsetRaw) ? Math.max(Math.floor(offsetRaw), 0) : 0;
+        try {
+            const matches = await getMatchHistory(userId, limit, offset);
+            json(res, 200, matches);
         } catch {
             json(res, 500, { error: "internal" });
         }

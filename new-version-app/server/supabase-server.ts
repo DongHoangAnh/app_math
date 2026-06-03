@@ -338,6 +338,60 @@ export async function claimTaskExp(
 }
 
 // ═══════════════════════════════════════════════════════════
+// MATCH HISTORY — paginated, newest → oldest, per-user perspective
+// ═══════════════════════════════════════════════════════════
+
+export type MatchHistoryItem = {
+    id: string;
+    roomId: string;
+    playedAt: string;
+    opponentName: string;
+    myScore: number;
+    opponentScore: number;
+    myCorrect: number;
+    opponentCorrect: number;
+    outcome: "win" | "lose" | "draw";
+    rankingDelta: number;
+    questionsCount: number;
+};
+
+export async function getMatchHistory(
+    userId: string,
+    limit: number,
+    offset: number
+): Promise<MatchHistoryItem[]> {
+    const { data, error } = await getSupabaseClient()
+        .from("game_matches")
+        .select("id,room_id,played_at,player1_id,player2_id,player1_display_name,player2_display_name,player1_score,player2_score,player1_correct,player2_correct,winner_id,questions_count")
+        .or(`player1_id.eq.${userId},player2_id.eq.${userId}`)
+        .order("played_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+
+    if (error || !data) return [];
+
+    return data.map((m) => {
+        const isP1 = m.player1_id === userId;
+        const outcome: "win" | "lose" | "draw" =
+            m.winner_id == null ? "draw" : m.winner_id === userId ? "win" : "lose";
+        // Điểm xếp hạng cộng/trừ tương ứng kết quả (cùng quy tắc khi kết thúc trận)
+        const rankingDelta = outcome === "win" ? POINTS_WIN : outcome === "lose" ? -POINTS_LOSE : 0;
+        return {
+            id: String(m.id),
+            roomId: m.room_id,
+            playedAt: m.played_at,
+            opponentName: (isP1 ? m.player2_display_name : m.player1_display_name) ?? "Đối thủ",
+            myScore: (isP1 ? m.player1_score : m.player2_score) ?? 0,
+            opponentScore: (isP1 ? m.player2_score : m.player1_score) ?? 0,
+            myCorrect: (isP1 ? m.player1_correct : m.player2_correct) ?? 0,
+            opponentCorrect: (isP1 ? m.player2_correct : m.player1_correct) ?? 0,
+            outcome,
+            rankingDelta,
+            questionsCount: m.questions_count ?? 10,
+        };
+    });
+}
+
+// ═══════════════════════════════════════════════════════════
 // PLAYER STATS — aggregated from game_matches
 // ═══════════════════════════════════════════════════════════
 

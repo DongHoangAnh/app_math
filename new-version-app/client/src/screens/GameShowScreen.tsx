@@ -517,7 +517,64 @@ export default function GameShowScreen() {
           </View>
         </View>
 
-        {/* ── Answer Input ── */}
+        {/* ── Interaction / Chat bar (moved ABOVE the keyboard) ── */}
+        <View style={s.chatBar}>
+          {state.chatMessages.filter(m => m.type === 'chat').slice(-2).map(msg => {
+            const isMe = msg.fromUserId === userId;
+            return (
+              <View key={msg.id} style={[s.chatBubble, isMe ? s.chatBubbleMe : s.chatBubbleThem]}>
+                <Text style={isMe ? s.chatNameMe : s.chatNameThem}>
+                  {isMe ? 'Bạn' : msg.fromName.split(' ').pop()}
+                </Text>
+                <Text style={isMe ? s.chatTextMe : s.chatTextThem}>{msg.text}</Text>
+              </View>
+            );
+          })}
+
+          {showChatInput && (
+            <View style={s.chatInputRow}>
+              <TextInput
+                style={s.chatInputField}
+                value={chatInput}
+                onChangeText={setChatInput}
+                placeholder="Nhắn tin..."
+                placeholderTextColor="#AAA"
+                maxLength={120}
+                autoFocus
+                returnKeyType="send"
+                onSubmitEditing={() => handleSendChat(false)}
+              />
+              <TouchableOpacity onPress={() => handleSendChat(false)} style={s.chatSendBtn}>
+                <Text style={s.chatSendBtnText}>Gửi</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={s.emojiRow}>
+            {CHAT_EMOJIS.map(emoji => (
+              <TouchableOpacity
+                key={emoji}
+                onPress={() => sendEmoji(emoji)}
+                style={s.emojiBtn}
+                activeOpacity={0.7}
+              >
+                <Text style={s.emojiBtnText}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={() => setShowChatInput(v => !v)}
+              style={[s.emojiBtn, showChatInput && s.emojiBtnActive]}
+              activeOpacity={0.7}
+            >
+              <Text style={s.emojiBtnText}>💬</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ── Answer Input ──
+            Fixed-height area (anchored to the bottom) so the interaction bar
+            above keeps its position when the keypad switches to comparison mode. */}
+        <View style={s.answerArea}>
         {isComparison ? (
           // Three wide amber buttons for comparison questions
           <View style={s.compRow}>
@@ -596,59 +653,6 @@ export default function GameShowScreen() {
             </View>
           </View>
         )}
-
-        {/* ── Chat bar ── */}
-        <View style={s.chatBar}>
-          {state.chatMessages.filter(m => m.type === 'chat').slice(-2).map(msg => {
-            const isMe = msg.fromUserId === userId;
-            return (
-              <View key={msg.id} style={[s.chatBubble, isMe ? s.chatBubbleMe : s.chatBubbleThem]}>
-                <Text style={isMe ? s.chatNameMe : s.chatNameThem}>
-                  {isMe ? 'Bạn' : msg.fromName.split(' ').pop()}
-                </Text>
-                <Text style={isMe ? s.chatTextMe : s.chatTextThem}>{msg.text}</Text>
-              </View>
-            );
-          })}
-
-          {showChatInput && (
-            <View style={s.chatInputRow}>
-              <TextInput
-                style={s.chatInputField}
-                value={chatInput}
-                onChangeText={setChatInput}
-                placeholder="Nhắn tin..."
-                placeholderTextColor="#AAA"
-                maxLength={120}
-                autoFocus
-                returnKeyType="send"
-                onSubmitEditing={() => handleSendChat(false)}
-              />
-              <TouchableOpacity onPress={() => handleSendChat(false)} style={s.chatSendBtn}>
-                <Text style={s.chatSendBtnText}>Gửi</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={s.emojiRow}>
-            {CHAT_EMOJIS.map(emoji => (
-              <TouchableOpacity
-                key={emoji}
-                onPress={() => sendEmoji(emoji)}
-                style={s.emojiBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={s.emojiBtnText}>{emoji}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              onPress={() => setShowChatInput(v => !v)}
-              style={[s.emojiBtn, showChatInput && s.emojiBtnActive]}
-              activeOpacity={0.7}
-            >
-              <Text style={s.emojiBtnText}>💬</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </SafeAreaView>
       </KeyboardAvoidingView>
@@ -895,8 +899,8 @@ const s = StyleSheet.create({
   // Question card — the navy "game" surface
   qCard: {
     backgroundColor: C.navy, borderRadius: R.xl,
-    paddingTop: 16, paddingBottom: 22, paddingHorizontal: 18,
-    alignItems: 'center', gap: 16, minHeight: 110,
+    paddingTop: 28, paddingBottom: 36, paddingHorizontal: 18,
+    alignItems: 'center', justifyContent: 'center', gap: 28, minHeight: 230,
     ...hardShadow(C.navy, 8, 0.2),
   },
   qCounterPill: {
@@ -905,56 +909,61 @@ const s = StyleSheet.create({
     paddingHorizontal: 18, paddingVertical: 6,
   },
   qCounterTxt:  { fontFamily: F.display, fontSize: 14, color: C.successBright },
-  questionText: { fontFamily: F.display, fontSize: 34, color: '#fff', textAlign: 'center', lineHeight: 42 },
+  questionText: { fontFamily: F.display, fontSize: 52, color: '#fff', textAlign: 'center', lineHeight: 62 },
 
   // Progress dots
   dots:      { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 4 },
   dot:       { width: 7, height: 7, borderRadius: 4, backgroundColor: C.border },
   dotActive: { width: 14, height: 7, borderRadius: 4, backgroundColor: C.primary },
 
-  // Comparison buttons
+  // Answer area — reserves the keypad's height and anchors content to the
+  // bottom, so the interaction bar above never shifts down when the input
+  // switches between the numeric keypad and the comparison (<,=,>) buttons.
+  answerArea: { minHeight: 360, justifyContent: 'flex-end' },
+
+  // Comparison buttons — fill the reserved area and center vertically
   compRow: {
-    flexDirection: 'row', gap: 12,
-    paddingHorizontal: 16, paddingBottom: 24, paddingTop: 8,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 16,
   },
   compBtn: {
-    flex: 1, paddingVertical: 18, borderRadius: R.xl,
-    backgroundColor: C.peachBg, alignItems: 'center',
+    flex: 1, height: 96, borderRadius: R.xl,
+    backgroundColor: C.peachBg, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: C.orange, ...shadow('#000', 1),
   },
-  compBtnTxt: { fontSize: 26, fontFamily: F.displayBold, color: C.orangeDark },
+  compBtnTxt: { fontSize: 40, fontFamily: F.displayBold, color: C.orangeDark },
 
   // Numeric keypad — recessed sheet, large rounded keys
   keypadWrap: {
-    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, gap: 8,
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 10,
     backgroundColor: C.bgKeypad, borderTopLeftRadius: R.sheet, borderTopRightRadius: R.sheet,
     borderWidth: 1, borderColor: C.lineSoft,
   },
   inputDisplay: {
     backgroundColor: C.peachBg, borderRadius: R.pill,
-    height: 42, justifyContent: 'center', alignItems: 'center',
+    height: 52, justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: C.orange,
   },
-  inputDisplayTxt: { fontSize: 24, fontFamily: F.displayBold, color: C.ink, letterSpacing: 2 },
-  keyRow: { flexDirection: 'row', gap: 10 },
+  inputDisplayTxt: { fontSize: 26, fontFamily: F.displayBold, color: C.ink, letterSpacing: 2 },
+  keyRow: { flexDirection: 'row', gap: 12 },
   key: {
-    flex: 1, height: 46,
+    flex: 1, height: 62,
     backgroundColor: C.surface, borderRadius: R.lg,
     justifyContent: 'center', alignItems: 'center', ...shadow('#000', 1),
   },
-  keyTxt: { fontSize: 24, fontFamily: F.display, color: C.ink },
+  keyTxt: { fontSize: 26, fontFamily: F.display, color: C.ink },
   keyXoa: {
-    flex: 1, height: 46,
+    flex: 1, height: 62,
     backgroundColor: C.line, borderRadius: R.lg,
     alignItems: 'center', justifyContent: 'center',
   },
-  keyXoaTxt: { fontSize: 20, color: C.inkBrown },
+  keyXoaTxt: { fontSize: 22, color: C.inkBrown },
   keySubmit: {
-    flex: 1, height: 46,
+    flex: 1, height: 62,
     backgroundColor: C.orange, borderRadius: R.lg,
     alignItems: 'center', justifyContent: 'center', ...shadow(C.orangeDark, 2),
   },
-  keySubmitTxt: { fontSize: 22, fontFamily: F.displayBold, color: '#fff' },
+  keySubmitTxt: { fontSize: 24, fontFamily: F.displayBold, color: '#fff' },
 
   // ── Floating emoji ──
   floatingEmoji: {

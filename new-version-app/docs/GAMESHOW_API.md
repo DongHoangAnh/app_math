@@ -306,6 +306,64 @@ Keep-alive response. Sent in response to PING.
 
 ---
 
+## In-Match Chat & Emojis
+
+Lightweight social messaging is available while a room is active (phases `playing`
+and `you_finished`). All messages are broadcast to **both** players, including the
+sender (the client renders optimistically and reconciles on echo).
+
+### Client → Server
+
+```jsonc
+// Send a quick emoji reaction
+{ "type": "SEND_EMOJI", "roomId": "<roomId>", "emoji": "🔥" }
+
+// Send a chat message (max 120 chars; server trims & moderates)
+{ "type": "SEND_CHAT", "roomId": "<roomId>", "text": "gg!" }
+```
+
+Server enforces: allowed-emoji whitelist, per-user rate limiting, profanity filter,
+and that the sender belongs to a live (non-finished) room.
+
+### Server → Client
+
+```jsonc
+{ "type": "EMOJI_RECEIVED", "fromUserId": "...", "fromName": "...", "emoji": "🔥", "timestamp": 0 }
+{ "type": "CHAT_RECEIVED",  "fromUserId": "...", "fromName": "...", "text": "gg!", "timestamp": 0 }
+{ "type": "CHAT_RATE_LIMITED" }   // your message was dropped (too fast)
+{ "type": "CHAT_MODERATED" }      // your message was dropped (profanity)
+```
+
+---
+
+## REST: Player Profile (privacy-aware)
+
+```
+GET /api/gameshow/profile/:userId        (Authorization: Bearer <token> required)
+```
+
+Returns the target player's public profile. Detailed `stats` are included only when
+the target has `allow_viewing_info = true`, or when the viewer is the owner;
+otherwise `stats` is `null` and only avatar/name/level are exposed.
+
+```jsonc
+{
+  "userId": "...",
+  "displayName": "...",
+  "avatarUrl": "https://... | null",
+  "level": 5,
+  "rankingPoints": 340,
+  "allowViewingInfo": true,
+  "stats": { /* PlayerStats */ } | null
+}
+```
+
+The `allow_viewing_info` flag is toggled by the user on the Statistics screen
+(stored on `user_profiles`). Match-history items also include `opponentId` so the
+client can open this profile view for a past opponent.
+
+---
+
 ## Scoring System
 
 - Each correct answer = 100 points

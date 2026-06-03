@@ -263,11 +263,13 @@ export function useGameShowWS(
                         timestamp: msg.timestamp,
                     };
                     setState((s) => {
-                        // Replace optimistic local_ message if this echo is our own
+                        // Replace optimistic chat message if this echo is our own.
+                        // Chỉ khớp tin chat lạc quan (id "local_…"), KHÔNG khớp emoji
+                        // (id "local_emoji_…") để tránh thay nhầm bong bóng emoji.
                         if (msg.fromUserId === userIdRef.current) {
                             const msgs = [...s.chatMessages];
                             const localIdx = msgs.map((m, i) => ({ m, i })).reverse()
-                                .find(({ m }) => m.id.startsWith("local_"))?.i;
+                                .find(({ m }) => m.type === "chat" && m.id.startsWith("local_") && !m.id.startsWith("local_emoji_"))?.i;
                             if (localIdx !== undefined) {
                                 msgs[localIdx] = chatMsg;
                                 return { ...s, chatMessages: msgs };

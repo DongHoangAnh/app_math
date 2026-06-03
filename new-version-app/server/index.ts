@@ -5,6 +5,7 @@ import {
     testSupabaseConnection,
     getPlayerStats,
     getMatchHistory,
+    getPublicProfile,
     getDailyTasks,
     claimTaskExp,
     verifyToken,
@@ -100,6 +101,7 @@ const server = http.createServer(async (req, res) => {
 
     const statsMatch     = pathname.match(/^\/api\/gameshow\/stats\/([^/]+)$/);
     const matchesMatch   = pathname.match(/^\/api\/gameshow\/matches\/([^/]+)$/);
+    const profileMatch   = pathname.match(/^\/api\/gameshow\/profile\/([^/]+)$/);
     const dailyTasksMatch = pathname.match(/^\/api\/daily-tasks\/([^/]+)$/);
     const claimTaskMatch  = pathname.match(/^\/api\/daily-tasks\/([^/]+)\/claim\/([^/]+)$/);
 
@@ -138,6 +140,31 @@ const server = http.createServer(async (req, res) => {
         try {
             const matches = await getMatchHistory(userId, limit, offset);
             json(res, 200, matches);
+        } catch {
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+    // GET /api/gameshow/profile/:userId  — requires auth (privacy-aware view of another player)
+    if (req.method === "GET" && profileMatch) {
+        const userId = profileMatch[1];
+        if (!isValidUuid(userId)) {
+            json(res, 400, { error: "invalid userId" });
+            return;
+        }
+        const viewerId = await authenticate(req);
+        if (!viewerId) {
+            json(res, 401, { error: "unauthorized" });
+            return;
+        }
+        try {
+            const profile = await getPublicProfile(viewerId, userId);
+            if (!profile) {
+                json(res, 404, { error: "not found" });
+                return;
+            }
+            json(res, 200, profile);
         } catch {
             json(res, 500, { error: "internal" });
         }

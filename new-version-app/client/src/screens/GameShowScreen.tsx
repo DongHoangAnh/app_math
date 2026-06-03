@@ -419,7 +419,11 @@ export default function GameShowScreen() {
     const isComparison = adaptedQ.type === 'comparison';
 
     return (
-      <SafeAreaView style={s.bg}>
+      <KeyboardAvoidingView
+        style={s.bg}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+      <SafeAreaView style={{ flex: 1 }}>
         {/* Floating emoji overlay */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {floatingEmojis.map(fe => (
@@ -647,6 +651,7 @@ export default function GameShowScreen() {
           </View>
         </View>
       </SafeAreaView>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -921,31 +926,31 @@ const s = StyleSheet.create({
 
   // Numeric keypad — recessed sheet, large rounded keys
   keypadWrap: {
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16, gap: 10,
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, gap: 8,
     backgroundColor: C.bgKeypad, borderTopLeftRadius: R.sheet, borderTopRightRadius: R.sheet,
     borderWidth: 1, borderColor: C.lineSoft,
   },
   inputDisplay: {
     backgroundColor: C.peachBg, borderRadius: R.pill,
-    height: 48, justifyContent: 'center', alignItems: 'center',
+    height: 42, justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: C.orange,
   },
   inputDisplayTxt: { fontSize: 24, fontFamily: F.displayBold, color: C.ink, letterSpacing: 2 },
   keyRow: { flexDirection: 'row', gap: 10 },
   key: {
-    flex: 1, height: 56,
+    flex: 1, height: 46,
     backgroundColor: C.surface, borderRadius: R.lg,
     justifyContent: 'center', alignItems: 'center', ...shadow('#000', 1),
   },
   keyTxt: { fontSize: 24, fontFamily: F.display, color: C.ink },
   keyXoa: {
-    flex: 1, height: 56,
+    flex: 1, height: 46,
     backgroundColor: C.line, borderRadius: R.lg,
     alignItems: 'center', justifyContent: 'center',
   },
   keyXoaTxt: { fontSize: 20, color: C.inkBrown },
   keySubmit: {
-    flex: 1, height: 56,
+    flex: 1, height: 46,
     backgroundColor: C.orange, borderRadius: R.lg,
     alignItems: 'center', justifyContent: 'center', ...shadow(C.orangeDark, 2),
   },

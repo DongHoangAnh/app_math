@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  SafeAreaView, ActivityIndicator,
+  SafeAreaView, ActivityIndicator, Switch, Alert,
 } from 'react-native';
 import { C, R, F, shadow } from '../theme';
 import { useAuth } from '../hooks/useAuth';
@@ -35,6 +35,8 @@ export default function StatisticsScreen() {
   const [loading, setLoading] = useState(false);
   const [userExp, setUserExp] = useState(0);
   const [userLevel, setUserLevel] = useState(1);
+  const [allowViewing, setAllowViewing] = useState(true);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -47,16 +49,33 @@ export default function StatisticsScreen() {
 
     supabase
       .from('user_profiles')
-      .select('exp,level')
+      .select('exp,level,allow_viewing_info')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
         if (data) {
           setUserExp(data.exp ?? 0);
           setUserLevel(data.level ?? 1);
+          setAllowViewing(data.allow_viewing_info !== false);
         }
       }, () => {});
   }, [user]);
+
+  const togglePrivacy = async (value: boolean) => {
+    if (!user || savingPrivacy) return;
+    setAllowViewing(value); // cập nhật lạc quan
+    setSavingPrivacy(true);
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ allow_viewing_info: value })
+      .eq('id', user.id);
+    if (error) {
+      console.warn('[privacy] update failed:', error.message, error);
+      setAllowViewing(!value); // hoàn lại nếu lưu thất bại
+      Alert.alert('Không lưu được', error.message);
+    }
+    setSavingPrivacy(false);
+  };
 
   if (loading) {
     return (
@@ -114,6 +133,26 @@ export default function StatisticsScreen() {
             <PerfRow icon="🔢" label="Điểm TB / trận" value={`${stats.averageScore}`} />
             <PerfRow icon="🎯" label="Tỷ lệ trả lời đúng" value={stats.totalMatches > 0 ? `${stats.accuracyRate.toFixed(1)}%` : '—'} />
             <PerfRow icon="⏱️" label="Trung bình / trận" value={stats.totalMatches > 0 ? `${stats.avgTimePerMatch.toFixed(1)}s` : '—'} isLast />
+          </View>
+        </View>
+
+        {/* Privacy */}
+        <View style={styles.section}>
+          <Text style={styles.h3}>Quyền riêng tư</Text>
+          <View style={styles.privacyCard}>
+            <View style={styles.privacyTextWrap}>
+              <Text style={styles.privacyLabel}>Cho phép người khác xem thông tin của tôi</Text>
+              <Text style={styles.privacySub}>
+                Khi tắt, người khác chỉ thấy ảnh đại diện, tên và cấp độ của bạn.
+              </Text>
+            </View>
+            <Switch
+              value={allowViewing}
+              onValueChange={togglePrivacy}
+              disabled={savingPrivacy}
+              trackColor={{ false: C.line, true: C.orange }}
+              thumbColor="#fff"
+            />
           </View>
         </View>
 
@@ -205,4 +244,14 @@ const styles = StyleSheet.create({
   },
   badgeTitle: { fontFamily: F.display, fontSize: 13, color: C.ink },
   badgeDesc:  { fontFamily: F.body, fontSize: 11, color: C.inkBrown, marginTop: 3, textAlign: 'center' },
+
+  privacyCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: C.surface, borderRadius: R.md,
+    borderWidth: 1, borderColor: C.line,
+    paddingVertical: 14, paddingHorizontal: 18, ...shadow('#000', 1),
+  },
+  privacyTextWrap: { flex: 1, gap: 3 },
+  privacyLabel: { fontFamily: F.display, fontSize: 14, color: C.ink },
+  privacySub:   { fontFamily: F.body, fontSize: 12, color: C.inkSlate },
 });

@@ -7,6 +7,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { C, R, F, shadow } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { authFetch } from '../utils/authFetch';
+import OpponentInfoModal from '../components/OpponentInfoModal';
 
 const PAGE = 5; // tải 5 trận mỗi lần
 
@@ -14,6 +15,7 @@ interface MatchItem {
   id: string;
   roomId: string;
   playedAt: string;
+  opponentId: string;
   opponentName: string;
   myScore: number;
   opponentScore: number;
@@ -49,6 +51,7 @@ export default function MatchHistoryScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
+  const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
 
   const load = useCallback(async (offset: number, replace: boolean) => {
     if (!user) return;
@@ -99,7 +102,12 @@ export default function MatchHistoryScreen() {
     const deltaColor = item.rankingDelta > 0 ? C.success : item.rankingDelta < 0 ? C.error : C.textSecond;
     const deltaTxt = `${item.rankingDelta >= 0 ? '+' : ''}${item.rankingDelta}`;
     return (
-      <View style={s.card}>
+      <TouchableOpacity
+        style={s.card}
+        activeOpacity={0.7}
+        disabled={!item.opponentId}
+        onPress={() => setSelected({ id: item.opponentId, name: item.opponentName })}
+      >
         <View style={[s.outcomeBadge, { backgroundColor: o.color }]}>
           <Text style={s.outcomeEmoji}>{o.emoji}</Text>
         </View>
@@ -117,7 +125,7 @@ export default function MatchHistoryScreen() {
           </Text>
           <Text style={[s.delta, { color: deltaColor }]}>{deltaTxt} điểm</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }, []);
 
@@ -170,6 +178,13 @@ export default function MatchHistoryScreen() {
           }
         />
       )}
+
+      <OpponentInfoModal
+        visible={!!selected}
+        opponentId={selected?.id ?? null}
+        fallbackName={selected?.name}
+        onClose={() => setSelected(null)}
+      />
     </SafeAreaView>
   );
 }

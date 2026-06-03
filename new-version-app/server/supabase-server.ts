@@ -345,6 +345,7 @@ export type MatchHistoryItem = {
     id: string;
     roomId: string;
     playedAt: string;
+    opponentId: string;
     opponentName: string;
     myScore: number;
     opponentScore: number;
@@ -379,6 +380,7 @@ export async function getMatchHistory(
             id: String(m.id),
             roomId: m.room_id,
             playedAt: m.played_at,
+            opponentId: (isP1 ? m.player2_id : m.player1_id) ?? "",
             opponentName: (isP1 ? m.player2_display_name : m.player1_display_name) ?? "Đối thủ",
             myScore: (isP1 ? m.player1_score : m.player2_score) ?? 0,
             opponentScore: (isP1 ? m.player2_score : m.player1_score) ?? 0,
@@ -487,5 +489,47 @@ export async function getPlayerStats(userId: string): Promise<PlayerStats> {
         nextLevelProgress,
         accuracyRate:    Math.round(accuracyRate * 10) / 10,
         avgTimePerMatch: Math.round(avgTimePerMatch * 10) / 10,
+    };
+}
+
+// ═══════════════════════════════════════════════════════════
+// PUBLIC PROFILE — for viewing another player (privacy-aware)
+// ═══════════════════════════════════════════════════════════
+
+export type PublicProfile = {
+    userId: string;
+    displayName: string;
+    avatarUrl: string | null;
+    level: number;
+    rankingPoints: number;
+    allowViewingInfo: boolean;
+    // Full stats only when the target allows it, or the viewer is the owner
+    stats: PlayerStats | null;
+};
+
+export async function getPublicProfile(
+    viewerId: string,
+    targetId: string
+): Promise<PublicProfile | null> {
+    const { data, error } = await getSupabaseClient()
+        .from("user_profiles")
+        .select("display_name,avatar_url,level,ranking_points,allow_viewing_info")
+        .eq("id", targetId)
+        .single();
+
+    if (error || !data) return null;
+
+    // Cột mới có thể chưa tồn tại nếu migration chưa chạy → mặc định cho phép xem
+    const allowViewingInfo = data.allow_viewing_info !== false;
+    const canSeeStats = allowViewingInfo || viewerId === targetId;
+
+    return {
+        userId: targetId,
+        displayName: data.display_name ?? "Đối thủ",
+        avatarUrl: data.avatar_url ?? null,
+        level: data.level ?? 1,
+        rankingPoints: data.ranking_points ?? 0,
+        allowViewingInfo,
+        stats: canSeeStats ? await getPlayerStats(targetId) : null,
     };
 }

@@ -7,10 +7,9 @@ import { C, R, F, shadow, hardShadow } from '../theme';
 import { ProgressBar } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
-import { authFetch } from '../utils/authFetch';
 import { getLevelProgress, getTier, TIER_LABEL } from '../utils/levelUtils';
 import EditProfileModal from '../components/EditProfileModal';
-import { API_URL } from '../config';
+import { gameApi } from '../services/api';
 
 interface UserStats {
   totalScore: number; totalMatches: number;
@@ -59,8 +58,7 @@ export default function ProfileScreen() {
         }
       }, () => {});
 
-    authFetch(`${API_URL}/api/gameshow/stats/${user.id}`)
-      .then((r) => r.json())
+    gameApi.getStats(user.id)
       .then((data) => setStats({
         totalScore:   data.totalScore   ?? 0,
         totalMatches: data.totalMatches ?? 0,

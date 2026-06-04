@@ -5,25 +5,7 @@ import {
 } from 'react-native';
 import { C, R, F, shadow } from '../theme';
 import { LevelBadge } from './LevelBadge';
-import { authFetch } from '../utils/authFetch';
-import { API_URL } from '../config';
-
-interface PlayerStats {
-  totalMatches: number; totalWins: number; winRate: number;
-  totalScore: number; averageScore: number; bestStreak: number;
-  currentStreak: number; level: number; nextLevelProgress: number;
-  accuracyRate: number; avgTimePerMatch: number;
-}
-
-interface PublicProfile {
-  userId: string;
-  displayName: string;
-  avatarUrl: string | null;
-  level: number;
-  rankingPoints: number;
-  allowViewingInfo: boolean;
-  stats: PlayerStats | null;
-}
+import { gameApi, type PublicProfile } from '../services/api';
 
 interface Props {
   visible: boolean;
@@ -43,12 +25,8 @@ export default function OpponentInfoModal({ visible, opponentId, fallbackName, o
     setLoading(true);
     setError(null);
     setProfile(null);
-    authFetch(`${API_URL}/api/gameshow/profile/${opponentId}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`http ${res.status}`);
-        return res.json();
-      })
-      .then((data: PublicProfile) => { if (!cancelled) setProfile(data); })
+    gameApi.getOpponentProfile(opponentId)
+      .then((data) => { if (!cancelled) setProfile(data); })
       .catch(() => { if (!cancelled) setError('Không tải được thông tin người chơi.'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

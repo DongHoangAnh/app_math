@@ -1,78 +1,118 @@
 /**
- * API Service - React Native
- * Handles all API calls to backend
+ * API service — the single place that talks to the backend REST API.
+ *
+ * Every call goes through `authFetch` (attaches the Supabase bearer token)
+ * and a shared `request()` helper that builds the URL from config and
+ * throws `ApiError` on non-2xx responses. Screens/hooks call the typed
+ * `gameApi` methods instead of hand-rolling fetch + URL + auth each time.
  */
 
-import axios from 'axios';
 import { API_URL } from '../config';
+import { authFetch } from '../utils/authFetch';
 
-// Create axios instance
-export const api = axios.create({
-  baseURL: API_URL,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+/** Thrown when the backend returns a non-2xx response. Carries the status. */
+export class ApiError extends Error {
+  constructor(public readonly status: number, message?: string) {
+    super(message ?? `HTTP ${status}`);
+    this.name = 'ApiError';
   }
-  return config;
-});
+}
 
-// API endpoints
-export const gameShowAPI = {
-  // Get user stats
-  getUserStats: (userId: string) =>
-    api.get(`/api/gameshow/stats/${userId}`),
+// ═══════════════════════════════════════════════════════════
+// RESPONSE DTOs — the API contract, shared by all consumers.
+// ═══════════════════════════════════════════════════════════
 
-  // Get leaderboard
-  getLeaderboard: (limit: number = 10) =>
-    api.get(`/api/gameshow/leaderboard?limit=${limit}`),
+export interface GameStatsResponse {
+  totalMatches: number;
+  totalWins: number;
+  winRate: number;
+  totalScore: number;
+  averageScore: number;
+  bestStreak: number;
+  currentStreak: number;
+  level: number;
+  nextLevelProgress: number;
+  accuracyRate: number;
+  avgTimePerMatch: number;
+}
 
-  // Save game result
-  saveGameResult: (data: {
-    userId: string;
-    opponentId: string;
-    roomId: string;
-    playerScore: number;
-    opponentScore: number;
-    playerTime: number;
-    opponentTime: number;
-    isWinner: boolean;
-  }) =>
-    api.post('/api/gameshow/results', data),
-};
+// Public profile exposes the same stat shape.
+export type PublicPlayerStats = GameStatsResponse;
 
-export const userAPI = {
-  // Get user profile
-  getProfile: (userId: string) =>
-    api.get(`/api/users/${userId}`),
+export interface PublicProfile {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  level: number;
+  rankingPoints: number;
+  allowViewingInfo: boolean;
+  stats: PublicPlayerStats | null;
+}
 
-  // Update user profile
-  updateProfile: (userId: string, data: any) =>
-    api.patch(`/api/users/${userId}`, data),
-};
+export interface MatchHistoryItem {
+  id: string;
+  roomId: string;
+  playedAt: string;
+  opponentId: string;
+  opponentName: string;
+  opponentAvatarUrl: string | null;
+  myScore: number;
+  opponentScore: number;
+  myCorrect: number;
+  opponentCorrect: number;
+  outcome: 'win' | 'lose' | 'draw';
+  rankingDelta: number;
+  questionsCount: number;
+}
 
-export const authAPI = {
-  // Login with credentials
-  login: (email: string, password: string) =>
-    api.post('/api/auth/login', { email, password }),
+export interface DailyTask {
+  task_key: string;
+  title: string;
+  description: string;
+  exp_reward: number;
+  progress: number;
+  target: number;
+  completed: boolean;
+  exp_claimed: boolean;
+}
 
-  // Register new user
-  register: (data: {
-    email: string;
-    password: string;
-    fullName: string;
-    grade?: string;
-  }) =>
-    api.post('/api/auth/register', data),
+export interface ClaimResult {
+  exp: number;
+  level: number;
+}
 
-  // Verify token
-  verifyToken: () =>
-    api.get('/api/auth/verify'),
+// ═══════════════════════════════════════════════════════════
+// CORE — auth + URL + JSON in one place.
+// ═══════════════════════════════════════════════════════════
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await authFetch(`${API_URL}${path}`, options);
+  if (!res.ok) throw new ApiError(res.status);
+  return res.json() as Promise<T>;
+}
+
+// ═══════════════════════════════════════════════════════════
+// ENDPOINTS
+// ═══════════════════════════════════════════════════════════
+
+export const gameApi = {
+  getStats: (userId: string) =>
+    request<GameStatsResponse>(`/api/gameshow/stats/${userId}`),
+
+  getOpponentProfile: (opponentId: string) =>
+    request<PublicProfile>(`/api/gameshow/profile/${opponentId}`),
+
+  getMatchHistory: (userId: string, limit: number, offset: number) =>
+    request<MatchHistoryItem[]>(
+      `/api/gameshow/matches/${userId}?limit=${limit}&offset=${offset}`,
+    ),
+
+  getDailyTasks: (userId: string) =>
+    request<DailyTask[]>(`/api/daily-tasks/${userId}`),
+
+  claimDailyTask: (userId: string, taskKey: string, displayName: string) =>
+    request<ClaimResult>(`/api/daily-tasks/${userId}/claim/${taskKey}`, {
+      method: 'POST',
+      body: JSON.stringify({ displayName }),
+    }),
 };

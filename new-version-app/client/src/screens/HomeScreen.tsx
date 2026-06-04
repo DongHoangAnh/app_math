@@ -8,8 +8,8 @@ import { Tactile, ProgressBar } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
-import { authFetch } from '../utils/authFetch';
 import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
+import { gameApi } from '../services/api';
 import { getLevelProgress } from '../utils/levelUtils';
 
 export default function HomeScreen() {
@@ -42,8 +42,7 @@ export default function HomeScreen() {
         }
       }, () => {});
 
-    authFetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
-      .then((r) => r.json())
+    gameApi.getStats(user.id)
       .then((data) => {
         setStreak(data.currentStreak ?? 0);
         setWins(data.totalWins ?? 0);

@@ -6,26 +6,10 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { C, R, F, shadow } from '../theme';
 import { useAuth } from '../hooks/useAuth';
-import { authFetch } from '../utils/authFetch';
 import OpponentInfoModal from '../components/OpponentInfoModal';
+import { gameApi, ApiError, type MatchHistoryItem as MatchItem } from '../services/api';
 
 const PAGE = 5; // tải 5 trận mỗi lần
-
-interface MatchItem {
-  id: string;
-  roomId: string;
-  playedAt: string;
-  opponentId: string;
-  opponentName: string;
-  opponentAvatarUrl: string | null;
-  myScore: number;
-  opponentScore: number;
-  myCorrect: number;
-  opponentCorrect: number;
-  outcome: 'win' | 'lose' | 'draw';
-  rankingDelta: number;
-  questionsCount: number;
-}
 
 const OUTCOME = {
   win:  { emoji: '🏆', label: 'Thắng', color: C.success },
@@ -60,22 +44,16 @@ export default function MatchHistoryScreen() {
     else setLoadingMore(true);
     setError(null);
     try {
-      const res = await authFetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/matches/${user.id}?limit=${PAGE}&offset=${offset}`
-      );
-      if (!res.ok) {
-        // 401 = phiên đăng nhập hết hạn, 5xx = lỗi máy chủ — báo rõ thay vì hiện trống
-        throw new Error(res.status === 401 ? 'unauthorized' : `http ${res.status}`);
-      }
-      const data = await res.json();
-      const list: MatchItem[] = Array.isArray(data) ? data : [];
+      const list = await gameApi.getMatchHistory(user.id, PAGE, offset);
       setHasMore(list.length === PAGE);
       setItems((prev) => (replace ? list : [...prev, ...list]));
-    } catch (e: any) {
-      // Chỉ chặn toàn màn hình khi tải lần đầu; lỗi khi tải thêm thì giữ danh sách đã có
+    } catch (e) {
+      // 401 = phiên đăng nhập hết hạn — báo rõ thay vì hiện trống.
+      // Chỉ chặn toàn màn hình khi tải lần đầu; lỗi khi tải thêm thì giữ danh sách đã có.
+      const unauthorized = e instanceof ApiError && e.status === 401;
       if (replace) {
         setError(
-          e?.message === 'unauthorized'
+          unauthorized
             ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
             : 'Không tải được lịch sử. Vui lòng thử lại.'
         );
@@ -228,7 +206,14 @@ const s = StyleSheet.create({
   outcomeEmoji: { fontSize: 22 },
 
   cardMid:  { flex: 1, gap: 3 },
-  opponent: { fontSize: 15, fontFamily: F.display, color: C.ink },
+  oppRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  oppAvatar: { width: 28, height: 28, borderRadius: R.pill, backgroundColor: C.line },
+  oppAvatarPlaceholder: {
+    width: 28, height: 28, borderRadius: R.pill,
+    backgroundColor: C.orange, justifyContent: 'center', alignItems: 'center',
+  },
+  oppAvatarInitial: { fontSize: 14, color: '#fff', fontFamily: F.display },
+  opponent: { flex: 1, fontSize: 15, fontFamily: F.display, color: C.ink },
   meta:     { fontSize: 12, color: C.inkBrown, fontFamily: F.body },
 
   cardRight: { alignItems: 'flex-end', gap: 3 },

@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { gameApi } from '../services/api';
 
 interface GameStats {
   totalMatches: number;
@@ -29,15 +30,7 @@ export function useGameStats(userId: string | null) {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${userId}`
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch stats');
-        }
-
-        const data = await response.json();
+        const data = await gameApi.getStats(userId);
         setStats(data);
       } catch (err) {
         const errorMessage =
@@ -57,15 +50,7 @@ export function useGameStats(userId: string | null) {
 
     try {
       setLoading(true);
-      const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${userId}`
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch stats');
-      }
-
-      const data = await response.json();
+      const data = await gameApi.getStats(userId);
       setStats(data);
     } catch (err) {
       const errorMessage =

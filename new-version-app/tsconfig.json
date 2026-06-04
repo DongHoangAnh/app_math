@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "jsx": "react-native",
-    "lib": ["es2020"],
+    "lib": ["es2020", "dom"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
@@ -12,12 +12,12 @@
   },
   "include": [
     "App.tsx",
-    "client/src/**/*"
+    "client/src/**/*",
+    "shared/types.ts",
+    "shared/constants.ts"
   ],
   "exclude": [
-    "node_modules",
-    "client/src/components/game-results.tsx",
-    "client/src/components/protected-route.tsx"
+    "node_modules"
   ],
   "extends": "expo/tsconfig.base"
 }

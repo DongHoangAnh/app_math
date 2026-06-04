@@ -1,16 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { authFetch } from '../utils/authFetch';
+import { gameApi, type DailyTask } from '../services/api';
 
-export type DailyTask = {
-  task_key: string;
-  title: string;
-  description: string;
-  exp_reward: number;
-  progress: number;
-  target: number;
-  completed: boolean;
-  exp_claimed: boolean;
-};
+// Re-export so existing importers (e.g. HomeScreen) keep working.
+export type { DailyTask };
 
 export function useDailyTasks(userId: string | null, displayName?: string) {
   const [tasks, setTasks] = useState<DailyTask[]>([]);
@@ -21,13 +13,8 @@ export function useDailyTasks(userId: string | null, displayName?: string) {
     if (!userId) return;
     setLoading(true);
     try {
-      const res = await authFetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/daily-tasks/${userId}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) setTasks(data);
-      }
+      const data = await gameApi.getDailyTasks(userId);
+      if (Array.isArray(data)) setTasks(data);
     } catch {
       // silent — tasks are non-critical
     } finally {
@@ -42,15 +29,7 @@ export function useDailyTasks(userId: string | null, displayName?: string) {
       if (!userId || claiming) return null;
       setClaiming(taskKey);
       try {
-        const res = await authFetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/api/daily-tasks/${userId}/claim/${taskKey}`,
-          {
-            method: 'POST',
-            body: JSON.stringify({ displayName: displayName ?? 'Player' }),
-          }
-        );
-        if (!res.ok) return null;
-        const result: { exp: number; level: number } = await res.json();
+        const result = await gameApi.claimDailyTask(userId, taskKey, displayName ?? 'Player');
         // Optimistically update local state
         setTasks((prev) =>
           prev.map((t) => (t.task_key === taskKey ? { ...t, exp_claimed: true } : t))

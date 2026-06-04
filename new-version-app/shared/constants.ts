@@ -1,0 +1,49 @@
+// ═══════════════════════════════════════════════════════════
+// SHARED CONFIG — single source for game tunables and lists.
+// Centralized so client UI and server logic stay in sync.
+// ═══════════════════════════════════════════════════════════
+
+import type { GameMode } from "./types";
+
+// ─── Match shape ────────────────────────────────────────────
+export const QUESTIONS_PER_MATCH = 10;
+// Seconds shown on the per-question countdown (client UI).
+export const QUESTION_SECONDS = 10;
+// Keep at most this many chat/emoji bubbles in client state.
+export const CHAT_HISTORY_MAX = 50;
+
+// ─── Play modes (client picker + server question gen) ───────
+export interface GameModeOption {
+    id: GameMode;
+    label: string;
+    desc: string;
+    icon: string;
+}
+export const MODES: GameModeOption[] = [
+    { id: "add_sub", label: "Cộng/Trừ", desc: "Dễ",  icon: "➕" },
+    { id: "mul_div", label: "Nhân/Chia", desc: "Khó", icon: "✖️" },
+    { id: "mixed",   label: "Hỗn hợp",  desc: "Thử", icon: "🔀" },
+];
+
+// ─── Chat / emoji ───────────────────────────────────────────
+// The only emojis allowed in match chat. Client renders this list;
+// server validates incoming emoji against it.
+export const EMOJIS = ["🔥", "😎", "👍", "😅", "💀", "🎉"] as const;
+
+// Rate limits (server-enforced).
+export const EMOJI_MAX = 3;
+export const EMOJI_WIN_MS = 5_000;
+export const CHAT_MAX = 5;
+export const CHAT_WIN_MS = 30_000;
+export const CHAT_MAX_LEN = 120;
+
+// ─── Profanity filter ───────────────────────────────────────
+// Vietnamese: substring match. English: word-boundary match.
+export const VI_BANNED = [
+    "đụ", "địt", "lồn", "cặc", "buồi", "chịch", "đéo", "đĩ",
+    "điếm", "đmm", "clm", "đml", "đcm", "đkm",
+];
+export const EN_BANNED = [
+    "fuck", "shit", "bitch", "bastard", "cunt", "dick", "cock",
+    "pussy", "whore", "slut", "nigga", "nigger",
+];

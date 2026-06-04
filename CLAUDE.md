@@ -65,8 +65,7 @@ new-version-app/
 │   │   ├── api.ts                  # Axios client for REST endpoints
 │   │   └── questionGenerator.ts    # Generate math questions
 │   │
-│   ├── contexts/                   # React contexts
-│   │   └── auth-context.tsx        # AuthProvider & useAuth implementation
+│   ├── config.ts                   # Centralized env vars (API_URL, WS_URL, Supabase)
 │   │
 │   └── utils/                      # Helper utilities
 │       ├── authFetch.ts            # Fetch wrapper with auth token
@@ -188,7 +187,15 @@ EXPO_PUBLIC_WS_URL=wss://api.example.com
 ### Testing
 - Jest preset: `jest-expo`
 - Run with `npm test`
-- No test suite committed yet — add tests as features stabilize
+- No unit test suite committed yet — add tests as features stabilize
+
+### E2E Testing (Playwright)
+- Runs against the Expo **web** build (`expo start --web`, port 8081); config in `new-version-app/playwright.config.ts`, specs in `new-version-app/e2e/`
+- Run with `npm run test:e2e` (also `:ui`, `:report`) from `new-version-app/`
+- **File organization rule:**
+  - **One spec file per screen.** Name it after the screen using kebab-case, matching the screen component (`LoginScreen.tsx` → `login.spec.ts`, `HomeScreen.tsx` → `home.spec.ts`, `LeaderboardScreen.tsx` → `leaderboard.spec.ts`).
+  - **Multi-screen flows go in their own file named after the flow**, not the screen — e.g. a match/competition flow that moves across queue → match → results lives in `match-flow.spec.ts` (flow thi đấu). Do not scatter a single flow's steps across per-screen files.
+- Anchor selectors to stable, user-visible copy (the UI is in Vietnamese); see `e2e/README.md` for the full convention.
 
 ## Common Issues & Solutions
 

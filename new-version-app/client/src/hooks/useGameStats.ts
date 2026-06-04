@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { API_URL } from '../config';
 
 interface GameStats {
   totalMatches: number;
@@ -30,7 +31,7 @@ export function useGameStats(userId: string | null) {
         setError(null);
 
         const response = await fetch(
-          `${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${userId}`
+          `${API_URL}/api/gameshow/stats/${userId}`
         );
 
         if (!response.ok) {
@@ -58,7 +59,7 @@ export function useGameStats(userId: string | null) {
     try {
       setLoading(true);
       const response = await fetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${userId}`
+        `${API_URL}/api/gameshow/stats/${userId}`
       );
 
       if (!response.ok) {

@@ -6,6 +6,7 @@ import {
 import { C, R, F, shadow } from '../theme';
 import { LevelBadge } from './LevelBadge';
 import { authFetch } from '../utils/authFetch';
+import { API_URL } from '../config';
 
 interface PlayerStats {
   totalMatches: number; totalWins: number; winRate: number;
@@ -42,7 +43,7 @@ export default function OpponentInfoModal({ visible, opponentId, fallbackName, o
     setLoading(true);
     setError(null);
     setProfile(null);
-    authFetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/profile/${opponentId}`)
+    authFetch(`${API_URL}/api/gameshow/profile/${opponentId}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(`http ${res.status}`);
         return res.json();

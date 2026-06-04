@@ -7,6 +7,7 @@ import { C, R, F, shadow } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { LevelCard } from '../components/LevelBadge';
+import { API_URL } from '../config';
 
 interface Stats {
   totalMatches: number; totalWins: number; winRate: number;
@@ -41,7 +42,7 @@ export default function StatisticsScreen() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
+    fetch(`${API_URL}/api/gameshow/stats/${user.id}`)
       .then((r) => r.json())
       .then((data) => setStats({ ...FALLBACK, ...data }))
       .catch(() => {})

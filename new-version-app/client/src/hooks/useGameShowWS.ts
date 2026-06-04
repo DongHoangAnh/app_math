@@ -1,54 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "../services/supabase";
+import { resolveWsUrl } from "../config";
+import type {
+    GameQuestion,
+    OpponentInfo,
+    GameResult,
+    ChatMessage,
+    MatchPhase,
+    AnswerRecord,
+} from "../../../shared/types";
+
+// Re-export shared types so existing importers of this module keep working.
+export type { GameQuestion, OpponentInfo, GameResult, ChatMessage, MatchPhase };
 
 // ═══════════════════════════════════════════════════════════
-// TYPES
+// CLIENT-ONLY STATE TYPE
 // ═══════════════════════════════════════════════════════════
-
-export interface GameQuestion {
-    id: string;
-    level: number;
-    question: string;
-    options: string[];
-    correctAnswer: string;
-    difficulty: number;
-    type?: "arithmetic" | "comparison";
-}
-
-export interface OpponentInfo {
-    userId: string;
-    displayName: string;
-    grade?: string;
-    winRate?: number;
-    totalScore?: number;
-}
-
-export interface GameResult {
-    correct: number;
-    score: number;
-    totalTimeMs: number;
-    displayName: string;
-    rankingDelta?: number;
-}
-
-export interface ChatMessage {
-    id: string;
-    fromUserId: string;
-    fromName: string;
-    text?: string;
-    emoji?: string;
-    type: "chat" | "emoji";
-    timestamp: number;
-}
-
-export type MatchPhase =
-    | "idle"
-    | "queued"
-    | "match_found"   // brief "found" screen
-    | "playing"       // answering questions (independent per player)
-    | "you_finished"  // I'm done, waiting for opponent
-    | "game_over"
-    | "opponent_disconnected";
 
 export interface GameShowState {
     phase: MatchPhase;
@@ -56,7 +23,7 @@ export interface GameShowState {
     questions: GameQuestion[];
     // My local progress
     currentQuestionIndex: number;
-    myAnswers: Record<number, { answer: string; isCorrect: boolean; timeMs: number }>;
+    myAnswers: Record<number, AnswerRecord>;
     // Opponent's progress (number of questions completed, from server events)
     opponentAnsweredCount: number;
     opponentFinished: boolean;
@@ -68,21 +35,6 @@ export interface GameShowState {
     connected: boolean;
     error: string | null;
     chatMessages: ChatMessage[];
-}
-
-// ═══════════════════════════════════════════════════════════
-// WS URL
-// ═══════════════════════════════════════════════════════════
-
-function buildWSUrl() {
-    // EXPO_PUBLIC_WS_URL is the full WS endpoint; use it directly.
-    // Fall back to API URL (HTTP) and derive the WS path.
-    if (process.env.EXPO_PUBLIC_WS_URL) {
-        return process.env.EXPO_PUBLIC_WS_URL;
-    }
-    const base = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
-    const url = base.replace(/^http/, 'ws').replace(/^https/, 'wss');
-    return `${url}/ws/gameshow`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -132,7 +84,7 @@ export function useGameShowWS(
     const connect = useCallback(() => {
         if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) return;
 
-        const ws = new WebSocket(buildWSUrl());
+        const ws = new WebSocket(resolveWsUrl());
         wsRef.current = ws;
 
         ws.onopen = () => {

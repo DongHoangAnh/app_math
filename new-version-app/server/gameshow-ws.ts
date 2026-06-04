@@ -1,20 +1,18 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
 import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch, verifyToken } from "./supabase-server";
+import type { GameQuestion, GameMode, AnswerRecord } from "../shared/types";
+import {
+    QUESTIONS_PER_MATCH,
+    EMOJIS,
+    EMOJI_MAX, EMOJI_WIN_MS,
+    CHAT_MAX, CHAT_WIN_MS, CHAT_MAX_LEN,
+    VI_BANNED, EN_BANNED,
+} from "../shared/constants";
 
 // ═══════════════════════════════════════════════════════════
-// TYPES
+// SERVER-ONLY TYPES (hold live socket refs — not shareable)
 // ═══════════════════════════════════════════════════════════
-
-interface GameQuestion {
-    id: string;
-    level: number;
-    question: string;
-    options: string[];
-    correctAnswer: string;
-    difficulty: number;
-    type: "arithmetic" | "comparison";
-}
 
 interface Player {
     ws: WebSocket;
@@ -29,7 +27,7 @@ interface Player {
 
 interface PlayerProgress {
     // questionIndex → answer record
-    answers: Record<number, { answer: string; isCorrect: boolean; timeMs: number }>;
+    answers: Record<number, AnswerRecord>;
     finished: boolean; // true when answered all questions
     finishedAt?: number;
 }
@@ -70,10 +68,7 @@ interface ChatRateLimit {
 }
 const chatRateLimits = new Map<string, ChatRateLimit>();
 
-const ALLOWED_EMOJIS = new Set(["🔥", "😎", "👍", "😅", "💀", "🎉"]);
-const EMOJI_MAX = 3, EMOJI_WIN_MS = 5_000;
-const CHAT_MAX = 5,  CHAT_WIN_MS  = 30_000;
-const CHAT_MAX_LEN = 120;
+const ALLOWED_EMOJIS = new Set<string>(EMOJIS);
 
 function getRateLimit(userId: string): ChatRateLimit {
     if (!chatRateLimits.has(userId)) chatRateLimits.set(userId, { emojiTs: [], chatTs: [] });
@@ -98,10 +93,8 @@ function canSendChat(userId: string): boolean {
     return true;
 }
 
-// Vietnamese + English profanity — substring match for VI, word-boundary for EN
-const VI_BANNED = ["đụ", "địt", "lồn", "cặc", "buồi", "chịch", "đéo", "đĩ", "điếm", "đmm", "clm", "đml", "đcm", "đkm"];
-const EN_BANNED = ["fuck", "shit", "bitch", "bastard", "cunt", "dick", "cock", "pussy", "whore", "slut", "nigga", "nigger"];
-
+// Vietnamese + English profanity — substring match for VI, word-boundary for EN.
+// Word lists live in shared/constants.ts.
 function hasProfanity(text: string): boolean {
     const norm = text.toLowerCase().replace(/1/g, "i").replace(/@/g, "a").replace(/0/g, "o");
     for (const w of VI_BANNED) if (norm.includes(w)) return true;
@@ -115,8 +108,6 @@ function hasProfanity(text: string): boolean {
 
 // Chế độ chơi quyết định phép tính của câu số học. Câu so sánh (<, >, =)
 // luôn xuất hiện ở mọi chế độ (cứ 3 câu thì có 1 câu so sánh).
-type GameMode = "add_sub" | "mul_div" | "mixed";
-
 function normalizeMode(m?: string): GameMode {
     return m === "add_sub" || m === "mul_div" || m === "mixed" ? m : "mixed";
 }
@@ -247,7 +238,7 @@ function tryMatch() {
     const roomId = generateRoomId();
     // Dùng chế độ của người vào hàng đợi trước (p1) để cả hai cùng một bộ câu hỏi
     const mode = normalizeMode(p1.mode);
-    const questions = generateQuestions(10, mode);
+    const questions = generateQuestions(QUESTIONS_PER_MATCH, mode);
 
     const makeProgress = (): PlayerProgress => ({ answers: {}, finished: false });
 

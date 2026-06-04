@@ -8,6 +8,7 @@ import { C, R, F, shadow } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { authFetch } from '../utils/authFetch';
 import OpponentInfoModal from '../components/OpponentInfoModal';
+import { API_URL } from '../config';
 
 const PAGE = 5; // tải 5 trận mỗi lần
 
@@ -61,7 +62,7 @@ export default function MatchHistoryScreen() {
     setError(null);
     try {
       const res = await authFetch(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/matches/${user.id}?limit=${PAGE}&offset=${offset}`
+        `${API_URL}/api/gameshow/matches/${user.id}?limit=${PAGE}&offset=${offset}`
       );
       if (!res.ok) {
         // 401 = phiên đăng nhập hết hạn, 5xx = lỗi máy chủ — báo rõ thay vì hiện trống

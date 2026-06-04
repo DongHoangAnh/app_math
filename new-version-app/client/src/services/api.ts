@@ -4,12 +4,7 @@
  */
 
 import axios from 'axios';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
-if (!API_URL) {
-  throw new Error('Missing EXPO_PUBLIC_API_URL environment variable');
-}
+import { API_URL } from '../config';
 
 // Create axios instance
 export const api = axios.create({

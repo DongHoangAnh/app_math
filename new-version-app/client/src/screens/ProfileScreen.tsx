@@ -10,6 +10,7 @@ import { supabase } from '../services/supabase';
 import { authFetch } from '../utils/authFetch';
 import { getLevelProgress, getTier, TIER_LABEL } from '../utils/levelUtils';
 import EditProfileModal from '../components/EditProfileModal';
+import { API_URL } from '../config';
 
 interface UserStats {
   totalScore: number; totalMatches: number;
@@ -58,7 +59,7 @@ export default function ProfileScreen() {
         }
       }, () => {});
 
-    authFetch(`${process.env.EXPO_PUBLIC_API_URL}/api/gameshow/stats/${user.id}`)
+    authFetch(`${API_URL}/api/gameshow/stats/${user.id}`)
       .then((r) => r.json())
       .then((data) => setStats({
         totalScore:   data.totalScore   ?? 0,

@@ -11,16 +11,11 @@ import { useGameShowWS } from '../hooks/useGameShowWS';
 import { useAuth } from '../hooks/useAuth';
 import GameResults from '../components/GameResults';
 import { supabase } from '../services/supabase';
+import { MODES, QUESTION_SECONDS, EMOJIS, VI_BANNED } from '../../../shared/constants';
 
-const MODES = [
-  { id: 'add_sub', label: 'Cộng/Trừ', desc: 'Dễ',  icon: '➕' },
-  { id: 'mul_div', label: 'Nhân/Chia', desc: 'Khó', icon: '✖️' },
-  { id: 'mixed',   label: 'Hỗn hợp',  desc: 'Thử', icon: '🔀' },
-];
-
-const QUESTION_SECONDS = 10;
-const CHAT_EMOJIS = ['🔥', '😎', '👍', '😅', '💀', '🎉'];
-const VI_CLIENT_BANNED = ['đụ', 'địt', 'lồn', 'cặc', 'buồi', 'đéo', 'đĩ', 'đmm', 'đcm', 'đkm'];
+// Aliases kept so existing references in this screen stay unchanged.
+const CHAT_EMOJIS = EMOJIS;
+const VI_CLIENT_BANNED = VI_BANNED;
 
 // ── Helpers ──────────────────────────────────────────────────────
 function countCorrect(answers: Record<number, { isCorrect: boolean }>) {

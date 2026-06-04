@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { POINTS_WIN, computeRankingDeltas, outcomeDelta } from "./ranking";
 
 const supabaseUrl = process.env.SUPABASE_URL ?? "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY ?? "";
@@ -16,9 +17,6 @@ function getSupabaseClient() {
     }
     return supabase;
 }
-
-const POINTS_WIN = 5;
-const POINTS_LOSE = 3;
 
 // ═══════════════════════════════════════════════════════════
 // SAVE MATCH + UPDATE RANKING
@@ -70,17 +68,9 @@ export async function saveGameMatch(data: GameMatchData): Promise<{ player1Delta
     // 1. Save match record
     await insertGameMatch(data);
 
-    // 2. Determine point deltas
-    let p1Delta = 0;
-    let p2Delta = 0;
-    if (data.winner_id === data.player1_id) {
-        p1Delta = POINTS_WIN;
-        p2Delta = -POINTS_LOSE;
-    } else if (data.winner_id === data.player2_id) {
-        p1Delta = -POINTS_LOSE;
-        p2Delta = POINTS_WIN;
-    }
-    // draw → both stay 0 delta
+    // 2. Determine point deltas (pure math in ./ranking)
+    const { player1Delta: p1Delta, player2Delta: p2Delta } =
+        computeRankingDeltas(data.winner_id, data.player1_id, data.player2_id);
 
     // 3. Update ranking points atomically via RPC (floor at 0 enforced in DB)
     await Promise.all([
@@ -376,7 +366,7 @@ export async function getMatchHistory(
         const outcome: "win" | "lose" | "draw" =
             m.winner_id == null ? "draw" : m.winner_id === userId ? "win" : "lose";
         // Điểm xếp hạng cộng/trừ tương ứng kết quả (cùng quy tắc khi kết thúc trận)
-        const rankingDelta = outcome === "win" ? POINTS_WIN : outcome === "lose" ? -POINTS_LOSE : 0;
+        const rankingDelta = outcomeDelta(outcome);
         return {
             id: String(m.id),
             roomId: m.room_id,

@@ -1,14 +1,10 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
 import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch, verifyToken } from "./supabase-server";
-import type { GameQuestion, GameMode, AnswerRecord } from "../shared/types";
-import {
-    QUESTIONS_PER_MATCH,
-    EMOJIS,
-    EMOJI_MAX, EMOJI_WIN_MS,
-    CHAT_MAX, CHAT_WIN_MS, CHAT_MAX_LEN,
-    VI_BANNED, EN_BANNED,
-} from "../shared/constants";
+import type { GameQuestion, AnswerRecord } from "../shared/types";
+import { QUESTIONS_PER_MATCH, CHAT_MAX_LEN } from "../shared/constants";
+import { generateQuestions, normalizeMode } from "./questions";
+import { canSendEmoji, canSendChat, hasProfanity, isAllowedEmoji, clearRateLimit } from "./rateLimiter";
 
 // ═══════════════════════════════════════════════════════════
 // SERVER-ONLY TYPES (hold live socket refs — not shareable)
@@ -57,144 +53,6 @@ type WSMessage =
 const waitingQueue: Player[] = [];
 const activeRooms = new Map<string, GameRoom>();
 const playerToRoom = new Map<string, string>(); // userId → roomId
-
-// ═══════════════════════════════════════════════════════════
-// CHAT / EMOJI — rate limiting + profanity filter
-// ═══════════════════════════════════════════════════════════
-
-interface ChatRateLimit {
-    emojiTs: number[];
-    chatTs: number[];
-}
-const chatRateLimits = new Map<string, ChatRateLimit>();
-
-const ALLOWED_EMOJIS = new Set<string>(EMOJIS);
-
-function getRateLimit(userId: string): ChatRateLimit {
-    if (!chatRateLimits.has(userId)) chatRateLimits.set(userId, { emojiTs: [], chatTs: [] });
-    return chatRateLimits.get(userId)!;
-}
-
-function canSendEmoji(userId: string): boolean {
-    const rl = getRateLimit(userId);
-    const now = Date.now();
-    rl.emojiTs = rl.emojiTs.filter(t => now - t < EMOJI_WIN_MS);
-    if (rl.emojiTs.length >= EMOJI_MAX) return false;
-    rl.emojiTs.push(now);
-    return true;
-}
-
-function canSendChat(userId: string): boolean {
-    const rl = getRateLimit(userId);
-    const now = Date.now();
-    rl.chatTs = rl.chatTs.filter(t => now - t < CHAT_WIN_MS);
-    if (rl.chatTs.length >= CHAT_MAX) return false;
-    rl.chatTs.push(now);
-    return true;
-}
-
-// Vietnamese + English profanity — substring match for VI, word-boundary for EN.
-// Word lists live in shared/constants.ts.
-function hasProfanity(text: string): boolean {
-    const norm = text.toLowerCase().replace(/1/g, "i").replace(/@/g, "a").replace(/0/g, "o");
-    for (const w of VI_BANNED) if (norm.includes(w)) return true;
-    for (const w of EN_BANNED) if (new RegExp(`\\b${w}\\b`).test(norm)) return true;
-    return false;
-}
-
-// ═══════════════════════════════════════════════════════════
-// RANDOM QUESTION GENERATOR — lớp 1: +, -, ×, ÷ và so sánh <, >, =
-// ═══════════════════════════════════════════════════════════
-
-// Chế độ chơi quyết định phép tính của câu số học. Câu so sánh (<, >, =)
-// luôn xuất hiện ở mọi chế độ (cứ 3 câu thì có 1 câu so sánh).
-function normalizeMode(m?: string): GameMode {
-    return m === "add_sub" || m === "mul_div" || m === "mixed" ? m : "mixed";
-}
-
-let _qCounter = 0;
-function nextQId() { return `q_${++_qCounter}`; }
-
-function randInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function shuffleArr<T>(arr: T[]): T[] {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-}
-
-function numericOptions(correct: number): string[] {
-    const pool = new Set<number>([correct]);
-    for (const d of shuffleArr([1, 2, 3, -1, -2, 4, 5, -3, 10, -4])) {
-        if (pool.size >= 4) break;
-        const w = correct + d;
-        if (w >= 0) pool.add(w);
-    }
-    let fill = correct + pool.size + 1;
-    while (pool.size < 4) { pool.add(fill); fill++; }
-    return shuffleArr([...pool].slice(0, 4).map(String));
-}
-
-// Các phép tính được phép theo từng chế độ
-function opsForMode(mode: GameMode): string[] {
-    if (mode === "add_sub") return ["+", "-"];
-    if (mode === "mul_div") return ["×", "÷"];
-    return ["+", "-", "×", "÷"];
-}
-
-function makeArithmeticQ(mode: GameMode): GameQuestion {
-    const op = shuffleArr(opsForMode(mode))[0];
-    let a: number, b: number, answer: number, text: string;
-
-    if (op === "+") {
-        a = randInt(1, 9); b = randInt(1, 9);
-        answer = a + b;
-        text = `${a} + ${b} = ?`;
-    } else if (op === "-") {
-        a = randInt(1, 9); b = randInt(1, a);
-        answer = a - b;
-        text = `${a} - ${b} = ?`;
-    } else if (op === "×") {
-        a = randInt(1, 5); b = randInt(1, 5);
-        answer = a * b;
-        text = `${a} × ${b} = ?`;
-    } else {
-        b = randInt(2, 5); answer = randInt(1, 4);
-        a = b * answer;
-        text = `${a} ÷ ${b} = ?`;
-    }
-
-    return {
-        id: nextQId(), level: 1, question: text,
-        options: numericOptions(answer), correctAnswer: String(answer),
-        difficulty: 1, type: "arithmetic",
-    };
-}
-
-function makeComparisonQ(): GameQuestion {
-    const a = randInt(1, 9), b = randInt(1, 9);
-    const correct = a > b ? ">" : a < b ? "<" : "=";
-    return {
-        id: nextQId(), level: 1,
-        question: `${a}  ?  ${b}`,
-        options: ["<", "=", ">"],
-        correctAnswer: correct,
-        difficulty: 1,
-        type: "comparison",
-    };
-}
-
-// Tạo bộ câu hỏi: cứ mỗi 3 câu thì có 1 câu so sánh, còn lại là số học theo mode
-function generateQuestions(count: number, mode: GameMode): GameQuestion[] {
-    return Array.from({ length: count }, (_, i) =>
-        i % 3 === 2 ? makeComparisonQ() : makeArithmeticQ(mode)
-    );
-}
 
 // ═══════════════════════════════════════════════════════════
 // HELPERS
@@ -433,7 +291,7 @@ function finishGame(room: GameRoom) {
 // ═══════════════════════════════════════════════════════════
 
 function handleDisconnect(userId: string) {
-    chatRateLimits.delete(userId);
+    clearRateLimit(userId);
 
     // Remove from queue
     const queueIdx = waitingQueue.findIndex((p) => p.userId === userId);
@@ -586,7 +444,7 @@ export function setupGameShowWS(httpServer: Server) {
                     const emojiRoom = typeof msg.roomId === "string" ? activeRooms.get(msg.roomId) : null;
                     if (!emojiRoom || emojiRoom.finished) return;
                     const inRoom = emojiRoom.player1.userId === currentPlayer.userId || emojiRoom.player2.userId === currentPlayer.userId;
-                    if (!inRoom || !ALLOWED_EMOJIS.has(msg.emoji)) return;
+                    if (!inRoom || !isAllowedEmoji(msg.emoji)) return;
                     if (!canSendEmoji(currentPlayer.userId)) return; // silently drop spam
                     const emojiPayload = {
                         type: "EMOJI_RECEIVED",

@@ -229,7 +229,14 @@ const s = StyleSheet.create({
   outcomeEmoji: { fontSize: 22 },
 
   cardMid:  { flex: 1, gap: 3 },
-  opponent: { fontSize: 15, fontFamily: F.display, color: C.ink },
+  oppRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  oppAvatar: { width: 28, height: 28, borderRadius: R.pill, backgroundColor: C.line },
+  oppAvatarPlaceholder: {
+    width: 28, height: 28, borderRadius: R.pill,
+    backgroundColor: C.orange, justifyContent: 'center', alignItems: 'center',
+  },
+  oppAvatarInitial: { fontSize: 14, color: '#fff', fontFamily: F.display },
+  opponent: { flex: 1, fontSize: 15, fontFamily: F.display, color: C.ink },
   meta:     { fontSize: 12, color: C.inkBrown, fontFamily: F.body },
 
   cardRight: { alignItems: 'flex-end', gap: 3 },

@@ -38,7 +38,13 @@ new-version-app/
 │   │   ├── LoginScreen.tsx         # Google OAuth + email/password login
 │   │   ├── RegisterScreen.tsx      # User registration
 │   │   ├── HomeScreen.tsx          # Main hub with game options
-│   │   ├── GameShowScreen.tsx      # Multiplayer 1v1 game UI
+│   │   ├── GameShowScreen.tsx      # 1v1 game — glue only (state/timers/routing)
+│   │   ├── GameShow/               # GameShowScreen split (see "Splitting a big screen")
+│   │   │   ├── styles.ts           # Shared StyleSheet for the screen
+│   │   │   ├── utils.ts            # Pure helpers + FloatingEmoji type
+│   │   │   ├── *Phase.tsx          # One file per match phase (Idle/Playing/…)
+│   │   │   └── *.tsx               # Sub-components (ChatBar, GameKeypad, …)
+│   │   ├── MatchHistoryScreen.tsx  # Past match list
 │   │   ├── ProfileScreen.tsx       # User profile & settings
 │   │   ├── StatisticsScreen.tsx    # Player stats & achievements
 │   │   ├── LeaderboardScreen.tsx   # Global ranking leaderboard
@@ -46,13 +52,14 @@ new-version-app/
 │   │   └── ResetPasswordScreen.tsx  # Password reset (email link)
 │   │
 │   ├── components/                 # Reusable UI components
+│   │   ├── ui.tsx                  # Shared primitives (TactileButton, …)
 │   │   ├── GameQuestion.tsx        # Display math question + options
 │   │   ├── GameResults.tsx         # Match results UI
+│   │   ├── OpponentInfoModal.tsx   # Opponent profile preview (uses gameApi)
 │   │   ├── PlayerCard.tsx          # Player info card (opponent preview)
 │   │   ├── LevelBadge.tsx          # User level badge
 │   │   ├── EditProfileModal.tsx    # Profile editor
-│   │   ├── Text.tsx                # Custom text component
-│   │   └── protected-route.tsx     # (auth guard, excluded from type-check)
+│   │   └── Text.tsx                # Custom text component
 │   │
 │   ├── hooks/                      # Custom React hooks
 │   │   ├── useAuth.tsx             # Auth state & Google OAuth logic
@@ -61,11 +68,11 @@ new-version-app/
 │   │   └── useDailyTasks.ts        # Daily challenge tracking
 │   │
 │   ├── services/                   # External service clients
-│   │   ├── supabase.ts             # Supabase client init
-│   │   ├── api.ts                  # Axios client for REST endpoints
+│   │   ├── supabase.ts             # Supabase client init (reads config.ts)
+│   │   ├── api.ts                  # SINGLE REST layer: `gameApi` + DTOs + ApiError (over authFetch)
 │   │   └── questionGenerator.ts    # Generate math questions
 │   │
-│   ├── config.ts                   # Centralized env vars (API_URL, WS_URL, Supabase)
+│   ├── config.ts                   # SINGLE place that reads env vars (API_URL, WS_URL, Supabase)
 │   │
 │   └── utils/                      # Helper utilities
 │       ├── authFetch.ts            # Fetch wrapper with auth token
@@ -75,9 +82,14 @@ new-version-app/
 ├── server/
 │   ├── index.ts                    # HTTP server setup, REST API routes
 │   ├── gameshow-ws.ts              # WebSocket server logic (matchmaking, game flow)
+│   ├── ranking.ts                  # Pure ranking-point math (no DB) — unit-testable
+│   ├── rateLimiter.ts              # Per-user chat/emoji rate limit + profanity filter
+│   ├── questions.ts                # Pure question generator (normalizeMode, generateQuestions)
 │   └── supabase-server.ts          # Server-side Supabase client & DB operations
 │
-├── shared/
+├── shared/                         # Code shared between client + server
+│   ├── types.ts                    # SINGLE source for game types (GameQuestion, GameMode, …)
+│   ├── constants.ts                # SINGLE source for game constants (QUESTIONS_PER_MATCH, MODES, EMOJIS, …)
 │   └── schema.ts                   # Drizzle ORM schemas (database table definitions)
 │
 ├── docs/
@@ -119,11 +131,35 @@ new-version-app/
 - All endpoints include security headers (CORS, XSS protection, CSRF tokens)
 
 ### State Management
-- **Auth**: `AuthContext` + `useAuth()` hook (Supabase session)
+- **Auth**: `useAuth()` hook (Supabase session) — the real auth lives in `hooks/useAuth.tsx`
 - **Game**: `useGameShowWS()` hook (WebSocket state + room management)
 - **Stats**: `useGameStats()` hook (fetched from API)
 - **UI**: Local component state (forms, modals, loading)
 - No Redux/Zustand — hooks are sufficient for this app size
+
+### Code Patterns — MUST follow (don't regress these)
+
+These conventions were established during the refactor. Breaking them re-introduces
+the exact bugs/duplication they removed, so follow them for all new code:
+
+1. **Env vars → only `client/src/config.ts`.** Never read `process.env` anywhere else.
+   Expo/Metro inlines `process.env.EXPO_PUBLIC_*` at the *literal* reference site, so
+   each var MUST be referenced in `config.ts` as a full static expression (never built
+   from a key name). Other modules import the resolved values / `resolveWsUrl()`.
+2. **Shared types → `shared/types.ts`; shared constants → `shared/constants.ts`.** One
+   source of truth, imported by both client and server. Never redefine `GameQuestion`,
+   `GameMode`, `MODES`, `EMOJIS`, limits, banned-word lists, etc. locally.
+3. **REST calls → only `services/api.ts` (`gameApi`).** No raw `fetch`/`axios` in screens
+   or hooks. `gameApi` is built on `authFetch` (attaches the Supabase bearer token) and
+   throws `ApiError` with a `.status` field — branch on `e instanceof ApiError && e.status === 401`,
+   not on string-matching messages. (`axios` is a leftover dep, unused — do not add new uses.)
+4. **Server: keep pure logic out of the WS/DB files.** Point math lives in `ranking.ts`,
+   chat limits/profanity in `rateLimiter.ts`, question generation in `questions.ts`.
+   `gameshow-ws.ts` / `supabase-server.ts` import from them — don't inline that logic back.
+5. **Splitting a big screen → folder pattern (see `screens/GameShow/`).** The screen file
+   stays *glue only* (owns state, timers, handlers, phase routing). Extract: one shared
+   `styles.ts`, pure helpers in `utils.ts`, one `*Phase.tsx` per phase, and reusable
+   sub-components. Move the StyleSheet verbatim so visuals don't drift.
 
 ### Database Schema
 - **users** — User profiles, auth, stats (points, level, streak, XP)
@@ -144,20 +180,35 @@ new-version-app/
 - **@react-navigation**: Bottom-tabs + native-stack navigation
 - **@supabase/supabase-js**: Auth + database client
 - **ws**: WebSocket client (for game connection)
-- **axios**: HTTP requests to custom backend
 - **expo-auth-session** + **expo-web-browser**: OAuth flow support
+- *(note: `axios` is still in package.json but unused in `src` — REST goes through `gameApi`/`authFetch`)*
 - **react-native-vector-icons**: Icon library
 - **dotenv**: Environment variable loading
 
 ### Environment Variables
-The app requires a `.env` file (or `.env.local` on Expo) with:
+Config lives in `new-version-app/.env` (gitignored — never commit it; never paste its
+values into any tracked file, especially `SUPABASE_SERVICE_KEY`). The file holds both
+client and server vars:
+
 ```
-EXPO_PUBLIC_SUPABASE_URL=https://...supabase.co
-EXPO_PUBLIC_SUPABASE_KEY=eyJ...
-EXPO_PUBLIC_API_URL=https://api.example.com
-EXPO_PUBLIC_WS_URL=wss://api.example.com
+# Client (Expo) — bundled into the app, read via client/src/config.ts
+EXPO_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+EXPO_PUBLIC_SUPABASE_KEY=<supabase publishable/anon key>
+EXPO_PUBLIC_API_URL=https://<backend host>          # prod: Railway deploy
+EXPO_PUBLIC_WS_URL=wss://<backend host>/ws/gameshow # optional; derived from API_URL if unset
+
+# Server only — NEVER prefix with EXPO_PUBLIC_ (must not ship to the client)
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_SERVICE_KEY=<supabase service-role secret>  # secret — keep out of git/logs
 ```
-**Note**: Prefix public vars with `EXPO_PUBLIC_` so Expo bundles them into the app.
+
+**Rules:**
+- Prefix client vars with `EXPO_PUBLIC_` so Expo bundles them; everything else stays
+  server-only. The service-role key must **never** get an `EXPO_PUBLIC_` prefix.
+- Client code reads these only through `client/src/config.ts` (see Code Patterns #1).
+- `EXPO_PUBLIC_WS_URL` is optional — `resolveWsUrl()` derives `wss://…/ws/gameshow`
+  from `EXPO_PUBLIC_API_URL` when it's unset.
+- Restart the Expo dev server after editing `.env` (vars are inlined at bundle time).
 
 ### Common Workflows
 
@@ -170,8 +221,9 @@ EXPO_PUBLIC_WS_URL=wss://api.example.com
 **Adding a new API endpoint:**
 1. Add route handler in `server/index.ts` (match pathname, validate UUID/auth, call DB function)
 2. Implement DB query in `server/supabase-server.ts`
-3. Call from client via `api.ts` (Axios client) or `authFetch()` wrapper
-4. Handle loading/error states in component
+3. Add a typed DTO + method to `gameApi` in `client/src/services/api.ts` (built on `authFetch`,
+   throws `ApiError`) — do NOT call `fetch`/`axios` directly from the screen (Code Patterns #3)
+4. Call `gameApi.*` from a hook/component; handle loading + `ApiError.status` error states
 
 **Modifying WebSocket protocol:**
 1. Edit message types + logic in `server/gameshow-ws.ts`

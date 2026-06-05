@@ -6,6 +6,7 @@ import {
 import { C, R, F, shadow, hardShadow } from '../theme';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { ASSETS } from '../assets';
 
 interface Entry { id: string; display_name: string | null; ranking_points: number }
 
@@ -55,7 +56,7 @@ export default function LeaderboardScreen() {
     <View style={{ gap: 24, marginBottom: 10 }}>
       {/* Title */}
       <View style={{ alignItems: 'center' }}>
-        <Text style={styles.title}>🏆 Bảng Xếp Hạng</Text>
+        <Text style={styles.title}>{`${ASSETS.leaderboard.trophy} Bảng Xếp Hạng`}</Text>
         <Text style={styles.subtitle}>Top 50 người chơi</Text>
       </View>
 
@@ -156,7 +157,7 @@ function PodiumCard({ rank, entry }: { rank: number; entry: Entry }) {
           ? { backgroundColor: C.orange, ...hardShadow(C.orange, 6, 0.3) }
           : { backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, ...shadow('#000', 1) },
       ]}>
-        {isFirst && <Text style={{ fontSize: 20 }}>👑</Text>}
+        {isFirst && <Text style={{ fontSize: 20 }}>{ASSETS.leaderboard.crown}</Text>}
         <Text style={[styles.podiumPts, { color: isFirst ? '#fff' : C.ink }]}>
           {entry.ranking_points.toLocaleString()}
         </Text>

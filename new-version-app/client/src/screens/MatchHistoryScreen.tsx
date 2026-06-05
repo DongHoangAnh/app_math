@@ -8,13 +8,14 @@ import { C, R, F, shadow } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import OpponentInfoModal from '../components/OpponentInfoModal';
 import { gameApi, ApiError, type MatchHistoryItem as MatchItem } from '../services/api';
+import { ASSETS } from '../assets';
 
 const PAGE = 5; // tải 5 trận mỗi lần
 
 const OUTCOME = {
-  win:  { emoji: '🏆', label: 'Thắng', color: C.success },
-  lose: { emoji: '💪', label: 'Thua',  color: C.error   },
-  draw: { emoji: '🤝', label: 'Hòa',   color: C.primary },
+  win:  { emoji: ASSETS.matchHistory.win,  label: 'Thắng', color: C.success },
+  lose: { emoji: ASSETS.matchHistory.lose, label: 'Thua',  color: C.error   },
+  draw: { emoji: ASSETS.matchHistory.draw, label: 'Hòa',   color: C.primary },
 };
 
 function fmtDate(iso: string): string {
@@ -130,7 +131,7 @@ export default function MatchHistoryScreen() {
         >
           <Text style={s.backTxt}>‹</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>📜 Lịch sử đấu</Text>
+        <Text style={s.headerTitle}>{`${ASSETS.matchHistory.title} Lịch sử đấu`}</Text>
         <View style={s.backBtn} />
       </View>
 
@@ -145,7 +146,7 @@ export default function MatchHistoryScreen() {
         </View>
       ) : items.length === 0 ? (
         <View style={s.centerBox}>
-          <Text style={s.emptyEmoji}>🗒️</Text>
+          <Text style={s.emptyEmoji}>{ASSETS.matchHistory.empty}</Text>
           <Text style={s.emptyTitle}>Chưa có trận nào</Text>
           <Text style={s.emptySub}>Hãy vào trận PK đầu tiên của bạn!</Text>
         </View>

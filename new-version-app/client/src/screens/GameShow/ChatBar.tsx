@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
 import { s } from './styles';
 import { EMOJIS } from '../../../../shared/constants';
+import { ASSETS } from '../../assets';
 import ChatBubble from './ChatBubble';
 import type { ChatMessage } from '../../../../shared/types';
 
@@ -63,7 +64,7 @@ export default function ChatBar({
           style={[s.emojiBtn, showChatInput && s.emojiBtnActive]}
           activeOpacity={0.7}
         >
-          <Text style={s.emojiBtnText}>💬</Text>
+          <Text style={s.emojiBtnText}>{ASSETS.gameshow.chat}</Text>
         </TouchableOpacity>
       </View>
     </View>

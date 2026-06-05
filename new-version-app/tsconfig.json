@@ -8,7 +8,7 @@
     "strict": true,
     "target": "es2020",
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node", "jest"],
   },
   "include": [
     "App.tsx",

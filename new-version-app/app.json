@@ -59,7 +59,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "expo-audio"
     ]
   }
 }

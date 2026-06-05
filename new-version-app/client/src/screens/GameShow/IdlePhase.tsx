@@ -4,6 +4,7 @@ import { C } from '../../theme';
 import { TactileButton } from '../../components/ui';
 import { MODES } from '../../../../shared/constants';
 import { s } from './styles';
+import { ASSETS } from '../../assets';
 
 interface Props {
   selectedMode: string;
@@ -22,12 +23,12 @@ export default function IdlePhase({
   return (
     <SafeAreaView style={s.bg}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={s.idleWrap} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Text style={s.idleTitle}>⚔️ Chế Độ PK</Text>
+        <Text style={s.idleTitle}>{`${ASSETS.gameshow.pkTitle} Chế Độ PK`}</Text>
         <Text style={s.idleSub}>Thách đấu toàn server · Real-time 1v1</Text>
 
         <View style={s.idleVsRow}>
           <View style={[s.idleAvatar, { borderColor: C.primary }]}>
-            <Text style={s.idleAvatarEmoji}>🐱</Text>
+            <Text style={s.idleAvatarEmoji}>{ASSETS.gameshow.youAvatar}</Text>
           </View>
           <Text style={s.idleVsLabel}>VS</Text>
           <View style={[s.idleAvatar, { borderColor: '#DDD' }]}>
@@ -65,13 +66,13 @@ export default function IdlePhase({
 
         <TactileButton
           title="Vào trận ngay"
-          icon="⚔️"
+          icon={ASSETS.gameshow.pkTitle}
           onPress={onJoin}
           disabled={!userId}
         />
 
         <TouchableOpacity style={s.historyBtn} onPress={onHistory} activeOpacity={0.8}>
-          <Text style={s.historyBtnTxt}>📜 Lịch sử đấu</Text>
+          <Text style={s.historyBtnTxt}>{`${ASSETS.gameshow.history} Lịch sử đấu`}</Text>
         </TouchableOpacity>
 
         {!userId && (

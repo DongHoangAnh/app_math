@@ -6,6 +6,7 @@ import {
 import { C, R, F, shadow } from '../theme';
 import { LevelBadge } from './LevelBadge';
 import { gameApi, type PublicProfile } from '../services/api';
+import { ASSETS } from '../assets';
 
 interface Props {
   visible: boolean;
@@ -73,22 +74,22 @@ export default function OpponentInfoModal({ visible, opponentId, fallbackName, o
                 <>
                   {/* ── Thống kê chi tiết ── */}
                   <View style={s.grid}>
-                    <BigStat emoji="🎮" value={`${stats.totalMatches}`}        label="Trận chơi" />
-                    <BigStat emoji="🥇" value={`${stats.totalWins}`}           label="Chiến thắng" valueColor={C.successDeep} />
-                    <BigStat emoji="📈" value={`${stats.winRate.toFixed(1)}%`} label="Tỷ lệ thắng" valueColor={C.orange} />
-                    <BigStat emoji="⭐" value={`${stats.totalScore}`}          label="Tổng điểm" valueColor={C.orangeDark} />
+                    <BigStat emoji={ASSETS.opponentInfo.matches} value={`${stats.totalMatches}`}        label="Trận chơi" />
+                    <BigStat emoji={ASSETS.opponentInfo.wins} value={`${stats.totalWins}`}           label="Chiến thắng" valueColor={C.successDeep} />
+                    <BigStat emoji={ASSETS.opponentInfo.winRate} value={`${stats.winRate.toFixed(1)}%`} label="Tỷ lệ thắng" valueColor={C.orange} />
+                    <BigStat emoji={ASSETS.opponentInfo.score} value={`${stats.totalScore}`}          label="Tổng điểm" valueColor={C.orangeDark} />
                   </View>
 
                   <View style={s.perfCard}>
-                    <PerfRow icon="🔥" label="Chuỗi thắng hiện tại" value={`${stats.currentStreak}`} />
-                    <PerfRow icon="⚡" label="Chuỗi thắng tốt nhất" value={`${stats.bestStreak}`} />
-                    <PerfRow icon="🎯" label="Tỷ lệ trả lời đúng" value={stats.totalMatches > 0 ? `${stats.accuracyRate.toFixed(1)}%` : '—'} />
-                    <PerfRow icon="🏆" label="Điểm xếp hạng" value={`${profile?.rankingPoints ?? 0}`} isLast />
+                    <PerfRow icon={ASSETS.opponentInfo.streakNow} label="Chuỗi thắng hiện tại" value={`${stats.currentStreak}`} />
+                    <PerfRow icon={ASSETS.opponentInfo.streakBest} label="Chuỗi thắng tốt nhất" value={`${stats.bestStreak}`} />
+                    <PerfRow icon={ASSETS.opponentInfo.accuracy} label="Tỷ lệ trả lời đúng" value={stats.totalMatches > 0 ? `${stats.accuracyRate.toFixed(1)}%` : '—'} />
+                    <PerfRow icon={ASSETS.opponentInfo.ranking} label="Điểm xếp hạng" value={`${profile?.rankingPoints ?? 0}`} isLast />
                   </View>
                 </>
               ) : (
                 <View style={s.hiddenBox}>
-                  <Text style={s.hiddenEmoji}>🔒</Text>
+                  <Text style={s.hiddenEmoji}>{ASSETS.opponentInfo.locked}</Text>
                   <Text style={s.hiddenText}>Người chơi này đã ẩn thông tin chi tiết.</Text>
                 </View>
               )}

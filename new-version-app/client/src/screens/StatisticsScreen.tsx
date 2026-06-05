@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { LevelCard } from '../components/LevelBadge';
 import { gameApi } from '../services/api';
+import { ASSETS } from '../assets';
 
 interface Stats {
   totalMatches: number; totalWins: number; winRate: number;
@@ -24,10 +25,10 @@ const FALLBACK: Stats = {
 };
 
 const BADGES = [
-  { emoji: '🌟', title: 'Bắt Đầu',   desc: 'Trận đầu tiên' },
-  { emoji: '🔥', title: 'Nóng Lên',  desc: '5 trận thắng liên tiếp' },
-  { emoji: '🏅', title: 'Nhân Phẩm', desc: 'Đạt 50 điểm xếp hạng' },
-  { emoji: '💎', title: 'Kim Cương', desc: 'Level 10' },
+  { emoji: ASSETS.statistics.achStart,   title: 'Bắt Đầu',   desc: 'Trận đầu tiên' },
+  { emoji: ASSETS.statistics.achHot,     title: 'Nóng Lên',  desc: '5 trận thắng liên tiếp' },
+  { emoji: ASSETS.statistics.achLucky,   title: 'Nhân Phẩm', desc: 'Đạt 50 điểm xếp hạng' },
+  { emoji: ASSETS.statistics.achDiamond, title: 'Kim Cương', desc: 'Level 10' },
 ];
 
 export default function StatisticsScreen() {
@@ -91,16 +92,16 @@ export default function StatisticsScreen() {
 
         {/* Title */}
         <View style={styles.titleWrap}>
-          <Text style={styles.title}>📈 Thống Kê</Text>
+          <Text style={styles.title}>{`${ASSETS.statistics.title} Thống Kê`}</Text>
           <Text style={styles.subtitle}>Tổng quan hiệu suất của bạn</Text>
         </View>
 
         {/* Main stats 2x2 */}
         <View style={styles.grid}>
-          <BigStat emoji="🎮" value={`${stats.totalMatches}`}        label="Trận chơi" />
-          <BigStat emoji="🥇" value={`${stats.totalWins}`}           label="Chiến thắng" valueColor={C.successDeep} />
-          <BigStat emoji="📈" value={`${stats.winRate.toFixed(1)}%`} label="Tỷ lệ thắng" valueColor={C.orange} />
-          <BigStat emoji="⭐" value={`${stats.totalScore}`}          label="Tổng điểm" valueColor={C.orangeDark} />
+          <BigStat emoji={ASSETS.statistics.matches} value={`${stats.totalMatches}`}        label="Trận chơi" />
+          <BigStat emoji={ASSETS.statistics.wins}    value={`${stats.totalWins}`}           label="Chiến thắng" valueColor={C.successDeep} />
+          <BigStat emoji={ASSETS.statistics.winRate} value={`${stats.winRate.toFixed(1)}%`} label="Tỷ lệ thắng" valueColor={C.orange} />
+          <BigStat emoji={ASSETS.statistics.score}   value={`${stats.totalScore}`}          label="Tổng điểm" valueColor={C.orangeDark} />
         </View>
 
         {/* Streak */}
@@ -108,12 +109,12 @@ export default function StatisticsScreen() {
           <Text style={styles.h3}>Chuỗi thắng</Text>
           <View style={styles.streakRow}>
             <View style={[styles.streakCard, { backgroundColor: C.peachBg, borderColor: C.peachBorder }]}>
-              <Text style={{ fontSize: 26 }}>🔥</Text>
+              <Text style={{ fontSize: 26 }}>{ASSETS.statistics.streakNow}</Text>
               <Text style={styles.streakValue}>{stats.currentStreak}</Text>
               <Text style={styles.streakLabel}>Hiện tại</Text>
             </View>
             <View style={[styles.streakCard, { backgroundColor: '#FFF6D9', borderColor: '#FCE08A' }]}>
-              <Text style={{ fontSize: 26 }}>⚡</Text>
+              <Text style={{ fontSize: 26 }}>{ASSETS.statistics.streakBest}</Text>
               <Text style={styles.streakValue}>{stats.bestStreak}</Text>
               <Text style={styles.streakLabel}>Tốt nhất</Text>
             </View>
@@ -130,9 +131,9 @@ export default function StatisticsScreen() {
         <View style={styles.section}>
           <Text style={styles.h3}>Hiệu suất</Text>
           <View style={styles.perfCard}>
-            <PerfRow icon="🔢" label="Điểm TB / trận" value={`${stats.averageScore}`} />
-            <PerfRow icon="🎯" label="Tỷ lệ trả lời đúng" value={stats.totalMatches > 0 ? `${stats.accuracyRate.toFixed(1)}%` : '—'} />
-            <PerfRow icon="⏱️" label="Trung bình / trận" value={stats.totalMatches > 0 ? `${stats.avgTimePerMatch.toFixed(1)}s` : '—'} isLast />
+            <PerfRow icon={ASSETS.statistics.avgScore}  label="Điểm TB / trận" value={`${stats.averageScore}`} />
+            <PerfRow icon={ASSETS.statistics.accuracy}  label="Tỷ lệ trả lời đúng" value={stats.totalMatches > 0 ? `${stats.accuracyRate.toFixed(1)}%` : '—'} />
+            <PerfRow icon={ASSETS.statistics.avgTime}   label="Trung bình / trận" value={stats.totalMatches > 0 ? `${stats.avgTimePerMatch.toFixed(1)}s` : '—'} isLast />
           </View>
         </View>
 

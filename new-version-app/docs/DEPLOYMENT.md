@@ -6,6 +6,44 @@ This guide helps you deploy the GameShow & Auth modules to your mobile app.
 
 ---
 
+## ⚠️ CRITICAL: Run the WebSocket server as a SINGLE instance
+
+The GameShow server keeps **all live game state in process memory** — the
+matchmaking queue, active rooms, and the `userId → room` map all live in RAM
+(`waitingQueue`, `activeRooms`, `playerToRoom` in `server/gameshow-ws.ts`).
+
+Because of this, the backend **must run as exactly one instance**:
+
+- **Do NOT enable horizontal scaling / multiple replicas / autoscaling.** Two
+  instances behind a load balancer cannot match players against each other (each
+  has its own queue), and a reconnect routed to a different instance loses the room.
+- On **Railway**: keep **Replicas = 1** (Settings → Deploy). Do not turn on
+  horizontal autoscaling.
+- A redeploy or crash drops all **in-progress** matches (finished matches are
+  already persisted to Supabase). Prefer deploying during low-traffic windows.
+
+A single Node process comfortably handles a few thousand concurrent WebSocket
+connections for this game (it is I/O-bound). Only when you need to go beyond a
+single instance do you have to move shared state into Redis (Redis pub/sub for
+the queue + rooms) — that is the one improvement here that is **not** free.
+
+### Built-in resilience (no extra infra)
+
+The server already mitigates the most common production issues for free:
+
+- **Heartbeat** (`HEARTBEAT_MS`): pings every socket every 30s and terminates any
+  that stop responding — clears "ghost" players left by half-open mobile
+  connections that never fire a `close` event.
+- **Mode-aware matchmaking**: players are paired with someone who picked the same
+  game mode; after `MATCH_FALLBACK_MS` (12s) of waiting they are matched with
+  anyone so nobody is stuck waiting for a mode no one else picked.
+- **Matchmaking sweep**: matching re-runs on a timer, so the fallback fires even
+  when no new player joins.
+
+Tunables live at the top of `server/gameshow-ws.ts`.
+
+---
+
 ## Files Included
 
 ```

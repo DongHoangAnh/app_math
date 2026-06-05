@@ -19,6 +19,7 @@ interface Player {
     totalScore?: number;
     mode?: string;
     roomId?: string;
+    queuedAt?: number; // when the player entered the waiting queue (for fallback matching)
 }
 
 interface PlayerProgress {
@@ -54,6 +55,13 @@ const waitingQueue: Player[] = [];
 const activeRooms = new Map<string, GameRoom>();
 const playerToRoom = new Map<string, string>(); // userId → roomId
 
+// ─── Server-only tunables ───────────────────────────────────
+// How often to ping clients + how long a queued player waits for a same-mode
+// opponent before we match them with anyone available.
+const HEARTBEAT_MS = 30_000;       // ping sweep interval (must be > client app-PING of 25s)
+const MATCHMAKING_SWEEP_MS = 2_000; // re-run matchmaking even when nobody new joins
+const MATCH_FALLBACK_MS = 12_000;   // after this wait, ignore mode and match anyone
+
 // ═══════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════
@@ -87,12 +95,7 @@ function calcPlayerStats(prog?: PlayerProgress) {
 // MATCHMAKING
 // ═══════════════════════════════════════════════════════════
 
-function tryMatch() {
-    if (waitingQueue.length < 2) return;
-
-    const p1 = waitingQueue.shift()!;
-    const p2 = waitingQueue.shift()!;
-
+function createRoom(p1: Player, p2: Player) {
     const roomId = generateRoomId();
     // Dùng chế độ của người vào hàng đợi trước (p1) để cả hai cùng một bộ câu hỏi
     const mode = normalizeMode(p1.mode);
@@ -132,6 +135,35 @@ function tryMatch() {
     });
 
     // Room created — keep server-side only if needed for debugging
+}
+
+function tryMatch() {
+    if (waitingQueue.length < 2) return;
+
+    // Pass 1 — prefer pairing players who picked the SAME mode (best UX:
+    // both get the questions they chose). Earliest-waiting player first.
+    for (let i = 0; i < waitingQueue.length; i++) {
+        const mode1 = normalizeMode(waitingQueue[i].mode);
+        for (let j = i + 1; j < waitingQueue.length; j++) {
+            if (normalizeMode(waitingQueue[j].mode) === mode1) {
+                const [p1] = waitingQueue.splice(i, 1);
+                const [p2] = waitingQueue.splice(j - 1, 1); // j shifted left after removing i
+                createRoom(p1, p2);
+                return tryMatch(); // keep pairing while pairs remain
+            }
+        }
+    }
+
+    // Pass 2 — fallback: if the longest-waiting player has been queued past the
+    // threshold, match them with anyone so nobody is stuck waiting forever for a
+    // mode nobody else picked. p1 (longest wait) decides the question mode.
+    const head = waitingQueue[0];
+    if (head && Date.now() - (head.queuedAt ?? 0) >= MATCH_FALLBACK_MS) {
+        const p1 = waitingQueue.shift()!;
+        const p2 = waitingQueue.shift()!;
+        createRoom(p1, p2);
+        return tryMatch();
+    }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -352,14 +384,49 @@ function handleDisconnect(userId: string) {
 // SETUP — mount WS server on existing HTTP server
 // ═══════════════════════════════════════════════════════════
 
+type LiveSocket = WebSocket & { isAlive?: boolean };
+
 export function setupGameShowWS(httpServer: Server) {
     const wss = new WebSocketServer({ server: httpServer, path: "/ws/gameshow" });
     console.log("[GameShow WS] WebSocket server ready at /ws/gameshow");
 
+    // Heartbeat — terminate sockets that stop responding (half-open mobile
+    // connections that never fire 'close', which would otherwise linger as
+    // "ghost" players in the queue/room). Each socket is marked alive on any
+    // pong or inbound message; the sweep kills any that missed the last ping.
+    const heartbeat = setInterval(() => {
+        for (const client of wss.clients) {
+            const sock = client as LiveSocket;
+            if (sock.isAlive === false) {
+                sock.terminate(); // forces a 'close' event → handleDisconnect runs
+                continue;
+            }
+            sock.isAlive = false;
+            try { sock.ping(); } catch { /* socket already gone */ }
+        }
+    }, HEARTBEAT_MS);
+
+    // Matchmaking sweep — re-run matching on a timer so the fallback (match
+    // anyone after a long wait) fires even when nobody new joins the queue.
+    const matchSweep = setInterval(tryMatch, MATCHMAKING_SWEEP_MS);
+
+    // Don't let these intervals keep the process alive on shutdown.
+    heartbeat.unref?.();
+    matchSweep.unref?.();
+
+    wss.on("close", () => {
+        clearInterval(heartbeat);
+        clearInterval(matchSweep);
+    });
+
     wss.on("connection", (ws) => {
         let currentPlayer: Player | null = null;
+        const sock = ws as LiveSocket;
+        sock.isAlive = true;
+        ws.on("pong", () => { sock.isAlive = true; });
 
         ws.on("message", async (raw) => {
+            sock.isAlive = true; // any inbound traffic proves the socket is live
             let msg: WSMessage;
             try {
                 msg = JSON.parse(raw.toString());
@@ -408,6 +475,7 @@ export function setupGameShowWS(httpServer: Server) {
                         }
                     }
 
+                    currentPlayer.queuedAt = Date.now();
                     waitingQueue.push(currentPlayer);
                     sendToPlayer(currentPlayer, { type: "QUEUED", position: waitingQueue.length });
                     // Player joined matchmaking queue

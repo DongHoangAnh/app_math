@@ -160,6 +160,15 @@ the exact bugs/duplication they removed, so follow them for all new code:
    stays *glue only* (owns state, timers, handlers, phase routing). Extract: one shared
    `styles.ts`, pure helpers in `utils.ts`, one `*Phase.tsx` per phase, and reusable
    sub-components. Move the StyleSheet verbatim so visuals don't drift.
+6. **Assets (emoji icons + sound files) → only `client/src/assets.ts` (`ASSETS`).** One
+   registry, keyed *by screen* (`ASSETS.home.points`, `ASSETS.gameshow.youAvatar`,
+   `ASSETS.sfx.win`, …). Screens/components/services import `{ ASSETS }` and reference a
+   key — never inline an emoji literal or `require('../../assets/...')` at the use site.
+   To change an icon/sound app-wide, edit the registry. Keep the header screen→asset map
+   in sync when adding keys. Sound files live under `assets/sfx/` and MUST be committed
+   (Metro resolves `require()` statically — uncommitted files break a clean build). Not
+   centralized (leave inline): functional control glyphs (`⌫`, `✓`, `·`), directional
+   arrows (`→`/`←`), emoji embedded mid-sentence, and emoji in code comments.
 
 ### Database Schema
 - **users** — User profiles, auth, stats (points, level, streak, XP)

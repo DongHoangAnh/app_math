@@ -11,6 +11,7 @@ import { supabase } from '../services/supabase';
 import { getLevelProgress, getTier, TIER_LABEL } from '../utils/levelUtils';
 import EditProfileModal from '../components/EditProfileModal';
 import { gameApi } from '../services/api';
+import { ASSETS } from '../assets';
 
 interface UserStats {
   totalScore: number; totalMatches: number;
@@ -22,10 +23,10 @@ const FALLBACK: UserStats = {
 };
 
 const ACHIEVEMENTS = [
-  { emoji: '🏆', label: 'Vô địch' },
-  { emoji: '🔥', label: 'Streak 5' },
-  { emoji: '⚡', label: 'Tốc độ' },
-  { emoji: '🎯', label: 'Bách phát' },
+  { emoji: ASSETS.profile.champion, label: 'Vô địch' },
+  { emoji: ASSETS.profile.streak5, label: 'Streak 5' },
+  { emoji: ASSETS.profile.speed, label: 'Tốc độ' },
+  { emoji: ASSETS.profile.sniper, label: 'Bách phát' },
 ];
 
 export default function ProfileScreen() {
@@ -101,7 +102,7 @@ export default function ProfileScreen() {
               </View>
             )}
             <View style={styles.editBadge}>
-              <Text style={styles.editBadgeIcon}>✏️</Text>
+              <Text style={styles.editBadgeIcon}>{ASSETS.profile.edit}</Text>
             </View>
           </TouchableOpacity>
 
@@ -170,10 +171,10 @@ export default function ProfileScreen() {
 
           {/* Settings */}
           <View style={styles.settings}>
-            <SettingRow icon="✏️" label="Chỉnh sửa hồ sơ" onPress={() => setEditVisible(true)} />
-            <SettingRow icon="💬" label="Trợ giúp" onPress={() => {}} />
-            <SettingRow icon="📋" label="Điều khoản" onPress={() => {}} />
-            <SettingRow icon="🚪" label="Đăng xuất" onPress={signOut} danger isLast />
+            <SettingRow icon={ASSETS.profile.edit} label="Chỉnh sửa hồ sơ" onPress={() => setEditVisible(true)} />
+            <SettingRow icon={ASSETS.profile.help} label="Trợ giúp" onPress={() => {}} />
+            <SettingRow icon={ASSETS.profile.terms} label="Điều khoản" onPress={() => {}} />
+            <SettingRow icon={ASSETS.profile.logout} label="Đăng xuất" onPress={signOut} danger isLast />
           </View>
         </View>
       </ScrollView>

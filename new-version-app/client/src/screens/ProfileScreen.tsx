@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, SafeAreaView, Image,
+  TouchableOpacity, SafeAreaView, Image, Switch,
 } from 'react-native';
 import { C, R, F, shadow, hardShadow } from '../theme';
 import { ProgressBar } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
+import { useSettings } from '../hooks/useSettings';
 import { supabase } from '../services/supabase';
 import { getLevelProgress, getTier, TIER_LABEL } from '../utils/levelUtils';
 import EditProfileModal from '../components/EditProfileModal';
@@ -29,6 +30,7 @@ const ACHIEVEMENTS = [
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const { soundEnabled, hapticsEnabled, setSoundEnabled, setHapticsEnabled } = useSettings();
   const [stats, setStats]                 = useState<UserStats>(FALLBACK);
   const [rankingPoints, setRankingPoints] = useState(0);
   const [userExp, setUserExp]             = useState(0);
@@ -138,6 +140,31 @@ export default function ProfileScreen() {
                   <Text style={styles.achLabel}>{a.label}</Text>
                 </View>
               ))}
+            </View>
+          </View>
+
+          {/* Sound & haptics toggles */}
+          <View style={styles.settingsCard}>
+            <Text style={styles.settingsTitle}>Âm thanh & Rung</Text>
+
+            <View style={styles.settingToggleRow}>
+              <Text style={styles.settingToggleLabel}>Âm thanh</Text>
+              <Switch
+                value={soundEnabled}
+                onValueChange={setSoundEnabled}
+                trackColor={{ true: C.orange, false: C.line }}
+                thumbColor="#fff"
+              />
+            </View>
+
+            <View style={styles.settingToggleRow}>
+              <Text style={styles.settingToggleLabel}>Rung</Text>
+              <Switch
+                value={hapticsEnabled}
+                onValueChange={setHapticsEnabled}
+                trackColor={{ true: C.orange, false: C.line }}
+                thumbColor="#fff"
+              />
             </View>
           </View>
 
@@ -268,4 +295,17 @@ const styles = StyleSheet.create({
   },
   settingLabel: { flex: 1, fontFamily: F.display, fontSize: 14, color: C.ink },
   settingArrow: { fontFamily: F.display, fontSize: 22, color: C.inkSlate },
+
+  // Sound & haptics card
+  settingsCard: {
+    padding: 16,
+    backgroundColor: C.surface, borderRadius: R.md,
+    borderWidth: 1, borderColor: C.line, ...shadow('#000', 1),
+  },
+  settingsTitle: { fontFamily: F.display, fontSize: 16, color: C.ink, marginBottom: 8 },
+  settingToggleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  settingToggleLabel: { fontFamily: F.bodyMedium, fontSize: 14, color: C.inkBrown },
 });

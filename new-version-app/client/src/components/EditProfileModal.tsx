@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { validateDisplayName, validateAvatarFile } from '../utils/validation';
+import { ASSETS } from '../assets';
 
 interface Props {
   visible: boolean;
@@ -148,7 +149,7 @@ export default function EditProfileModal({
                   </View>
                 )}
                 <View style={styles.avatarEditBadge}>
-                  <Text style={styles.avatarEditIcon}>📷</Text>
+                  <Text style={styles.avatarEditIcon}>{ASSETS.editProfile.camera}</Text>
                 </View>
               </TouchableOpacity>
 

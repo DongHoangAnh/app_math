@@ -5,13 +5,14 @@ import {
   getLevelProgress, getExpForNextLevel, getCumulativeExpForLevel,
   type TierName,
 } from '../utils/levelUtils';
+import { ASSETS } from '../assets';
 
 // ── Icon definitions ─────────────────────────────────────────
 const ICONS = {
-  crown: { emoji: '👑', bg: '#EDE7F6', fg: '#6A1B9A' },
-  sun:   { emoji: '☀️', bg: '#FFF3E0', fg: '#E65100' },
-  moon:  { emoji: '🌙', bg: '#E3F2FD', fg: '#1565C0' },
-  star:  { emoji: '⭐', bg: '#FFFDE7', fg: '#F57F17' },
+  crown: { emoji: ASSETS.levelBadge.crown, bg: '#EDE7F6', fg: '#6A1B9A' },
+  sun:   { emoji: ASSETS.levelBadge.sun,   bg: '#FFF3E0', fg: '#E65100' },
+  moon:  { emoji: ASSETS.levelBadge.moon,  bg: '#E3F2FD', fg: '#1565C0' },
+  star:  { emoji: ASSETS.levelBadge.star,  bg: '#FFFDE7', fg: '#F57F17' },
 };
 
 // ── Sizes ────────────────────────────────────────────────────
@@ -77,7 +78,7 @@ export function LevelBadge({ level, size = 'md' }: { level: number; size?: Size 
       ) : (
         // Level 1: no icons yet
         <View style={[styles.iconBox, { width: SIZE_MAP[size].box, height: SIZE_MAP[size].box, borderRadius: SIZE_MAP[size].box / 4, backgroundColor: '#F5F5F5', marginRight: SIZE_MAP[size].gap }]}>
-          <Text style={{ fontSize: font * 0.8, lineHeight: SIZE_MAP[size].box }}>🥚</Text>
+          <Text style={{ fontSize: font * 0.8, lineHeight: SIZE_MAP[size].box }}>{ASSETS.levelBadge.egg}</Text>
         </View>
       )}
       <Text style={[styles.levelNum, { fontSize: font * 0.75, color: TIER_COLOR[tier] }]}>
@@ -114,7 +115,7 @@ export function LevelCard({ level, totalExp }: { level: number; totalExp: number
             </>
           ) : (
             <View style={[styles.iconBox, { width: 34, height: 34, borderRadius: 8, backgroundColor: '#F5F5F5', marginRight: 5 }]}>
-              <Text style={{ fontSize: 20, lineHeight: 34 }}>🥚</Text>
+              <Text style={{ fontSize: 20, lineHeight: 34 }}>{ASSETS.levelBadge.egg}</Text>
             </View>
           )}
         </View>
@@ -138,7 +139,7 @@ export function LevelCard({ level, totalExp }: { level: number; totalExp: number
       {nextMilestone && (
         <View style={styles.milestoneRow}>
           <Text style={styles.milestoneText}>
-            🎯 {nextMilestone.expLeft - (totalExp - getCumulativeExpForLevel(level))} EXP nữa để đạt {nextMilestone.label}
+            {ASSETS.levelBadge.target} {nextMilestone.expLeft - (totalExp - getCumulativeExpForLevel(level))} EXP nữa để đạt {nextMilestone.label}
           </Text>
         </View>
       )}
@@ -148,9 +149,9 @@ export function LevelCard({ level, totalExp }: { level: number; totalExp: number
 
 /** Returns the next visual milestone (first moon / sun / crown) or null. */
 function getNextMilestone(level: number): { label: string; expLeft: number } | null {
-  if (level < 5)  return { label: '🌙 Chiến Sĩ (Lv.5)',      expLeft: 800 };
-  if (level < 17) return { label: '☀️ Anh Hùng (Lv.17)',     expLeft: 5600 };
-  if (level < 65) return { label: '👑 Huyền Thoại (Lv.65)', expLeft: 53600 };
+  if (level < 5)  return { label: `${ASSETS.levelBadge.moon} Chiến Sĩ (Lv.5)`,      expLeft: 800 };
+  if (level < 17) return { label: `${ASSETS.levelBadge.sun} Anh Hùng (Lv.17)`,     expLeft: 5600 };
+  if (level < 65) return { label: `${ASSETS.levelBadge.crown} Huyền Thoại (Lv.65)`, expLeft: 53600 };
   return null;
 }
 

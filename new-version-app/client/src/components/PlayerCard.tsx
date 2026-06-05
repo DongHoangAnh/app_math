@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { C, R } from '../theme';
+import { ASSETS } from '../assets';
 
 interface PlayerCardProps {
   name: string;
@@ -37,7 +38,7 @@ export default function PlayerCard({
 
       {isWinner && (
         <View style={styles.winnerBadge}>
-          <Text style={styles.winnerText}>👑 Winner</Text>
+          <Text style={styles.winnerText}>{`${ASSETS.playerCard.crown} Winner`}</Text>
         </View>
       )}
     </View>

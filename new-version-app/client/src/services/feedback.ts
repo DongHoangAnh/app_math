@@ -3,6 +3,7 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 import * as Haptics from 'expo-haptics';
 import type { Settings } from './settingsStorage';
 import { DEFAULT_SETTINGS } from './settingsStorage';
+import { ASSETS } from '../assets';
 
 // Module-level prefs, kept in sync by useSettings via setPrefs().
 let prefs: Settings = { ...DEFAULT_SETTINGS };
@@ -18,10 +19,10 @@ function makePlayer(src: number): AudioPlayer | null {
 }
 
 const players = {
-  correct: makePlayer(require('../../../assets/sfx/correct.mp3')),
-  wrong:   makePlayer(require('../../../assets/sfx/wrong.mp3')),
-  win:     makePlayer(require('../../../assets/sfx/win.mp3')),
-  lose:    makePlayer(require('../../../assets/sfx/lose.mp3')),
+  correct: makePlayer(ASSETS.sfx.correct),
+  wrong:   makePlayer(ASSETS.sfx.wrong),
+  win:     makePlayer(ASSETS.sfx.win),
+  lose:    makePlayer(ASSETS.sfx.lose),
 };
 
 try {

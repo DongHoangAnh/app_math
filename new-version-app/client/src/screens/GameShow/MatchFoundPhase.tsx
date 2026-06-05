@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, SafeAreaView } from 'react-native';
 import { C } from '../../theme';
 import { s } from './styles';
+import { ASSETS } from '../../assets';
 
 interface Props {
   displayName: string;
@@ -17,20 +18,20 @@ export default function MatchFoundPhase({ displayName, opponentName, countdown }
         <View style={s.queueAvatarRow}>
           <View style={s.matchPlayer}>
             <View style={[s.bigRing, { borderColor: C.primary }]}>
-              <Text style={s.bigEmoji}>🐱</Text>
+              <Text style={s.bigEmoji}>{ASSETS.gameshow.youAvatar}</Text>
             </View>
             <Text style={s.matchName} numberOfLines={1}>{displayName}</Text>
           </View>
           <Text style={s.vsHuge}>VS</Text>
           <View style={s.matchPlayer}>
             <View style={[s.bigRing, { borderColor: C.error }]}>
-              <Text style={s.bigEmoji}>🐻</Text>
+              <Text style={s.bigEmoji}>{ASSETS.gameshow.oppAvatar}</Text>
             </View>
             <Text style={s.matchName} numberOfLines={1}>{opponentName}</Text>
           </View>
         </View>
 
-        <Text style={s.countdownBig}>{countdown > 0 ? countdown : '🚀'}</Text>
+        <Text style={s.countdownBig}>{countdown > 0 ? countdown : ASSETS.gameshow.rocket}</Text>
         <Text style={s.searchSub}>Chuẩn bị bắt đầu!</Text>
       </View>
     </SafeAreaView>

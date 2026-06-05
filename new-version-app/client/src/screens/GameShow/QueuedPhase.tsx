@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
 import { C } from '../../theme';
 import { s } from './styles';
+import { ASSETS } from '../../assets';
 
 // Matchmaking spinner — "đang tìm đối thủ" with a cancel link.
 export default function QueuedPhase({ onCancel }: { onCancel: () => void }) {
@@ -10,7 +11,7 @@ export default function QueuedPhase({ onCancel }: { onCancel: () => void }) {
       <View style={s.centered}>
         <View style={s.queueAvatarRow}>
           <View style={[s.bigRing, { borderColor: C.primary }]}>
-            <Text style={s.bigEmoji}>🐱</Text>
+            <Text style={s.bigEmoji}>{ASSETS.gameshow.youAvatar}</Text>
           </View>
           <Text style={s.vsHuge}>VS</Text>
           <View style={[s.bigRing, { borderColor: '#DDD' }]}>

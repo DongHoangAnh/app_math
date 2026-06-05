@@ -6,6 +6,7 @@ import { C } from '../../theme';
 import { QUESTION_SECONDS } from '../../../../shared/constants';
 import { s } from './styles';
 import { adaptQuestion, type FloatingEmoji } from './utils';
+import { ASSETS } from '../../assets';
 import type { GameShowState } from '../../hooks/useGameShowWS';
 import QuestionDisplay from './QuestionDisplay';
 import FloatingEmojiLayer from './FloatingEmojiLayer';
@@ -75,7 +76,7 @@ export default function PlayingPhase({
         {/* My side */}
         <View style={s.battleSide}>
           <View style={[s.battleRing, { borderColor: C.primary }]}>
-            <Text style={s.battleEmoji}>🐱</Text>
+            <Text style={s.battleEmoji}>{ASSETS.gameshow.youAvatar}</Text>
           </View>
           <View>
             <Text style={s.battleWho}>Tôi</Text>
@@ -100,7 +101,7 @@ export default function PlayingPhase({
             </Text>
           </View>
           <View style={[s.battleRing, { borderColor: C.error }]}>
-            <Text style={s.battleEmoji}>🐻</Text>
+            <Text style={s.battleEmoji}>{ASSETS.gameshow.oppAvatar}</Text>
           </View>
         </View>
       </View>
@@ -114,7 +115,7 @@ export default function PlayingPhase({
       <View style={s.playBody}>
         {state.opponentFinished && (
           <View style={s.opDoneBanner}>
-            <Text style={s.opDoneTxt}>⚡ Đối thủ đã hoàn thành!</Text>
+            <Text style={s.opDoneTxt}>{`${ASSETS.gameshow.oppDone} Đối thủ đã hoàn thành!`}</Text>
           </View>
         )}
 

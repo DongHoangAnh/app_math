@@ -3,6 +3,7 @@ import { View, Text, SafeAreaView } from 'react-native';
 import { C } from '../../theme';
 import { TactileButton } from '../../components/ui';
 import { s } from './styles';
+import { ASSETS } from '../../assets';
 
 interface Props {
   rankingDelta: number | null;
@@ -14,7 +15,7 @@ export default function OpponentDisconnectedPhase({ rankingDelta, onPlayAgain }:
   return (
     <SafeAreaView style={s.bg}>
       <View style={s.centerFlex}>
-        <Text style={{ fontSize: 64, marginBottom: 16 }}>🏃</Text>
+        <Text style={{ fontSize: 64, marginBottom: 16 }}>{ASSETS.gameshow.oppLeft}</Text>
         <Text style={s.waitTitle}>Đối thủ bỏ cuộc!</Text>
         <Text style={[s.waitSub, { marginBottom: 28 }]}>Bạn thắng mặc định 🎉</Text>
         {rankingDelta != null && (
@@ -23,7 +24,7 @@ export default function OpponentDisconnectedPhase({ rankingDelta, onPlayAgain }:
           </Text>
         )}
         <View style={{ width: '80%' }}>
-          <TactileButton title="Chơi Trận Mới" icon="⚔️" onPress={onPlayAgain} />
+          <TactileButton title="Chơi Trận Mới" icon={ASSETS.gameshow.pkTitle} onPress={onPlayAgain} />
         </View>
       </View>
     </SafeAreaView>

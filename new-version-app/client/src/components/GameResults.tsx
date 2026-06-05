@@ -1,8 +1,22 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Animated } from 'react-native';
+import ConfettiCannon from 'react-native-confetti-cannon';
 import { useNavigation } from '@react-navigation/native';
-import { C, R, F, shadow, hardShadow } from '../theme';
+import { C, R, F, APP_W, shadow, hardShadow } from '../theme';
 import { TactileButton } from './ui';
+import { useFeedback } from '../hooks/useFeedback';
+
+// Animate a number from 0 → target. useNativeDriver:false because we read the value.
+function useCountUp(target: number, duration = 800): number {
+  const [val, setVal] = useState(0);
+  const av = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const id = av.addListener(({ value }) => setVal(Math.round(value)));
+    Animated.timing(av, { toValue: target, duration, useNativeDriver: false }).start();
+    return () => av.removeListener(id);
+  }, [target, duration, av]);
+  return val;
+}
 
 interface Props {
   playerScore: number;
@@ -37,6 +51,17 @@ export default function GameResults({
   const outcome   = draw ? 'draw' : won ? 'win' : 'lose';
   const accuracy  = totalQ > 0 ? Math.round((playerScore / totalQ) * 100) : 0;
 
+  const fb = useFeedback();
+  useEffect(() => {
+    if (outcome === 'win') fb.win();
+    else fb.lose();
+    // play exactly once when the results mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const animatedPlayerScore   = useCountUp(playerScore);
+  const animatedOpponentScore = useCountUp(opponentScore);
+
   const cfg = {
     win:  { emoji: '🏆', label: 'CHIẾN THẮNG!', sub: 'Bạn đã hoàn thành xuất sắc thử thách', accent: C.orange,   slab: '#C9431A' },
     lose: { emoji: '🚩', label: 'THUA CUỘC',    sub: 'Cố gắng hơn ở trận sau nhé!',          accent: C.inkSlate, slab: '#3D4456' },
@@ -54,6 +79,19 @@ export default function GameResults({
       {/* peach glow behind the celebration */}
       <View style={s.glow} pointerEvents="none" />
 
+      {won && (
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <ConfettiCannon
+            count={120}
+            origin={{ x: APP_W / 2, y: -20 }}
+            autoStart
+            fadeOut
+            explosionSpeed={350}
+            fallSpeed={2800}
+          />
+        </View>
+      )}
+
       <View style={s.content}>
         {/* ── Outcome ── */}
         <View style={[s.trophy, { backgroundColor: cfg.accent }, hardShadow(cfg.slab, 8, 0.25)]}>
@@ -64,8 +102,8 @@ export default function GameResults({
 
         {/* ── VS board ── */}
         <View style={s.vsRow}>
-          <ResultCard name="Bạn" score={playerScore} winner={won} accent={C.orange} />
-          <ResultCard name="Đối thủ" score={opponentScore} winner={!won && !draw} accent={C.inkSlate} dim />
+          <ResultCard name="Bạn" score={animatedPlayerScore} winner={won} accent={C.orange} />
+          <ResultCard name="Đối thủ" score={animatedOpponentScore} winner={!won && !draw} accent={C.inkSlate} dim />
         </View>
 
         {/* ── 3 stat cards ── */}

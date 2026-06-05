@@ -3,6 +3,7 @@ import { ScrollView, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useGameShowWS } from '../hooks/useGameShowWS';
 import { useAuth } from '../hooks/useAuth';
+import { useFeedback } from '../hooks/useFeedback';
 import GameResults from '../components/GameResults';
 import { supabase } from '../services/supabase';
 import { QUESTION_SECONDS, VI_BANNED } from '../../../shared/constants';
@@ -53,6 +54,43 @@ export default function GameShowScreen() {
   useEffect(() => { selectedAnswerRef.current = selectedAnswer; }, [selectedAnswer]);
   useEffect(() => { currentIdxRef.current = state.currentQuestionIndex; }, [state.currentQuestionIndex]);
   useEffect(() => { roomIdRef.current = state.roomId; }, [state.roomId]);
+
+  // ── Juicy feedback (sound + haptics + pulse/shake) ─────────────
+  const fb = useFeedback();
+  const scoreScale = useRef(new Animated.Value(1)).current;   // my-score pulse on correct
+  const shakeX     = useRef(new Animated.Value(0)).current;   // question-card shake on wrong
+  const prevAnswersLen = useRef(0);
+
+  const pulseScore = useCallback(() => {
+    Animated.sequence([
+      Animated.spring(scoreScale, { toValue: 1.18, useNativeDriver: true, tension: 280, friction: 6 }),
+      Animated.spring(scoreScale, { toValue: 1,    useNativeDriver: true, tension: 280, friction: 6 }),
+    ]).start();
+  }, [scoreScale]);
+
+  const shakeCard = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(shakeX, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeX, { toValue:  8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeX, { toValue: -6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeX, { toValue:  0, duration: 60, useNativeDriver: true }),
+    ]).start();
+  }, [shakeX]);
+
+  // Fire feedback when a new answer lands in myAnswers (server is source of truth;
+  // a timeout is recorded as isCorrect:false → plays the "wrong" feedback).
+  useEffect(() => {
+    const len = Object.keys(state.myAnswers).length;
+    if (len > prevAnswersLen.current) {
+      const newIdx = prevAnswersLen.current;          // answers fill sequentially
+      const rec = state.myAnswers[newIdx];
+      if (rec) {
+        if (rec.isCorrect) { fb.correct(); pulseScore(); }
+        else               { fb.wrong();   shakeCard(); }
+      }
+    }
+    prevAnswersLen.current = len;
+  }, [state.myAnswers, fb, pulseScore, shakeCard]);
 
   // Fetch ranking points
   useEffect(() => {
@@ -251,6 +289,8 @@ export default function GameShowScreen() {
         questionTimer={questionTimer}
         myScore={myScore}
         total={total}
+        scoreScale={scoreScale}
+        shakeX={shakeX}
         floatingEmojis={floatingEmojis}
         selectedAnswer={selectedAnswer}
         revealState={revealState}

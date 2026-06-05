@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, SafeAreaView, KeyboardAvoidingView, Platform,
+  View, Text, SafeAreaView, KeyboardAvoidingView, Platform, Animated,
 } from 'react-native';
 import { C } from '../../theme';
 import { QUESTION_SECONDS } from '../../../../shared/constants';
@@ -19,6 +19,8 @@ interface Props {
   questionTimer: number;
   myScore: number;
   total: number;
+  scoreScale: Animated.Value;
+  shakeX: Animated.Value;
   floatingEmojis: FloatingEmoji[];
   selectedAnswer: string | null;
   revealState: 'hidden' | 'revealed';
@@ -37,7 +39,7 @@ interface Props {
 // Live 1v1 round: battle header + timer, navy question card, progress dots,
 // chat bar, and the answer input (numeric keypad or comparison buttons).
 export default function PlayingPhase({
-  state, userId, questionTimer, myScore, total, floatingEmojis,
+  state, userId, questionTimer, myScore, total, scoreScale, shakeX, floatingEmojis,
   selectedAnswer, revealState, numericInput,
   showChatInput, chatInput, onChangeChat, onToggleChat, onSendChat, onEmoji,
   onAnswer, onNumericKey, onNumericSubmit,
@@ -77,10 +79,12 @@ export default function PlayingPhase({
           </View>
           <View>
             <Text style={s.battleWho}>Tôi</Text>
-            <Text style={s.battleScoreRow}>
-              <Text style={s.battleScoreNum}>{myScore}</Text>
-              <Text style={s.battleScoreOf}>/{total}</Text>
-            </Text>
+            <Animated.View style={{ transform: [{ scale: scoreScale }] }}>
+              <Text style={s.battleScoreRow}>
+                <Text style={s.battleScoreNum}>{myScore}</Text>
+                <Text style={s.battleScoreOf}>/{total}</Text>
+              </Text>
+            </Animated.View>
           </View>
         </View>
 
@@ -115,12 +119,12 @@ export default function PlayingPhase({
         )}
 
         {/* Question Card — the navy "game" surface */}
-        <View style={s.qCard}>
+        <Animated.View style={[s.qCard, { transform: [{ translateX: shakeX }] }]}>
           <View style={s.qCounterPill}>
             <Text style={s.qCounterTxt}>Câu {current + 1}/{total}</Text>
           </View>
           <QuestionDisplay text={adaptedQ.text} type={adaptedQ.type} />
-        </View>
+        </Animated.View>
 
         {/* Progress dots */}
         <View style={s.dots}>

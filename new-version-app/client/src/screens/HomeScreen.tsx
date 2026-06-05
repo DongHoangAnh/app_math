@@ -11,6 +11,7 @@ import { supabase } from '../services/supabase';
 import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
 import { gameApi } from '../services/api';
 import { getLevelProgress } from '../utils/levelUtils';
+import { ASSETS } from '../assets';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -62,7 +63,7 @@ export default function HomeScreen() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Chào buổi sáng' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
-  const greetingEmoji = hour < 12 ? '☀️' : hour < 18 ? '🌤️' : '🌙';
+  const greetingEmoji = hour < 12 ? ASSETS.home.greetMorning : hour < 18 ? ASSETS.home.greetNoon : ASSETS.home.greetNight;
 
   const lp = getLevelProgress(userExp);
 
@@ -77,7 +78,7 @@ export default function HomeScreen() {
           <Text style={styles.wordmark}>MathUp</Text>
         </View>
         <View style={styles.pointsPill}>
-          <Text style={styles.pointsPillIcon}>🏆</Text>
+          <Text style={styles.pointsPillIcon}>{ASSETS.home.points}</Text>
           <Text style={styles.pointsPillValue}>{rankingPoints.toLocaleString()} pts</Text>
         </View>
       </View>
@@ -98,9 +99,9 @@ export default function HomeScreen() {
 
         {/* ── 3 metrics ── */}
         <View style={styles.statRow}>
-          <StatBadge emoji="⭐" label="ĐIỂM" value={rankingPoints.toLocaleString()} />
-          <StatBadge emoji="🔥" label="STREAK" value={`${streak}`} />
-          <StatBadge emoji="🎯" label="THẮNG" value={wins != null ? `${wins}` : '—'} />
+          <StatBadge emoji={ASSETS.home.score} label="ĐIỂM" value={rankingPoints.toLocaleString()} />
+          <StatBadge emoji={ASSETS.home.streak} label="STREAK" value={`${streak}`} />
+          <StatBadge emoji={ASSETS.home.target} label="THẮNG" value={wins != null ? `${wins}` : '—'} />
         </View>
 
         {/* ── Battle CTA (navy "game" surface) ── */}
@@ -119,20 +120,20 @@ export default function HomeScreen() {
             <Text style={styles.battleSub}>Tìm đối thủ ngang sức ngay!</Text>
           </View>
           <View style={styles.battleBolt}>
-            <Text style={{ fontSize: 30 }}>⚡</Text>
+            <Text style={{ fontSize: 30 }}>{ASSETS.home.bolt}</Text>
           </View>
         </Tactile>
 
         {/* ── Rule chips ── */}
         <View style={styles.ruleRow}>
           <View style={[styles.ruleChip, { backgroundColor: '#E7F6E8' }]}>
-            <Text style={[styles.ruleChipText, { color: C.successDeep }]}>🏅 Thắng +5</Text>
+            <Text style={[styles.ruleChipText, { color: C.successDeep }]}>{`${ASSETS.home.win} Thắng +5`}</Text>
           </View>
           <View style={[styles.ruleChip, { backgroundColor: C.errorSoft }]}>
-            <Text style={[styles.ruleChipText, { color: C.error }]}>💔 Thua −3</Text>
+            <Text style={[styles.ruleChipText, { color: C.error }]}>{`${ASSETS.home.lose} Thua −3`}</Text>
           </View>
           <View style={[styles.ruleChip, { backgroundColor: C.surfaceSunken }]}>
-            <Text style={[styles.ruleChipText, { color: C.inkSlate }]}>🤝 Hoà ±0</Text>
+            <Text style={[styles.ruleChipText, { color: C.inkSlate }]}>{`${ASSETS.home.draw} Hoà ±0`}</Text>
           </View>
         </View>
 
@@ -140,9 +141,9 @@ export default function HomeScreen() {
         <View style={{ gap: 12 }}>
           <Text style={styles.h3}>Khám phá</Text>
           <View style={styles.navGrid}>
-            <NavCard emoji="🏆" label="Xếp Hạng" onPress={() => navigation.navigate('LeaderboardTab')} />
-            <NavCard emoji="📈" label="Thống Kê" onPress={() => navigation.navigate('StatsTab')} />
-            <NavCard emoji="😊" label="Hồ Sơ" onPress={() => navigation.navigate('ProfileTab')} />
+            <NavCard emoji={ASSETS.home.navRank} label="Xếp Hạng" onPress={() => navigation.navigate('LeaderboardTab')} />
+            <NavCard emoji={ASSETS.home.navStats} label="Thống Kê" onPress={() => navigation.navigate('StatsTab')} />
+            <NavCard emoji={ASSETS.home.navProfile} label="Hồ Sơ" onPress={() => navigation.navigate('ProfileTab')} />
           </View>
         </View>
 
@@ -182,7 +183,7 @@ export default function HomeScreen() {
 
         {/* ── Tip Banner ── */}
         <View style={styles.tipBanner}>
-          <Text style={styles.tipEmoji}>💡</Text>
+          <Text style={styles.tipEmoji}>{ASSETS.home.tip}</Text>
           <Text style={styles.tipText}>Hoàn thành nhiệm vụ mỗi ngày để tích EXP và lên cấp!</Text>
         </View>
       </ScrollView>
@@ -219,7 +220,7 @@ function TaskRow({
     <View style={[styles.taskRow, done && styles.taskRowDone]}>
       <View style={[styles.taskIcon, { backgroundColor: done ? C.line : C.successBright }]}>
         <Text style={{ fontSize: 18, color: done ? C.inkSlate : C.successDeep }}>
-          {done ? '✓' : task.completed ? '🎯' : '⚡'}
+          {done ? '✓' : task.completed ? ASSETS.home.target : ASSETS.home.bolt}
         </Text>
       </View>
       <View style={styles.taskInfo}>

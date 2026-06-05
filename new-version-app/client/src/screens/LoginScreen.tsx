@@ -8,6 +8,7 @@ import { C, R, F, hardShadow } from '../theme';
 import { Tactile, TactileButton } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
+import { ASSETS } from '../assets';
 
 export default function LoginScreen() {
   const { signInWithEmail, signInWithGoogle, loading } = useAuth();
@@ -69,7 +70,7 @@ export default function LoginScreen() {
           {/* Hero */}
           <View style={styles.hero}>
             <View style={[styles.mascot, hardShadow(C.orangeDark, 8, 0.25)]}>
-              <Text style={styles.mascotEmoji}>✏️</Text>
+              <Text style={styles.mascotEmoji}>{ASSETS.login.mascot}</Text>
             </View>
             <Text style={styles.appName}>MATHUP</Text>
             <Text style={styles.tagline}>Thách đấu toán học 1v1 🔥</Text>
@@ -109,7 +110,7 @@ export default function LoginScreen() {
                   onSubmitEditing={handleEmailLogin}
                 />
                 <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPwd(!showPwd)}>
-                  <Text style={styles.eyeIcon}>{showPwd ? '🙈' : '👁️'}</Text>
+                  <Text style={styles.eyeIcon}>{showPwd ? ASSETS.login.eyeHide : ASSETS.login.eyeShow}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -125,7 +126,7 @@ export default function LoginScreen() {
 
             {error && (
               <View style={styles.errorBox}>
-                <Text style={styles.errorText}>⚠️  {error}</Text>
+                <Text style={styles.errorText}>{ASSETS.login.warn}  {error}</Text>
               </View>
             )}
 

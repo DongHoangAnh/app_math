@@ -9,6 +9,7 @@ import { Tactile, TactileButton } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 import { validateDisplayName } from '../utils/validation';
+import { ASSETS } from '../assets';
 
 export default function RegisterScreen() {
   const { signUp, signInWithGoogle, loading } = useAuth();
@@ -93,7 +94,7 @@ export default function RegisterScreen() {
           {/* Hero */}
           <View style={styles.hero}>
             <View style={[styles.mascot, hardShadow(C.orangeDark, 6, 0.25)]}>
-              <Text style={styles.mascotEmoji}>🌟</Text>
+              <Text style={styles.mascotEmoji}>{ASSETS.register.mascot}</Text>
             </View>
             <Text style={styles.appName}>Tạo Tài Khoản</Text>
             <Text style={styles.tagline}>Tham gia cộng đồng MathUp 🚀</Text>
@@ -101,7 +102,7 @@ export default function RegisterScreen() {
 
           {success ? (
             <View style={styles.successBox}>
-              <Text style={styles.successEmoji}>🎉</Text>
+              <Text style={styles.successEmoji}>{ASSETS.register.success}</Text>
               <Text style={styles.successTitle}>Đăng ký thành công!</Text>
               <Text style={styles.successText}>
                 Kiểm tra email để xác nhận tài khoản (nếu có).
@@ -159,7 +160,7 @@ export default function RegisterScreen() {
                       editable={!busy}
                     />
                     <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPwd(!showPwd)}>
-                      <Text style={styles.eyeIcon}>{showPwd ? '🙈' : '👁️'}</Text>
+                      <Text style={styles.eyeIcon}>{showPwd ? ASSETS.register.eyeHide : ASSETS.register.eyeShow}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -185,13 +186,13 @@ export default function RegisterScreen() {
 
                 {error && (
                   <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>⚠️  {error}</Text>
+                    <Text style={styles.errorText}>{ASSETS.register.warn}  {error}</Text>
                   </View>
                 )}
 
                 <TactileButton
                   title="Đăng ký"
-                  iconRight="🎉"
+                  iconRight={ASSETS.register.success}
                   onPress={handleRegister}
                   loading={submitting}
                   disabled={busy}

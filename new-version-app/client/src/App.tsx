@@ -15,6 +15,7 @@ import {
   BeVietnamPro_700Bold,
 } from '@expo-google-fonts/be-vietnam-pro';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { SettingsProvider } from './hooks/useSettings';
 import { supabase } from './services/supabase';
 import { C, R, F } from './theme';
 
@@ -153,10 +154,12 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <NavigationContainer>
-        <RootNavigator />
-      </NavigationContainer>
-    </AuthProvider>
+    <SettingsProvider>
+      <AuthProvider>
+        <NavigationContainer>
+          <RootNavigator />
+        </NavigationContainer>
+      </AuthProvider>
+    </SettingsProvider>
   );
 }

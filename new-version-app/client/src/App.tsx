@@ -18,6 +18,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { SettingsProvider } from './hooks/useSettings';
 import { supabase } from './services/supabase';
 import { C, R, F } from './theme';
+import { ASSETS } from './assets';
 
 // Screens
 import LoginScreen         from './screens/LoginScreen';
@@ -91,12 +92,12 @@ function MainTabs() {
         headerShown: false,
       }}
     >
-      <Tab.Screen name="HomeTab"      component={HomeScreen}       options={{ tabBarLabel: 'Trang Chủ', tabBarIcon: ({ focused }) => <TabIcon icon="🏡" focused={focused} /> }} />
-      <Tab.Screen name="GameShowTab"  component={GameShowScreen}   options={{ tabBarLabel: 'Đấu',      tabBarIcon: ({ focused }) => <TabIcon icon="🎮" focused={focused} /> }} />
-      <Tab.Screen name="LeaderboardTab" component={LeaderboardScreen} options={{ tabBarLabel: 'Xếp Hạng', tabBarIcon: ({ focused }) => <TabIcon icon="🏆" focused={focused} /> }} />
-      <Tab.Screen name="StatsTab"     component={StatisticsScreen} options={{ tabBarLabel: 'Thống Kê', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon="📈" focused={focused} /> }} />
-      <Tab.Screen name="MatchHistoryTab" component={MatchHistoryScreen} options={{ tabBarLabel: 'Lịch Sử', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon="📜" focused={focused} /> }} />
-      <Tab.Screen name="ProfileTab"   component={ProfileScreen}    options={{ tabBarLabel: 'Hồ Sơ',   tabBarIcon: ({ focused }) => <TabIcon icon="😊" focused={focused} /> }} />
+      <Tab.Screen name="HomeTab"      component={HomeScreen}       options={{ tabBarLabel: 'Trang Chủ', tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.home} focused={focused} /> }} />
+      <Tab.Screen name="GameShowTab"  component={GameShowScreen}   options={{ tabBarLabel: 'Đấu',      tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.gameshow} focused={focused} /> }} />
+      <Tab.Screen name="LeaderboardTab" component={LeaderboardScreen} options={{ tabBarLabel: 'Xếp Hạng', tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.leaderboard} focused={focused} /> }} />
+      <Tab.Screen name="StatsTab"     component={StatisticsScreen} options={{ tabBarLabel: 'Thống Kê', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.stats} focused={focused} /> }} />
+      <Tab.Screen name="MatchHistoryTab" component={MatchHistoryScreen} options={{ tabBarLabel: 'Lịch Sử', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.matchHistory} focused={focused} /> }} />
+      <Tab.Screen name="ProfileTab"   component={ProfileScreen}    options={{ tabBarLabel: 'Hồ Sơ',   tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.profile} focused={focused} /> }} />
     </Tab.Navigator>
   );
 }

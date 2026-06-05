@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
-    "@types/jest": "^30.0.0",
+    "@types/jest": "~29.5.14",
     "@types/node": "^25.9.1",
     "@types/react": "~19.1.10",
     "@types/ws": "^8.5.14",
@@ -56,6 +56,10 @@
     "preset": "jest-expo",
     "setupFiles": [
       "./jest.setup.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/e2e/"
     ]
   },
   "engines": {

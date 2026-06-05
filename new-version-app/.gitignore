@@ -9,6 +9,9 @@ dist/
 *.key
 *.mobileprovision
 *.orig.*
+# Google Play service-account key for `eas submit` (secret — never commit)
+google-service-account*.json
+*service-account*.json
 web-build/
 .DS_Store
 *.log

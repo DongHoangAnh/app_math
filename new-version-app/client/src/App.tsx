@@ -23,6 +23,7 @@ import LoginScreen         from './screens/LoginScreen';
 import RegisterScreen      from './screens/RegisterScreen';
 import ForgotPasswordScreen from './screens/ForgotPasswordScreen';
 import ResetPasswordScreen  from './screens/ResetPasswordScreen';
+import ConsentScreen       from './screens/ConsentScreen';
 import HomeScreen          from './screens/HomeScreen';
 import GameShowScreen      from './screens/GameShowScreen';
 import ProfileScreen       from './screens/ProfileScreen';
@@ -101,7 +102,7 @@ function MainTabs() {
 }
 
 function RootNavigator() {
-  const { user, loading, passwordRecovery } = useAuth();
+  const { user, loading, passwordRecovery, termsAccepted } = useAuth();
   useDeepLinkHandler();
 
   if (loading) {
@@ -118,6 +119,9 @@ function RootNavigator() {
         // Khi đang trong chế độ khôi phục mật khẩu (từ email link), ưu tiên màn hình đặt lại
         passwordRecovery ? (
           <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        ) : !termsAccepted ? (
+          // Lần đầu đăng nhập / sau khi đăng ký: bắt buộc đồng ý điều khoản trước khi vào app
+          <Stack.Screen name="Consent" component={ConsentScreen} />
         ) : (
           <Stack.Screen name="MainApp" component={MainTabs} />
         )

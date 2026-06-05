@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { supabase } from '../services/supabase';
+import { TERMS_VERSION } from '../config';
 import type { User, Session } from '@supabase/supabase-js';
 
 // Đóng WebBrowser session còn sót khi quay lại app (chỉ có tác dụng trên native iOS)
@@ -15,12 +16,14 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   passwordRecovery: boolean;
+  termsAccepted: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   confirmPasswordReset: (newPassword: string) => Promise<void>;
+  acceptTerms: () => Promise<void>;
   updateProfile: (displayName: string, avatarUrl?: string | null) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -129,6 +132,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPasswordRecovery(false);
   };
 
+  // ─── Terms & Privacy consent ──────────────────────────────────────────────
+  // Acceptance is stored on the account (user_metadata) so it survives reinstall
+  // and works for every sign-in method (email + Google OAuth). Bumping
+  // TERMS_VERSION re-prompts everyone who accepted an older version.
+
+  const acceptTerms = async () => {
+    const { data, error } = await supabase.auth.updateUser({
+      data: {
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: TERMS_VERSION,
+      },
+    });
+    if (error) throw error;
+    if (data.user) setUser(data.user);
+  };
+
   // ─── Profile ────────────────────────────────────────────────────────────────
 
   const refreshUser = async () => {
@@ -161,11 +180,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await refreshUser();
   };
 
+  // Has this user accepted the *current* version of the legal docs?
+  const termsAccepted =
+    user?.user_metadata?.terms_version === TERMS_VERSION &&
+    !!user?.user_metadata?.terms_accepted_at;
+
   return (
     <AuthContext.Provider value={{
-      user, session, loading, passwordRecovery,
+      user, session, loading, passwordRecovery, termsAccepted,
       signInWithGoogle, signInWithEmail, signUp, signOut,
-      sendPasswordResetEmail, confirmPasswordReset,
+      sendPasswordResetEmail, confirmPasswordReset, acceptTerms,
       updateProfile, refreshUser,
     }}>
       {children}

@@ -9,7 +9,11 @@ import {
     getDailyTasks,
     claimTaskExp,
     verifyToken,
+    acquireSessionLock,
+    heartbeatSessionLock,
+    releaseSessionLock,
 } from "./supabase-server";
+import { LOCK_TTL_SECONDS } from "../shared/constants";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const MAX_BODY_BYTES = 2048;
@@ -86,7 +90,22 @@ async function readBody(req: http.IncomingMessage): Promise<string | null> {
     });
 }
 
-const server = http.createServer(async (req, res) => {
+// Parse { deviceId } from a request body; returns null if absent/invalid.
+function parseDeviceId(raw: string | null): string | null {
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.deviceId === "string" && parsed.deviceId.length > 0) {
+            return parsed.deviceId.slice(0, 64);
+        }
+    } catch {
+        /* fall through */
+    }
+    return null;
+}
+
+export function createApp() {
+    return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const originHeader = typeof req.headers.origin === "string" ? req.headers.origin : undefined;
     applyHeaders(res, originHeader);
 
@@ -243,8 +262,56 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    json(res, 200, { status: "ok" });
-});
+    // POST /api/session/acquire  — claim the single-device lock after login
+    if (req.method === "POST" && pathname === "/api/session/acquire") {
+        const authedId = await authenticate(req);
+        if (!authedId) { json(res, 401, { error: "unauthorized" }); return; }
+        const deviceId = parseDeviceId(await readBody(req));
+        if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
+        try {
+            const granted = await acquireSessionLock(authedId, deviceId, LOCK_TTL_SECONDS);
+            json(res, 200, { granted });
+        } catch {
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+    // POST /api/session/heartbeat  — keep the lock warm; owner:false => evicted
+    if (req.method === "POST" && pathname === "/api/session/heartbeat") {
+        const authedId = await authenticate(req);
+        if (!authedId) { json(res, 401, { error: "unauthorized" }); return; }
+        const deviceId = parseDeviceId(await readBody(req));
+        if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
+        try {
+            const owner = await heartbeatSessionLock(authedId, deviceId);
+            json(res, 200, { owner });
+        } catch {
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+    // POST /api/session/release  — explicit logout releases the lock
+    if (req.method === "POST" && pathname === "/api/session/release") {
+        const authedId = await authenticate(req);
+        if (!authedId) { json(res, 401, { error: "unauthorized" }); return; }
+        const deviceId = parseDeviceId(await readBody(req));
+        if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
+        try {
+            await releaseSessionLock(authedId, deviceId);
+            json(res, 200, { ok: true });
+        } catch {
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+        json(res, 200, { status: "ok" });
+    };
+}
+
+const server = http.createServer(createApp());
 
 setupGameShowWS(server);
 

@@ -224,16 +224,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     const beat = async () => {
-      let owner: boolean;
       try {
         const deviceId = await getDeviceId();
-        const res = await gameApi.heartbeat(deviceId);
-        owner = res.owner;
+        const { owner } = await gameApi.heartbeat(deviceId);
+        if (!owner) {
+          // owner:false can mean eviction by another device OR simply no lock
+          // row yet (fresh launch / post-TTL). Try to (re)claim; only sign out
+          // if another device genuinely holds a fresh lock.
+          const { granted } = await gameApi.acquireLock(deviceId);
+          if (!granted && !cancelled) {
+            await supabase.auth.signOut();
+          }
+        }
       } catch {
-        return; // fail-open
-      }
-      if (!owner && !cancelled) {
-        await supabase.auth.signOut();
+        return; // fail-open: never sign out on a network/unknown error
       }
     };
 

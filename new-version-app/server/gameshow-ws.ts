@@ -447,6 +447,10 @@ export function setupGameShowWS(httpServer: Server) {
                     // account's session. A null owner (no lock yet) is allowed
                     // so the very first connection isn't blocked.
                     const lockOwner = await getLockOwnerDeviceId(authed.id);
+                    // A client that omits deviceId is intentionally allowed for backward-compat:
+                    // the auth token is already verified above (primary security gate), so there
+                    // is no data-integrity risk. This WS check is a secondary gate — the REST
+                    // acquire endpoint is the primary one.
                     if (lockOwner && msg.deviceId && lockOwner !== msg.deviceId) {
                         ws.close(4002, "Session active on another device");
                         return;

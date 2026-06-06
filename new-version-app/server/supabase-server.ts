@@ -217,6 +217,8 @@ export async function getLockOwnerDeviceId(userId: string): Promise<string | nul
         .select("device_id")
         .eq("user_id", userId)
         .maybeSingle();
+    // DELIBERATE fail-open: return null so the WS layer allows the connection.
+    // Do NOT change this to throw — transient DB blips must not boot players from gameplay.
     if (error) {
         console.error("[Supabase] getLockOwnerDeviceId error:", error.message);
         return null;

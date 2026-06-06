@@ -81,6 +81,14 @@ export interface ClaimResult {
   level: number;
 }
 
+export interface AcquireLockResult {
+  granted: boolean;
+}
+
+export interface HeartbeatResult {
+  owner: boolean;
+}
+
 // ═══════════════════════════════════════════════════════════
 // CORE — auth + URL + JSON in one place.
 // ═══════════════════════════════════════════════════════════
@@ -114,5 +122,23 @@ export const gameApi = {
     request<ClaimResult>(`/api/daily-tasks/${userId}/claim/${taskKey}`, {
       method: 'POST',
       body: JSON.stringify({ displayName }),
+    }),
+
+  acquireLock: (deviceId: string) =>
+    request<AcquireLockResult>(`/api/session/acquire`, {
+      method: 'POST',
+      body: JSON.stringify({ deviceId }),
+    }),
+
+  heartbeat: (deviceId: string) =>
+    request<HeartbeatResult>(`/api/session/heartbeat`, {
+      method: 'POST',
+      body: JSON.stringify({ deviceId }),
+    }),
+
+  releaseLock: (deviceId: string) =>
+    request<{ ok: boolean }>(`/api/session/release`, {
+      method: 'POST',
+      body: JSON.stringify({ deviceId }),
     }),
 };

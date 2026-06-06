@@ -1,14 +1,47 @@
 import { useState, useEffect, useContext, createContext } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { supabase, createSessionFromUrl } from '../services/supabase';
 import { TERMS_VERSION } from '../config';
+import { getDeviceId } from '../utils/deviceId';
+import { gameApi } from '../services/api';
+import { HEARTBEAT_INTERVAL_MS } from '../../../shared/constants';
 import type { User, Session } from '@supabase/supabase-js';
 
 // Đóng WebBrowser session còn sót khi quay lại app (chỉ có tác dụng trên native iOS)
 if (Platform.OS !== 'web') {
   WebBrowser.maybeCompleteAuthSession();
+}
+
+/** Thrown when the single-device lock is held by another device. Lets the UI
+ *  tell a "logged in elsewhere" block apart from a wrong-password error. */
+export class SessionLockedError extends Error {
+  constructor(message = 'Tài khoản đang đăng nhập ở thiết bị khác. Hãy đăng xuất ở thiết bị kia rồi thử lại.') {
+    super(message);
+    this.name = 'SessionLockedError';
+  }
+}
+
+/**
+ * Claims the single-device lock for the current session. Resolves silently
+ * when granted. When the lock is held by another device, signs out and throws
+ * `SessionLockedError`. Network/unknown errors are swallowed (fail-open) so a
+ * flaky connection never locks a legitimate user out.
+ */
+export async function enforceSingleDevice(): Promise<void> {
+  let granted: boolean;
+  try {
+    const deviceId = await getDeviceId();
+    const res = await gameApi.acquireLock(deviceId);
+    granted = res.granted;
+  } catch {
+    return; // fail-open
+  }
+  if (!granted) {
+    await supabase.auth.signOut();
+    throw new SessionLockedError();
+  }
 }
 
 interface AuthContextType {
@@ -41,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session) { enforceSingleDevice().catch(() => {}); }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -86,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (result.type === 'success') {
       // Parse ?code= từ callback URL rồi đổi lấy session (PKCE)
       await createSessionFromUrl(result.url);
+      await enforceSingleDevice();
     }
     // type === 'cancel' → user đóng popup, bỏ qua
   };
@@ -95,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithEmail = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    await enforceSingleDevice();
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -109,6 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    try {
+      const deviceId = await getDeviceId();
+      await gameApi.releaseLock(deviceId);
+    } catch {
+      /* best-effort; TTL will reclaim */
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     setUser(null);
@@ -184,6 +226,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const termsAccepted =
     user?.user_metadata?.terms_version === TERMS_VERSION &&
     !!user?.user_metadata?.terms_accepted_at;
+
+  // ─── Single-device heartbeat ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    const beat = async () => {
+      try {
+        const deviceId = await getDeviceId();
+        const { owner } = await gameApi.heartbeat(deviceId);
+        if (!owner) {
+          // owner:false can mean eviction by another device OR simply no lock
+          // row yet (fresh launch / post-TTL). Try to (re)claim; only sign out
+          // if another device genuinely holds a fresh lock.
+          const { granted } = await gameApi.acquireLock(deviceId);
+          if (!granted && !cancelled) {
+            await supabase.auth.signOut();
+          }
+        }
+      } catch {
+        return; // fail-open: never sign out on a network/unknown error
+      }
+    };
+
+    const interval = setInterval(beat, HEARTBEAT_INTERVAL_MS);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') beat();
+    });
+    beat(); // immediate first beat
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      sub.remove();
+    };
+  }, [user?.id]);
 
   return (
     <AuthContext.Provider value={{

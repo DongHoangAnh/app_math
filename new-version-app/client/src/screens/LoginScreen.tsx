@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, TextInput,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Modal,
 } from 'react-native';
 import { C, R, F, hardShadow } from '../theme';
 import { Tactile, TactileButton } from '../components/ui';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth, SessionLockedError } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 import { ASSETS } from '../assets';
 
@@ -20,6 +20,7 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError]           = useState<string | null>(null);
+  const [lockMsg, setLockMsg]       = useState<string | null>(null);
 
   const busy = submitting || googleLoading || loading;
 
@@ -33,7 +34,8 @@ export default function LoginScreen() {
     try {
       await signInWithEmail(email.trim(), password);
     } catch (e: any) {
-      setError(translateAuthError(e?.message));
+      if (e instanceof SessionLockedError) setLockMsg(e.message);
+      else setError(translateAuthError(e?.message));
     } finally {
       setSubmitting(false);
     }
@@ -45,7 +47,8 @@ export default function LoginScreen() {
     try {
       await signInWithGoogle();
     } catch (e: any) {
-      if (!e?.message?.toLowerCase().includes('cancel')) {
+      if (e instanceof SessionLockedError) setLockMsg(e.message);
+      else if (!e?.message?.toLowerCase().includes('cancel')) {
         setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
       }
     } finally {
@@ -172,6 +175,27 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Single-device block — confirm to dismiss */}
+      <Modal
+        visible={!!lockMsg}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLockMsg(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, hardShadow(C.orangeDark, 10, 0.25)]}>
+            <Text style={styles.modalEmoji}>🔒</Text>
+            <Text style={styles.modalTitle}>Tài khoản đang được dùng nơi khác</Text>
+            <Text style={styles.modalBody}>{lockMsg}</Text>
+            <TactileButton
+              title="Đã hiểu"
+              onPress={() => setLockMsg(null)}
+              style={{ marginTop: 8, alignSelf: 'stretch' }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -251,4 +275,23 @@ const styles = StyleSheet.create({
   },
   footerText: { fontFamily: F.body, fontSize: 14, color: C.inkBrown },
   footerLink: { fontFamily: F.display, fontSize: 14, color: C.orangeDark },
+
+  // Single-device block modal
+  modalBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center', alignItems: 'center', padding: 28,
+  },
+  modalCard: {
+    width: '100%', maxWidth: 360, backgroundColor: C.bg,
+    borderRadius: R.lg, borderWidth: 2, borderColor: C.peachBorder,
+    padding: 24, alignItems: 'center', gap: 10,
+  },
+  modalEmoji: { fontSize: 44 },
+  modalTitle: {
+    fontFamily: F.display, fontSize: 19, color: C.orangeDark, textAlign: 'center',
+  },
+  modalBody: {
+    fontFamily: F.body, fontSize: 14, color: C.inkBrown,
+    textAlign: 'center', lineHeight: 20, marginBottom: 6,
+  },
 });

@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
-import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch, verifyToken } from "./supabase-server";
+import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch, verifyToken, getLockOwnerDeviceId } from "./supabase-server";
 import type { GameQuestion, AnswerRecord } from "../shared/types";
 import { QUESTIONS_PER_MATCH, CHAT_MAX_LEN } from "../shared/constants";
 import { generateQuestions, normalizeMode } from "./questions";
@@ -40,7 +40,7 @@ interface GameRoom {
 }
 
 type WSMessage =
-    | { type: "JOIN_QUEUE"; userId: string; token: string; displayName: string; grade?: string; winRate?: number; totalScore?: number; mode?: string }
+    | { type: "JOIN_QUEUE"; userId: string; token: string; displayName: string; grade?: string; winRate?: number; totalScore?: number; mode?: string; deviceId?: string }
     | { type: "LEAVE_QUEUE"; userId: string }
     | { type: "SUBMIT_ANSWER"; userId: string; roomId: string; questionIndex: number; answer: string; timeMs: number }
     | { type: "SEND_EMOJI"; roomId: string; emoji: string }
@@ -440,6 +440,19 @@ export function setupGameShowWS(httpServer: Server) {
                     const authed = await verifyToken(msg.token ?? "");
                     if (!authed || authed.id !== msg.userId) {
                         ws.close(4001, "Unauthorized");
+                        return;
+                    }
+
+                    // Single-device lock: refuse if another device owns this
+                    // account's session. A null owner (no lock yet) is allowed
+                    // so the very first connection isn't blocked.
+                    const lockOwner = await getLockOwnerDeviceId(authed.id);
+                    // A client that omits deviceId is intentionally allowed for backward-compat:
+                    // the auth token is already verified above (primary security gate), so there
+                    // is no data-integrity risk. This WS check is a secondary gate — the REST
+                    // acquire endpoint is the primary one.
+                    if (lockOwner && msg.deviceId && lockOwner !== msg.deviceId) {
+                        ws.close(4002, "Session active on another device");
                         return;
                     }
 

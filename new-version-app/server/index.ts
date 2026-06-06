@@ -9,7 +9,11 @@ import {
     getDailyTasks,
     claimTaskExp,
     verifyToken,
+    acquireSessionLock,
+    heartbeatSessionLock,
+    releaseSessionLock,
 } from "./supabase-server";
+import { LOCK_TTL_SECONDS } from "../shared/constants";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const MAX_BODY_BYTES = 2048;
@@ -86,7 +90,22 @@ async function readBody(req: http.IncomingMessage): Promise<string | null> {
     });
 }
 
-const server = http.createServer(async (req, res) => {
+// Parse { deviceId } from a request body; returns null if absent/invalid.
+function parseDeviceId(raw: string | null): string | null {
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.deviceId === "string" && parsed.deviceId.length > 0) {
+            return parsed.deviceId.slice(0, 64);
+        }
+    } catch {
+        /* fall through */
+    }
+    return null;
+}
+
+export function createApp() {
+    return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const originHeader = typeof req.headers.origin === "string" ? req.headers.origin : undefined;
     applyHeaders(res, originHeader);
 
@@ -243,12 +262,70 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    json(res, 200, { status: "ok" });
-});
+    // POST /api/session/acquire  — claim the single-device lock after login
+    if (req.method === "POST" && pathname === "/api/session/acquire") {
+        const authedId = await authenticate(req);
+        if (!authedId) { json(res, 401, { error: "unauthorized" }); return; }
+        const deviceId = parseDeviceId(await readBody(req));
+        if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
+        try {
+            const granted = await acquireSessionLock(authedId, deviceId, LOCK_TTL_SECONDS);
+            console.log(`[session/acquire] user=${authedId.slice(0, 8)} dev=${deviceId.slice(0, 8)} granted=${granted}`);
+            json(res, 200, { granted });
+        } catch (e) {
+            console.error("[session/acquire] error:", (e as Error)?.message);
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
 
-setupGameShowWS(server);
+    // POST /api/session/heartbeat  — keep the lock warm; owner:false => evicted
+    if (req.method === "POST" && pathname === "/api/session/heartbeat") {
+        const authedId = await authenticate(req);
+        if (!authedId) { json(res, 401, { error: "unauthorized" }); return; }
+        const deviceId = parseDeviceId(await readBody(req));
+        if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
+        try {
+            const owner = await heartbeatSessionLock(authedId, deviceId);
+            console.log(`[session/heartbeat] user=${authedId.slice(0, 8)} dev=${deviceId.slice(0, 8)} owner=${owner}`);
+            json(res, 200, { owner });
+        } catch (e) {
+            console.error("[session/heartbeat] error:", (e as Error)?.message);
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
 
-server.listen(PORT, () => {
-    console.log(`[GameShow] WebSocket server running on ws://localhost:${PORT}/ws/gameshow`);
-    testSupabaseConnection();
-});
+    // POST /api/session/release  — explicit logout releases the lock
+    if (req.method === "POST" && pathname === "/api/session/release") {
+        const authedId = await authenticate(req);
+        if (!authedId) { json(res, 401, { error: "unauthorized" }); return; }
+        const deviceId = parseDeviceId(await readBody(req));
+        if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
+        try {
+            await releaseSessionLock(authedId, deviceId);
+            console.log(`[session/release] user=${authedId.slice(0, 8)} dev=${deviceId.slice(0, 8)}`);
+            json(res, 200, { ok: true });
+        } catch (e) {
+            console.error("[session/release] error:", (e as Error)?.message);
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+        json(res, 200, { status: "ok" });
+    };
+}
+
+// Only boot the real listening server outside of tests. Test suites import
+// `createApp()` directly and run it on their own ephemeral server, so the
+// top-level listen must not fire on import (it would leak an open handle and
+// collide on the port).
+if (process.env.NODE_ENV !== "test") {
+    const server = http.createServer(createApp());
+    setupGameShowWS(server);
+    server.listen(PORT, () => {
+        console.log(`[GameShow] WebSocket server running on ws://localhost:${PORT}/ws/gameshow`);
+        testSupabaseConnection();
+    });
+}

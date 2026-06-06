@@ -158,6 +158,75 @@ async function applyRankingDelta(userId: string, delta: number, displayName: str
 }
 
 // ═══════════════════════════════════════════════════════════
+// SINGLE-DEVICE SESSION LOCK
+// ═══════════════════════════════════════════════════════════
+
+/** Claim/refresh the lock. Returns true if this device now owns it. */
+export async function acquireSessionLock(
+    userId: string,
+    deviceId: string,
+    ttlSeconds: number
+): Promise<boolean> {
+    const { data, error } = await getSupabaseClient().rpc("acquire_session_lock", {
+        p_user_id: userId,
+        p_device_id: deviceId,
+        p_ttl_seconds: ttlSeconds,
+    });
+    if (error) {
+        console.error("[Supabase] acquire_session_lock error:", error.message);
+        throw error;
+    }
+    return data === true;
+}
+
+/** Refresh the lock if the caller still owns it. Returns false if taken over. */
+export async function heartbeatSessionLock(
+    userId: string,
+    deviceId: string
+): Promise<boolean> {
+    const { data, error } = await getSupabaseClient().rpc("heartbeat_session_lock", {
+        p_user_id: userId,
+        p_device_id: deviceId,
+    });
+    if (error) {
+        console.error("[Supabase] heartbeat_session_lock error:", error.message);
+        throw error;
+    }
+    return data === true;
+}
+
+/** Release the lock if the caller owns it. Idempotent. */
+export async function releaseSessionLock(
+    userId: string,
+    deviceId: string
+): Promise<void> {
+    const { error } = await getSupabaseClient().rpc("release_session_lock", {
+        p_user_id: userId,
+        p_device_id: deviceId,
+    });
+    if (error) {
+        console.error("[Supabase] release_session_lock error:", error.message);
+        throw error;
+    }
+}
+
+/** Current owning device id for a user, or null if no active lock. */
+export async function getLockOwnerDeviceId(userId: string): Promise<string | null> {
+    const { data, error } = await getSupabaseClient()
+        .from("user_session_locks")
+        .select("device_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+    // DELIBERATE fail-open: return null so the WS layer allows the connection.
+    // Do NOT change this to throw — transient DB blips must not boot players from gameplay.
+    if (error) {
+        console.error("[Supabase] getLockOwnerDeviceId error:", error.message);
+        return null;
+    }
+    return data?.device_id ?? null;
+}
+
+// ═══════════════════════════════════════════════════════════
 // DAILY TASKS
 // ═══════════════════════════════════════════════════════════
 

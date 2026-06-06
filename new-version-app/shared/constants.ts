@@ -37,6 +37,14 @@ export const CHAT_MAX = 5;
 export const CHAT_WIN_MS = 30_000;
 export const CHAT_MAX_LEN = 120;
 
+// ─── Single-device login ────────────────────────────────────
+// One account = one active device. The lock row is kept warm by a client
+// heartbeat; if no heartbeat arrives within LOCK_TTL_SECONDS the lock is
+// considered stale and another device may claim it. Used by both the client
+// (interval) and the server (RPC ttl arg) — single source of truth.
+export const LOCK_TTL_SECONDS = 120;
+export const HEARTBEAT_INTERVAL_MS = 30_000;
+
 // ─── Profanity filter ───────────────────────────────────────
 // Vietnamese: substring match. English: word-boundary match.
 export const VI_BANNED = [

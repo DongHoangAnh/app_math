@@ -27,11 +27,13 @@ jest.mock('../supabase-server', () => {
     saveMatchRecord: jest.fn(async () => undefined),
     saveDisconnectWin: jest.fn(async () => 5),
     updateTasksAfterMatch: jest.fn(async () => undefined),
+    getLockOwnerDeviceId: jest.fn(async () => null),
   };
 });
 
 import { setupGameShowWS } from '../gameshow-ws';
 import { QUESTIONS_PER_MATCH, EMOJI_MAX, CHAT_MAX } from '../../shared/constants';
+import * as dbMock from '../supabase-server';
 
 let httpServer: Server;
 let baseUrl: string;
@@ -271,5 +273,44 @@ describe('disconnect handling', () => {
     expect(notice.message).toMatch(/thắng mặc định/);
 
     b.close();
+  });
+});
+
+describe('single-device lock enforcement', () => {
+  afterEach(() => {
+    (dbMock.getLockOwnerDeviceId as jest.Mock).mockResolvedValue(null);
+  });
+
+  it('rejects JOIN_QUEUE when another device owns the lock (close code 4002)', async () => {
+    (dbMock.getLockOwnerDeviceId as jest.Mock).mockResolvedValueOnce('other-device');
+
+    const c = makeClient('user-lock-1');
+    await c.opened;
+    c.send({
+      type: 'JOIN_QUEUE',
+      userId: 'user-lock-1',
+      token: 'valid:user-lock-1',
+      displayName: 'A',
+      deviceId: 'this-device',
+    });
+    const code = await c.waitClose();
+    expect(code).toBe(4002);
+  });
+
+  it('allows JOIN_QUEUE when this device owns the lock', async () => {
+    (dbMock.getLockOwnerDeviceId as jest.Mock).mockResolvedValueOnce('this-device');
+
+    const c = makeClient('user-lock-2');
+    await c.opened;
+    c.send({
+      type: 'JOIN_QUEUE',
+      userId: 'user-lock-2',
+      token: 'valid:user-lock-2',
+      displayName: 'B',
+      deviceId: 'this-device',
+    });
+    const msg = await c.waitType('QUEUED');
+    expect(msg.type).toBe('QUEUED');
+    c.close();
   });
 });

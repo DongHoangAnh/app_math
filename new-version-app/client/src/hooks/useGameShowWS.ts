@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "../services/supabase";
 import { resolveWsUrl } from "../config";
+import { getDeviceId } from "../utils/deviceId";
 import type {
     GameQuestion,
     OpponentInfo,
@@ -254,10 +255,11 @@ export function useGameShowWS(
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token ?? "";
         if (!token) return; // refuse to join without a valid session
+        const deviceId = await getDeviceId();
         connect();
         const tryJoin = () => {
             if (wsRef.current?.readyState === WebSocket.OPEN) {
-                send({ type: "JOIN_QUEUE", userId, token, displayName, grade, winRate, totalScore, mode });
+                send({ type: "JOIN_QUEUE", userId, token, deviceId, displayName, grade, winRate, totalScore, mode });
             } else {
                 setTimeout(tryJoin, 200);
             }

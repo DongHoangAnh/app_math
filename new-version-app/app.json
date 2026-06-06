@@ -67,7 +67,8 @@
           "microphonePermission": false
         }
       ],
-      "./plugins/withoutRecordAudio"
+      "./plugins/withoutRecordAudio",
+      "expo-asset"
     ],
     "extra": {
       "eas": {

@@ -311,11 +311,15 @@ export function createApp() {
     };
 }
 
-const server = http.createServer(createApp());
-
-setupGameShowWS(server);
-
-server.listen(PORT, () => {
-    console.log(`[GameShow] WebSocket server running on ws://localhost:${PORT}/ws/gameshow`);
-    testSupabaseConnection();
-});
+// Only boot the real listening server outside of tests. Test suites import
+// `createApp()` directly and run it on their own ephemeral server, so the
+// top-level listen must not fire on import (it would leak an open handle and
+// collide on the port).
+if (process.env.NODE_ENV !== "test") {
+    const server = http.createServer(createApp());
+    setupGameShowWS(server);
+    server.listen(PORT, () => {
+        console.log(`[GameShow] WebSocket server running on ws://localhost:${PORT}/ws/gameshow`);
+        testSupabaseConnection();
+    });
+}

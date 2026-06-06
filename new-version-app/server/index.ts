@@ -270,8 +270,10 @@ export function createApp() {
         if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
         try {
             const granted = await acquireSessionLock(authedId, deviceId, LOCK_TTL_SECONDS);
+            console.log(`[session/acquire] user=${authedId.slice(0, 8)} dev=${deviceId.slice(0, 8)} granted=${granted}`);
             json(res, 200, { granted });
-        } catch {
+        } catch (e) {
+            console.error("[session/acquire] error:", (e as Error)?.message);
             json(res, 500, { error: "internal" });
         }
         return;
@@ -285,8 +287,10 @@ export function createApp() {
         if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
         try {
             const owner = await heartbeatSessionLock(authedId, deviceId);
+            console.log(`[session/heartbeat] user=${authedId.slice(0, 8)} dev=${deviceId.slice(0, 8)} owner=${owner}`);
             json(res, 200, { owner });
-        } catch {
+        } catch (e) {
+            console.error("[session/heartbeat] error:", (e as Error)?.message);
             json(res, 500, { error: "internal" });
         }
         return;
@@ -300,8 +304,10 @@ export function createApp() {
         if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
         try {
             await releaseSessionLock(authedId, deviceId);
+            console.log(`[session/release] user=${authedId.slice(0, 8)} dev=${deviceId.slice(0, 8)}`);
             json(res, 200, { ok: true });
-        } catch {
+        } catch (e) {
+            console.error("[session/release] error:", (e as Error)?.message);
             json(res, 500, { error: "internal" });
         }
         return;

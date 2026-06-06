@@ -14,10 +14,19 @@ if (Platform.OS !== 'web') {
   WebBrowser.maybeCompleteAuthSession();
 }
 
+/** Thrown when the single-device lock is held by another device. Lets the UI
+ *  tell a "logged in elsewhere" block apart from a wrong-password error. */
+export class SessionLockedError extends Error {
+  constructor(message = 'Tài khoản đang đăng nhập ở thiết bị khác. Hãy đăng xuất ở thiết bị kia rồi thử lại.') {
+    super(message);
+    this.name = 'SessionLockedError';
+  }
+}
+
 /**
  * Claims the single-device lock for the current session. Resolves silently
  * when granted. When the lock is held by another device, signs out and throws
- * a user-facing error. Network/unknown errors are swallowed (fail-open) so a
+ * `SessionLockedError`. Network/unknown errors are swallowed (fail-open) so a
  * flaky connection never locks a legitimate user out.
  */
 export async function enforceSingleDevice(): Promise<void> {
@@ -31,7 +40,7 @@ export async function enforceSingleDevice(): Promise<void> {
   }
   if (!granted) {
     await supabase.auth.signOut();
-    throw new Error('Tài khoản đang đăng nhập ở thiết bị khác. Thử lại sau khoảng 2 phút.');
+    throw new SessionLockedError();
   }
 }
 

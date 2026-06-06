@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "MathUp Mobile",
-    "slug": "mathup-mobile",
+    "slug": "math-up",
     "scheme": "mathup",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -60,7 +60,20 @@
       ],
       "expo-web-browser",
       "expo-font",
-      "expo-audio"
-    ]
+      [
+        "expo-audio",
+        {
+          "recordAudioAndroid": false,
+          "microphonePermission": false
+        }
+      ],
+      "./plugins/withoutRecordAudio"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c5eb4dc4-2a18-4f65-ab45-476c6b990a5f"
+      }
+    },
+    "owner": "dong171"
   }
 }

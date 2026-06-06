@@ -9,6 +9,7 @@ import { supabase } from '../services/supabase';
 import { LevelCard } from '../components/LevelBadge';
 import { gameApi } from '../services/api';
 import { ASSETS } from '../assets';
+import { AchievementId, AchievementStats, isUnlocked } from '../utils/achievements';
 
 interface Stats {
   totalMatches: number; totalWins: number; winRate: number;
@@ -24,11 +25,11 @@ const FALLBACK: Stats = {
   accuracyRate: 0, avgTimePerMatch: 0,
 };
 
-const BADGES = [
-  { emoji: ASSETS.statistics.achStart,   title: 'Bắt Đầu',   desc: 'Trận đầu tiên' },
-  { emoji: ASSETS.statistics.achHot,     title: 'Nóng Lên',  desc: '5 trận thắng liên tiếp' },
-  { emoji: ASSETS.statistics.achLucky,   title: 'Nhân Phẩm', desc: 'Đạt 50 điểm xếp hạng' },
-  { emoji: ASSETS.statistics.achDiamond, title: 'Kim Cương', desc: 'Level 10' },
+const BADGES: { id: AchievementId; emoji: string; title: string; desc: string }[] = [
+  { id: 'firstMatch', emoji: ASSETS.statistics.achStart,   title: 'Bắt Đầu',   desc: 'Trận đầu tiên' },
+  { id: 'hotStreak',  emoji: ASSETS.statistics.achHot,     title: 'Nóng Lên',  desc: '5 trận thắng liên tiếp' },
+  { id: 'lucky',      emoji: ASSETS.statistics.achLucky,   title: 'Nhân Phẩm', desc: 'Đạt 50 điểm xếp hạng' },
+  { id: 'diamond',    emoji: ASSETS.statistics.achDiamond, title: 'Kim Cương', desc: 'Level 10' },
 ];
 
 export default function StatisticsScreen() {
@@ -37,6 +38,7 @@ export default function StatisticsScreen() {
   const [loading, setLoading] = useState(false);
   const [userExp, setUserExp] = useState(0);
   const [userLevel, setUserLevel] = useState(1);
+  const [rankingPoints, setRankingPoints] = useState(0);
   const [allowViewing, setAllowViewing] = useState(true);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
 
@@ -50,17 +52,29 @@ export default function StatisticsScreen() {
 
     supabase
       .from('user_profiles')
-      .select('exp,level,allow_viewing_info')
+      .select('exp,level,ranking_points,allow_viewing_info')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
         if (data) {
           setUserExp(data.exp ?? 0);
           setUserLevel(data.level ?? 1);
+          setRankingPoints(data.ranking_points ?? 0);
           setAllowViewing(data.allow_viewing_info !== false);
         }
       }, () => {});
   }, [user]);
+
+  const achievementStats: AchievementStats = {
+    totalMatches: stats.totalMatches,
+    totalWins: stats.totalWins,
+    bestStreak: stats.bestStreak,
+    currentStreak: stats.currentStreak,
+    accuracyRate: stats.accuracyRate,
+    avgTimePerMatch: stats.avgTimePerMatch,
+    level: userLevel,
+    rankingPoints,
+  };
 
   const togglePrivacy = async (value: boolean) => {
     if (!user || savingPrivacy) return;
@@ -100,7 +114,7 @@ export default function StatisticsScreen() {
         <View style={styles.grid}>
           <BigStat emoji={ASSETS.statistics.matches} value={`${stats.totalMatches}`}        label="Trận chơi" />
           <BigStat emoji={ASSETS.statistics.wins}    value={`${stats.totalWins}`}           label="Chiến thắng" valueColor={C.successDeep} />
-          <BigStat emoji={ASSETS.statistics.winRate} value={`${stats.winRate.toFixed(1)}%`} label="Tỷ lệ thắng" valueColor={C.orange} />
+          <BigStat emoji={ASSETS.statistics.winRate} value={`${stats.winRate.toFixed(0)}%`} label="Tỷ lệ thắng" valueColor={C.orange} />
           <BigStat emoji={ASSETS.statistics.score}   value={`${stats.totalScore}`}          label="Tổng điểm" valueColor={C.orangeDark} />
         </View>
 
@@ -161,13 +175,17 @@ export default function StatisticsScreen() {
         <View style={styles.section}>
           <Text style={styles.h3}>Thành tựu</Text>
           <View style={styles.badgeGrid}>
-            {BADGES.map((b) => (
-              <View key={b.title} style={styles.badge}>
-                <Text style={{ fontSize: 34, marginBottom: 6 }}>{b.emoji}</Text>
-                <Text style={styles.badgeTitle}>{b.title}</Text>
-                <Text style={styles.badgeDesc}>{b.desc}</Text>
-              </View>
-            ))}
+            {BADGES.map((b) => {
+              const unlocked = isUnlocked(b.id, achievementStats);
+              return (
+                <View key={b.title} style={[styles.badge, !unlocked && styles.badgeLocked]}>
+                  {!unlocked && <Text style={styles.badgeLock}>🔒</Text>}
+                  <Text style={[{ fontSize: 34, marginBottom: 6 }, !unlocked && styles.badgeDim]}>{b.emoji}</Text>
+                  <Text style={styles.badgeTitle}>{b.title}</Text>
+                  <Text style={styles.badgeDesc}>{b.desc}</Text>
+                </View>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -243,6 +261,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.peachBorder, borderRadius: R.md,
     padding: 16, alignItems: 'center',
   },
+  badgeLocked: { backgroundColor: C.surfaceSunken, borderColor: C.line },
+  badgeDim:    { opacity: 0.3 },
+  badgeLock:   { position: 'absolute', top: 10, right: 10, fontSize: 13, opacity: 0.6 },
   badgeTitle: { fontFamily: F.display, fontSize: 13, color: C.ink },
   badgeDesc:  { fontFamily: F.body, fontSize: 11, color: C.inkBrown, marginTop: 3, textAlign: 'center' },
 

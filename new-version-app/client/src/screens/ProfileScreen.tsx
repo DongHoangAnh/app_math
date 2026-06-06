@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, SafeAreaView, Image, Switch,
+  TouchableOpacity, SafeAreaView, Image, Switch, Platform, Linking,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { C, R, F, shadow, hardShadow } from '../theme';
 import { ProgressBar } from '../components/ui';
 import { useAuth } from '../hooks/useAuth';
@@ -12,21 +13,25 @@ import { getLevelProgress, getTier, TIER_LABEL } from '../utils/levelUtils';
 import EditProfileModal from '../components/EditProfileModal';
 import { gameApi } from '../services/api';
 import { ASSETS } from '../assets';
+import { TERMS_OF_SERVICE_URL, SUPPORT_EMAIL } from '../config';
+import { AchievementId, AchievementStats, isUnlocked } from '../utils/achievements';
 
 interface UserStats {
   totalScore: number; totalMatches: number;
   wins: number; winRate: number; streak: number; level: number;
+  bestStreak: number; accuracyRate: number; avgTimePerMatch: number;
 }
 
 const FALLBACK: UserStats = {
   totalScore: 0, totalMatches: 0, wins: 0, winRate: 0, streak: 0, level: 1,
+  bestStreak: 0, accuracyRate: 0, avgTimePerMatch: 0,
 };
 
-const ACHIEVEMENTS = [
-  { emoji: ASSETS.profile.champion, label: 'Vô địch' },
-  { emoji: ASSETS.profile.streak5, label: 'Streak 5' },
-  { emoji: ASSETS.profile.speed, label: 'Tốc độ' },
-  { emoji: ASSETS.profile.sniper, label: 'Bách phát' },
+const ACHIEVEMENTS: { id: AchievementId; emoji: string; label: string }[] = [
+  { id: 'champion', emoji: ASSETS.profile.champion, label: 'Vô địch' },
+  { id: 'hotStreak', emoji: ASSETS.profile.streak5, label: 'Streak 5' },
+  { id: 'speed', emoji: ASSETS.profile.speed, label: 'Tốc độ' },
+  { id: 'sniper', emoji: ASSETS.profile.sniper, label: 'Bách phát' },
 ];
 
 export default function ProfileScreen() {
@@ -69,9 +74,35 @@ export default function ProfileScreen() {
         winRate:      data.winRate      ?? 0,
         streak:       data.currentStreak ?? 0,
         level:        data.level        ?? 1,
+        bestStreak:      data.bestStreak      ?? 0,
+        accuracyRate:    data.accuracyRate    ?? 0,
+        avgTimePerMatch: data.avgTimePerMatch ?? 0,
       }))
       .catch(() => {});
   }, [user]);
+
+  const openTerms = async () => {
+    try {
+      if (Platform.OS === 'web') await Linking.openURL(TERMS_OF_SERVICE_URL);
+      else await WebBrowser.openBrowserAsync(TERMS_OF_SERVICE_URL);
+    } catch { /* nothing we can do if the browser refuses to open */ }
+  };
+
+  const openHelp = () => {
+    const url = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Hỗ trợ — MathUp')}`;
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const achievementStats: AchievementStats = {
+    totalMatches: stats.totalMatches,
+    totalWins: stats.wins,
+    bestStreak: stats.bestStreak,
+    currentStreak: stats.streak,
+    accuracyRate: stats.accuracyRate,
+    avgTimePerMatch: stats.avgTimePerMatch,
+    level: userLevel,
+    rankingPoints,
+  };
 
   const handleProfileSaved = (_newName: string, newAvatarUrl: string | null) => {
     setAvatarUrl(newAvatarUrl);
@@ -135,12 +166,16 @@ export default function ProfileScreen() {
           <View style={{ gap: 12 }}>
             <Text style={styles.h3}>Thành tích</Text>
             <View style={styles.achRow}>
-              {ACHIEVEMENTS.map((a) => (
-                <View key={a.label} style={styles.achCard}>
-                  <Text style={{ fontSize: 24 }}>{a.emoji}</Text>
-                  <Text style={styles.achLabel}>{a.label}</Text>
-                </View>
-              ))}
+              {ACHIEVEMENTS.map((a) => {
+                const unlocked = isUnlocked(a.id, achievementStats);
+                return (
+                  <View key={a.label} style={[styles.achCard, !unlocked && styles.achCardLocked]}>
+                    {!unlocked && <Text style={styles.achLock}>🔒</Text>}
+                    <Text style={[{ fontSize: 24 }, !unlocked && styles.achDim]}>{a.emoji}</Text>
+                    <Text style={styles.achLabel}>{a.label}</Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
 
@@ -172,8 +207,8 @@ export default function ProfileScreen() {
           {/* Settings */}
           <View style={styles.settings}>
             <SettingRow icon={ASSETS.profile.edit} label="Chỉnh sửa hồ sơ" onPress={() => setEditVisible(true)} />
-            <SettingRow icon={ASSETS.profile.help} label="Trợ giúp" onPress={() => {}} />
-            <SettingRow icon={ASSETS.profile.terms} label="Điều khoản" onPress={() => {}} />
+            <SettingRow icon={ASSETS.profile.help} label="Trợ giúp" onPress={openHelp} />
+            <SettingRow icon={ASSETS.profile.terms} label="Điều khoản" onPress={openTerms} />
             <SettingRow icon={ASSETS.profile.logout} label="Đăng xuất" onPress={signOut} danger isLast />
           </View>
         </View>
@@ -278,6 +313,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: C.peachBorder,
     justifyContent: 'center', alignItems: 'center', gap: 4,
   },
+  achCardLocked: { backgroundColor: C.surfaceSunken, borderColor: C.line },
+  achDim:   { opacity: 0.3 },
+  achLock:  { position: 'absolute', top: 6, right: 6, fontSize: 11, opacity: 0.6 },
   achLabel: { fontFamily: F.bodyMedium, fontSize: 10, color: C.orangeDark },
 
   // Settings

@@ -22,6 +22,10 @@ export const PRIVACY_POLICY_URL =
 export const TERMS_OF_SERVICE_URL =
     process.env.EXPO_PUBLIC_TERMS_URL ?? 'https://donghoanganh.github.io/mathup-legal/#terms';
 
+/** Support contact — used by the "Trợ giúp" action on the Profile screen. */
+export const SUPPORT_EMAIL =
+    process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? 'hoangpham100778@gmail.com';
+
 /**
  * Current legal version the user must consent to. Bump this when the terms
  * or privacy policy change materially — users who accepted an older version

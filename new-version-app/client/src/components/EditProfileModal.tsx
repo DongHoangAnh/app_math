@@ -27,6 +27,9 @@ export default function EditProfileModal({
   const [name, setName]             = useState(currentName);
   const [nameError, setNameError]   = useState('');
   const [avatarUri, setAvatarUri]   = useState<string | null>(currentAvatarUrl);
+  // base64 payload of a freshly picked image (null when unchanged/removed).
+  // Uploading via base64 is the reliable path on native RN — see uploadAvatar.
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [avatarChanged, setAvatarChanged] = useState(false);
   const [saving, setSaving]         = useState(false);
 
@@ -36,6 +39,7 @@ export default function EditProfileModal({
       setName(currentName);
       setNameError('');
       setAvatarUri(currentAvatarUrl);
+      setAvatarBase64(null);
       setAvatarChanged(false);
     }
   }, [visible, currentName, currentAvatarUrl]);
@@ -63,6 +67,7 @@ export default function EditProfileModal({
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0]) {
@@ -76,12 +81,14 @@ export default function EditProfileModal({
       }
 
       setAvatarUri(asset.uri);
+      setAvatarBase64(asset.base64 ?? null);
       setAvatarChanged(true);
     }
   };
 
   const removeAvatar = () => {
     setAvatarUri(null);
+    setAvatarBase64(null);
     setAvatarChanged(true);
   };
 
@@ -104,7 +111,7 @@ export default function EditProfileModal({
       // Upload ảnh mới nếu đã thay đổi
       if (avatarChanged) {
         if (avatarUri) {
-          finalAvatarUrl = await uploadAvatar(user.id, avatarUri);
+          finalAvatarUrl = await uploadAvatar(user.id, avatarUri, avatarBase64);
         } else {
           // Xoá ảnh cũ
           if (currentAvatarUrl) {
@@ -232,18 +239,37 @@ function getMimeFromUri(uri: string): string {
   return map[ext] ?? 'image/jpeg';
 }
 
-async function uploadAvatar(userId: string, localUri: string): Promise<string> {
+/** Decode a base64 string into raw bytes (atob is a global in RN 0.74+ / web). */
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function uploadAvatar(
+  userId: string,
+  localUri: string,
+  base64: string | null,
+): Promise<string> {
   const ext    = localUri.split('.').pop()?.toLowerCase() ?? 'jpg';
   const mime   = getMimeFromUri(localUri);
   const path   = `${userId}/avatar.${ext}`;
 
-  // Đọc file thành Blob qua fetch (hoạt động trong React Native)
-  const response = await fetch(localUri);
-  const blob     = await response.blob();
+  // On native, `fetch(localUri).blob()` yields a 0-byte upload — supabase-js
+  // can't read a React Native Blob body. Upload the picker's base64 payload as
+  // a raw ArrayBuffer instead. Fall back to the Blob path (web, or no base64).
+  let body: Uint8Array | Blob;
+  if (base64) {
+    body = base64ToBytes(base64);
+  } else {
+    const response = await fetch(localUri);
+    body = await response.blob();
+  }
 
   const { error } = await supabase.storage
     .from('avatars')
-    .upload(path, blob, { contentType: mime, upsert: true });
+    .upload(path, body, { contentType: mime, upsert: true });
 
   if (error) throw new Error(`Không thể tải ảnh lên: ${error.message}`);
 

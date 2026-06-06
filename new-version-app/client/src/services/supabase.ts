@@ -5,6 +5,7 @@
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { SUPABASE_URL, SUPABASE_KEY } from '../config';
 
 const supabaseUrl = SUPABASE_URL;
@@ -28,8 +29,39 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // Web: bật để Supabase tự xử lý token từ URL sau OAuth redirect
     // Native: tắt vì dùng deep link + exchangeCodeForSession thủ công
     detectSessionInUrl: isWeb,
+    // PKCE bắt buộc cho OAuth trên native: signInWithOAuth sinh code_challenge
+    // + lưu code verifier vào storage để exchangeCodeForSession dùng.
+    // (Mặc định là 'implicit' — callback chỉ trả token trong #fragment,
+    // exchangeCodeForSession sẽ luôn fail vì không có code/verifier.)
+    flowType: 'pkce',
   },
 });
+
+/**
+ * Parse callback URL (deep link `mathup://auth/...`) sau OAuth / email link,
+ * lấy `?code=` và đổi thành session. Chỉ cần trên native — web đã có
+ * detectSessionInUrl. Trả về session, hoặc null nếu URL không chứa code.
+ */
+export async function createSessionFromUrl(url: string) {
+  const { params, errorCode } = QueryParams.getQueryParams(url);
+  if (errorCode) throw new Error(errorCode);
+  if (params.error) {
+    throw new Error(params.error_description ?? params.error);
+  }
+
+  const { code } = params;
+  if (!code) return null;
+
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    // Code chỉ dùng được 1 lần — nếu handler khác (deep link listener) đã
+    // exchange xong và session tồn tại thì không coi là lỗi.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) return session;
+    throw error;
+  }
+  return data.session;
+}
 
 // Helper to check auth status
 export async function isAuthenticated() {

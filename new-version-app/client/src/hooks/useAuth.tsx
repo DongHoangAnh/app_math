@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, createContext } from 'react';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
-import { supabase } from '../services/supabase';
+import { supabase, createSessionFromUrl } from '../services/supabase';
 import { TERMS_VERSION } from '../config';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -84,8 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
     if (result.type === 'success') {
-      const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
-      if (sessionError) throw sessionError;
+      // Parse ?code= từ callback URL rồi đổi lấy session (PKCE)
+      await createSessionFromUrl(result.url);
     }
     // type === 'cancel' → user đóng popup, bỏ qua
   };

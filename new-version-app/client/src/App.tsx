@@ -16,7 +16,7 @@ import {
 } from '@expo-google-fonts/be-vietnam-pro';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { SettingsProvider } from './hooks/useSettings';
-import { supabase } from './services/supabase';
+import { createSessionFromUrl } from './services/supabase';
 import { C, R, F } from './theme';
 import { ASSETS } from './assets';
 
@@ -45,7 +45,7 @@ function useDeepLinkHandler() {
     const handle = async (url: string) => {
       if (!url) return;
       if (url.includes('auth/callback') || url.includes('auth/reset-password')) {
-        await supabase.auth.exchangeCodeForSession(url).catch(() => {});
+        await createSessionFromUrl(url).catch(() => {});
       }
     };
 

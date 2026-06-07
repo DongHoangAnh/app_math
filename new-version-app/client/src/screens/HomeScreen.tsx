@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, SafeAreaView, Alert,
+  ScrollView, SafeAreaView, Alert, Image,
 } from 'react-native';
 import { C, R, F, shadow, hardShadow } from '../theme';
 import { Tactile, ProgressBar } from '../components/ui';
@@ -21,6 +21,7 @@ export default function HomeScreen() {
   const [userLevel, setUserLevel] = useState<number>(1);
   const [streak, setStreak] = useState<number>(0);
   const [wins, setWins] = useState<number | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const displayName = user?.user_metadata?.full_name ?? 'Bạn';
   const initial = displayName[0]?.toUpperCase() ?? 'B';
@@ -32,7 +33,7 @@ export default function HomeScreen() {
     if (!user) return;
     supabase
       .from('user_profiles')
-      .select('ranking_points,exp,level')
+      .select('ranking_points,exp,level,avatar_url')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
@@ -40,6 +41,7 @@ export default function HomeScreen() {
           setRankingPoints(data.ranking_points ?? 0);
           setUserExp(data.exp ?? 0);
           setUserLevel(data.level ?? 1);
+          setAvatarUrl(data.avatar_url ?? null);
         }
       }, () => {});
 
@@ -71,12 +73,21 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe}>
       {/* ── Top app bar ── */}
       <View style={styles.topbar}>
-        <View style={styles.brandRow}>
+        <TouchableOpacity
+          style={styles.brandRow}
+          onPress={() => navigation.navigate('ProfileTab')}
+          activeOpacity={0.85}
+          accessibilityLabel="Hồ sơ"
+        >
           <View style={styles.brandAvatar}>
-            <Text style={styles.brandAvatarText}>{initial}</Text>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.brandAvatarImg} />
+            ) : (
+              <Text style={styles.brandAvatarText}>{initial}</Text>
+            )}
           </View>
-          <Text style={styles.wordmark}>MathUp</Text>
-        </View>
+          <Text style={styles.wordmark} numberOfLines={1}>{displayName}</Text>
+        </TouchableOpacity>
         <View style={styles.pointsPill}>
           <Text style={styles.pointsPillIcon}>{ASSETS.home.points}</Text>
           <Text style={styles.pointsPillValue}>{rankingPoints.toLocaleString()} pts</Text>
@@ -262,14 +273,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: C.bg, ...shadow('#000', 1),
   },
-  brandRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brandRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, marginRight: 12 },
   brandAvatar: {
     width: 40, height: 40, borderRadius: R.pill,
     backgroundColor: C.peachBg, borderWidth: 2, borderColor: C.orange,
-    justifyContent: 'center', alignItems: 'center',
+    justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
   },
+  brandAvatarImg:  { width: '100%', height: '100%' },
   brandAvatarText: { fontFamily: F.displayBold, fontSize: 18, color: C.orangeDark },
-  wordmark:    { fontFamily: F.display, fontSize: 20, color: C.orangeDark },
+  wordmark:    { fontFamily: F.display, fontSize: 20, color: C.orangeDark, flexShrink: 1 },
   pointsPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: C.peachBg, borderRadius: R.pill,

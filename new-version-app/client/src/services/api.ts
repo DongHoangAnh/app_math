@@ -124,10 +124,12 @@ export const gameApi = {
       body: JSON.stringify({ displayName }),
     }),
 
-  acquireLock: (deviceId: string) =>
+  // `force` = login takeover (new device wins): claim even if another device
+  // holds a warm lock. Heartbeat re-acquire leaves it false (conservative).
+  acquireLock: (deviceId: string, force = false) =>
     request<AcquireLockResult>(`/api/session/acquire`, {
       method: 'POST',
-      body: JSON.stringify({ deviceId }),
+      body: JSON.stringify({ deviceId, force }),
     }),
 
   heartbeat: (deviceId: string) =>

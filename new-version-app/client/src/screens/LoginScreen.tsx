@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, TextInput,
@@ -11,7 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ASSETS } from '../assets';
 
 export default function LoginScreen() {
-  const { signInWithEmail, signInWithGoogle, loading } = useAuth();
+  const { signInWithEmail, signInWithGoogle, loading, evictedElsewhere, clearEviction } = useAuth();
   const navigation = useNavigation<any>();
 
   const [email, setEmail]           = useState('');
@@ -23,6 +23,16 @@ export default function LoginScreen() {
   const [lockMsg, setLockMsg]       = useState<string | null>(null);
 
   const busy = submitting || googleLoading || loading;
+
+  // Heartbeat evicted this device because the account was opened elsewhere.
+  useEffect(() => {
+    if (evictedElsewhere) setLockMsg('Tài khoản đã đăng nhập ở nơi khác!');
+  }, [evictedElsewhere]);
+
+  const dismissLock = () => {
+    setLockMsg(null);
+    clearEviction();
+  };
 
   const handleEmailLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -181,7 +191,7 @@ export default function LoginScreen() {
         visible={!!lockMsg}
         transparent
         animationType="fade"
-        onRequestClose={() => setLockMsg(null)}
+        onRequestClose={dismissLock}
       >
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, hardShadow(C.orangeDark, 10, 0.25)]}>
@@ -190,7 +200,7 @@ export default function LoginScreen() {
             <Text style={styles.modalBody}>{lockMsg}</Text>
             <TactileButton
               title="Đã hiểu"
-              onPress={() => setLockMsg(null)}
+              onPress={dismissLock}
               style={{ marginTop: 8, alignSelf: 'stretch' }}
             />
           </View>

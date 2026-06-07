@@ -104,6 +104,16 @@ function parseDeviceId(raw: string | null): string | null {
     return null;
 }
 
+// Parse the optional { force } flag from a request body (default false).
+function parseForce(raw: string | null): boolean {
+    if (!raw) return false;
+    try {
+        return JSON.parse(raw).force === true;
+    } catch {
+        return false;
+    }
+}
+
 export function createApp() {
     return async (req: http.IncomingMessage, res: http.ServerResponse) => {
     const originHeader = typeof req.headers.origin === "string" ? req.headers.origin : undefined;
@@ -262,15 +272,20 @@ export function createApp() {
         return;
     }
 
-    // POST /api/session/acquire  — claim the single-device lock after login
+    // POST /api/session/acquire  — claim the single-device lock after login.
+    // `force` = login takeover (new device wins): claim even when another device
+    // holds a warm lock, evicting it. Heartbeat re-acquire omits it (conservative,
+    // so an evicted device never steals the lock back → no ping-pong).
     if (req.method === "POST" && pathname === "/api/session/acquire") {
         const authedId = await authenticate(req);
         if (!authedId) { json(res, 401, { error: "unauthorized" }); return; }
-        const deviceId = parseDeviceId(await readBody(req));
+        const raw = await readBody(req);
+        const deviceId = parseDeviceId(raw);
         if (!deviceId) { json(res, 400, { error: "deviceId required" }); return; }
+        const force = parseForce(raw);
         try {
-            const granted = await acquireSessionLock(authedId, deviceId, LOCK_TTL_SECONDS);
-            console.log(`[session/acquire] user=${authedId.slice(0, 8)} dev=${deviceId.slice(0, 8)} granted=${granted}`);
+            const granted = await acquireSessionLock(authedId, deviceId, LOCK_TTL_SECONDS, force);
+            console.log(`[session/acquire] user=${authedId.slice(0, 8)} dev=${deviceId.slice(0, 8)} force=${force} granted=${granted}`);
             json(res, 200, { granted });
         } catch (e) {
             console.error("[session/acquire] error:", (e as Error)?.message);

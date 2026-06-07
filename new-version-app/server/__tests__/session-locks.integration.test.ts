@@ -60,7 +60,13 @@ describe('POST /api/session/acquire', () => {
     const r = await post('/api/session/acquire', { deviceId: 'd1' }, `valid:${USER}`);
     expect(r.status).toBe(200);
     expect(r.json).toEqual({ granted: true });
-    expect(db.acquireSessionLock).toHaveBeenCalledWith(USER, 'd1', 120);
+    // force defaults to false when the body omits it (heartbeat re-acquire path)
+    expect(db.acquireSessionLock).toHaveBeenCalledWith(USER, 'd1', 120, false);
+  });
+
+  it('forwards force=true for a login takeover (new device wins)', async () => {
+    await post('/api/session/acquire', { deviceId: 'd1', force: true }, `valid:${USER}`);
+    expect(db.acquireSessionLock).toHaveBeenCalledWith(USER, 'd1', 120, true);
   });
 
   it('returns granted:false when the lock is held elsewhere', async () => {

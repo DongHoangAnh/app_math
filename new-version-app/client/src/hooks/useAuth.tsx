@@ -24,16 +24,20 @@ export class SessionLockedError extends Error {
 }
 
 /**
- * Claims the single-device lock for the current session. Resolves silently
- * when granted. When the lock is held by another device, signs out and throws
- * `SessionLockedError`. Network/unknown errors are swallowed (fail-open) so a
- * flaky connection never locks a legitimate user out.
+ * Claims the single-device lock for the current session as a *takeover*
+ * (force=true → "new device wins"): logging in here evicts whatever device
+ * previously held the lock. That old device sees `owner:false` on its next
+ * heartbeat and signs itself out. Network/unknown errors are swallowed
+ * (fail-open) so a flaky connection never locks a legitimate user out.
+ *
+ * Still throws `SessionLockedError` if the takeover is somehow refused, so the
+ * login UI can keep distinguishing a lock block from a wrong-password error.
  */
 export async function enforceSingleDevice(): Promise<void> {
   let granted: boolean;
   try {
     const deviceId = await getDeviceId();
-    const res = await gameApi.acquireLock(deviceId);
+    const res = await gameApi.acquireLock(deviceId, true);
     granted = res.granted;
   } catch {
     return; // fail-open
@@ -59,6 +63,11 @@ interface AuthContextType {
   acceptTerms: () => Promise<void>;
   updateProfile: (displayName: string, avatarUrl?: string | null) => Promise<void>;
   refreshUser: () => Promise<void>;
+  /** True after the heartbeat signs this device out because another device
+   *  took over the single-device lock. The login screen reads it to explain
+   *  the eviction; call `clearEviction` once shown. */
+  evictedElsewhere: boolean;
+  clearEviction: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession]             = useState<Session | null>(null);
   const [loading, setLoading]             = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [evictedElsewhere, setEvictedElsewhere] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -85,6 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setPasswordRecovery(true);
       } else if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
         if (event !== 'TOKEN_REFRESHED') setPasswordRecovery(false);
+        // A real sign-in clears any prior "logged in elsewhere" eviction notice.
+        if (event === 'SIGNED_IN') setEvictedElsewhere(false);
       }
     });
 
@@ -243,6 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const { granted } = await gameApi.acquireLock(deviceId);
           if (!granted && !cancelled) {
             await supabase.auth.signOut();
+            setEvictedElsewhere(true); // surfaced on the login screen
           }
         }
       } catch {
@@ -269,6 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle, signInWithEmail, signUp, signOut,
       sendPasswordResetEmail, confirmPasswordReset, acceptTerms,
       updateProfile, refreshUser,
+      evictedElsewhere, clearEviction: () => setEvictedElsewhere(false),
     }}>
       {children}
     </AuthContext.Provider>

@@ -161,16 +161,19 @@ async function applyRankingDelta(userId: string, delta: number, displayName: str
 // SINGLE-DEVICE SESSION LOCK
 // ═══════════════════════════════════════════════════════════
 
-/** Claim/refresh the lock. Returns true if this device now owns it. */
+/** Claim/refresh the lock. Returns true if this device now owns it.
+ *  `force` (login takeover) claims even when another device holds a warm lock. */
 export async function acquireSessionLock(
     userId: string,
     deviceId: string,
-    ttlSeconds: number
+    ttlSeconds: number,
+    force = false
 ): Promise<boolean> {
     const { data, error } = await getSupabaseClient().rpc("acquire_session_lock", {
         p_user_id: userId,
         p_device_id: deviceId,
         p_ttl_seconds: ttlSeconds,
+        p_force: force,
     });
     if (error) {
         console.error("[Supabase] acquire_session_lock error:", error.message);

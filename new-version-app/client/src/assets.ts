@@ -56,12 +56,18 @@ export const ASSETS = {
     navRank: '🏆',
     navStats: '📈',
     navProfile: '😊',
+    navHistory: '📜',
+    pk: '⚔️',
+    heroYou: '🐱',
+    heroOpp: '❓',
     tip: '💡',
   },
 
   leaderboard: {
     trophy: '🏆',
     crown: '👑',
+    battle: '⚔️',
+    clock: '🕐',
   },
 
   login: {

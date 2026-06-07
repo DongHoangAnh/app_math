@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, SafeAreaView, Alert, Image,
 } from 'react-native';
-import { C, R, F, shadow, hardShadow } from '../theme';
+import { C, R, F, shadow } from '../theme';
 import { Tactile, ProgressBar } from '../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
@@ -11,6 +11,7 @@ import { supabase } from '../services/supabase';
 import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
 import { gameApi } from '../services/api';
 import { getLevelProgress } from '../utils/levelUtils';
+import { MODES } from '../../../shared/constants';
 import { ASSETS } from '../assets';
 
 export default function HomeScreen() {
@@ -94,48 +95,42 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 24 }} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 20, paddingBottom: 32, gap: 22 }} showsVerticalScrollIndicator={false}>
 
-        {/* ── Hero greeting card ── */}
-        <View style={[styles.hero, hardShadow(C.orange, 8, 0.3)]}>
-          <View style={styles.heroDots} />
-          <Text style={[styles.heroGlyph, { right: '6%', top: '8%', fontSize: 64 }]}>÷</Text>
-          <Text style={[styles.heroGlyph, { right: '32%', top: '46%', fontSize: 40 }]}>×</Text>
-          <View style={styles.heroGreetRow}>
-            <Text style={styles.heroGreet}>{greeting}</Text>
-            <Text style={{ fontSize: 18 }}>{greetingEmoji}</Text>
-          </View>
-          <Text style={styles.heroName} numberOfLines={1}>{displayName}</Text>
-        </View>
-
-        {/* ── 3 metrics ── */}
-        <View style={styles.statRow}>
-          <StatBadge emoji={ASSETS.home.score} label="ĐIỂM" value={rankingPoints.toLocaleString()} />
-          <StatBadge emoji={ASSETS.home.streak} label="STREAK" value={`${streak}`} />
-          <StatBadge emoji={ASSETS.home.target} label="THẮNG" value={wins != null ? `${wins}` : '—'} />
-        </View>
-
-        {/* ── Battle CTA (navy "game" surface) ── */}
+        {/* ── Hero: PK battle intro (the star of the screen) ── */}
         <Tactile
-          slabColor="#0A0F1C"
+          slabColor="#C9431A"
           depth={8}
           radius={R.xl}
           onPress={() => navigation.navigate('GameShowTab')}
-          style={styles.battleFace}
-          accessibilityLabel="Đấu 1v1"
+          style={styles.hero}
+          accessibilityLabel="Battle Math"
         >
-          <Text style={[styles.heroGlyph, { color: '#fff', opacity: 0.05, left: '4%', top: '6%', fontSize: 70 }]}>∑</Text>
-          <Text style={[styles.heroGlyph, { color: '#fff', opacity: 0.05, left: '40%', bottom: '8%', fontSize: 48 }]}>√</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.battleTitle}>Đấu 1v1</Text>
-            <Text style={styles.battleSub}>Tìm đối thủ ngang sức ngay!</Text>
+          <Text style={[styles.heroGlyph, { right: '4%', top: '6%', fontSize: 64 }]}>÷</Text>
+          <Text style={[styles.heroGlyph, { right: '30%', bottom: '10%', fontSize: 40 }]}>×</Text>
+          <View style={styles.heroGreetRow}>
+            <Text style={styles.heroGreet}>{greeting}, {displayName}</Text>
+            <Text style={{ fontSize: 14 }}>{greetingEmoji}</Text>
           </View>
-          <View style={styles.battleBolt}>
-            <Text style={{ fontSize: 30 }}>{ASSETS.home.bolt}</Text>
+          <Text style={styles.heroTitle}>{ASSETS.home.pk} Battle Math</Text>
+          <Text style={styles.heroSub}>Thách đấu toàn server · Real-time</Text>
+          <View style={styles.heroBottomRow}>
+            <View style={styles.heroCta}>
+              <Text style={styles.heroCtaTxt}>Vào trận ngay {ASSETS.home.bolt}</Text>
+            </View>
+            <View style={styles.heroVsRow}>
+              <View style={styles.heroAvatar}>
+                <Text style={{ fontSize: 22 }}>{ASSETS.home.heroYou}</Text>
+              </View>
+              <Text style={styles.heroVs}>VS</Text>
+              <View style={styles.heroAvatar}>
+                <Text style={{ fontSize: 22 }}>{ASSETS.home.heroOpp}</Text>
+              </View>
+            </View>
           </View>
         </Tactile>
 
-        {/* ── Rule chips ── */}
+        {/* ── PK rule chips ── */}
         <View style={styles.ruleRow}>
           <View style={[styles.ruleChip, { backgroundColor: '#E7F6E8' }]}>
             <Text style={[styles.ruleChipText, { color: C.successDeep }]}>{`${ASSETS.home.win} Thắng +5`}</Text>
@@ -148,11 +143,40 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Explore ── */}
+        {/* ── PK modes (Xiaoyuan-style feature cards) ── */}
+        <View style={{ gap: 12 }}>
+          <Text style={styles.h3}>Chế độ Battle Math</Text>
+          <View style={styles.modeRow}>
+            {MODES.map(m => (
+              <TouchableOpacity
+                key={m.id}
+                style={styles.modeCard}
+                onPress={() => navigation.navigate('GameShowTab', { mode: m.id })}
+                activeOpacity={0.85}
+              >
+                <View style={styles.modeIconWrap}>
+                  <Text style={{ fontSize: 24 }}>{m.icon}</Text>
+                </View>
+                <Text style={styles.modeName}>{m.label}</Text>
+                <Text style={styles.modeDesc}>{m.desc}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* ── 3 metrics ── */}
+        <View style={styles.statRow}>
+          <StatBadge emoji={ASSETS.home.score} label="ĐIỂM" value={rankingPoints.toLocaleString()} />
+          <StatBadge emoji={ASSETS.home.streak} label="STREAK" value={`${streak}`} />
+          <StatBadge emoji={ASSETS.home.target} label="THẮNG" value={wins != null ? `${wins}` : '—'} />
+        </View>
+
+        {/* ── Explore (icon grid) ── */}
         <View style={{ gap: 12 }}>
           <Text style={styles.h3}>Khám phá</Text>
           <View style={styles.navGrid}>
             <NavCard emoji={ASSETS.home.navRank} label="Xếp Hạng" onPress={() => navigation.navigate('LeaderboardTab')} />
+            <NavCard emoji={ASSETS.home.navHistory} label="Lịch Sử" onPress={() => navigation.navigate('MatchHistoryTab')} />
             <NavCard emoji={ASSETS.home.navStats} label="Thống Kê" onPress={() => navigation.navigate('StatsTab')} />
             <NavCard emoji={ASSETS.home.navProfile} label="Hồ Sơ" onPress={() => navigation.navigate('ProfileTab')} />
           </View>
@@ -290,20 +314,34 @@ const styles = StyleSheet.create({
   pointsPillIcon:  { fontSize: 14 },
   pointsPillValue: { fontFamily: F.display, fontSize: 14, color: C.orange },
 
-  // Hero greeting card
+  // Hero PK card (orange, tactile slab)
   hero: {
-    position: 'relative', overflow: 'hidden', borderRadius: R.xl,
-    backgroundColor: C.orange, padding: 18, minHeight: 132,
-    justifyContent: 'flex-end',
+    position: 'relative', overflow: 'hidden',
+    backgroundColor: C.orange, padding: 20,
   },
-  heroDots: { ...StyleSheet.absoluteFillObject, opacity: 0.12 },
   heroGlyph: {
     position: 'absolute', fontFamily: F.displayBold,
-    color: '#fff', opacity: 0.2,
+    color: '#fff', opacity: 0.18,
   },
   heroGreetRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  heroGreet: { fontFamily: F.body, fontSize: 16, color: C.orangeDeepest },
-  heroName:  { fontFamily: F.display, fontSize: 24, color: '#fff', marginTop: 4 },
+  heroGreet: { fontFamily: F.bodyMedium, fontSize: 13, color: C.orangeDeepest, flexShrink: 1 },
+  heroTitle: { fontFamily: F.displayBold, fontSize: 28, color: '#fff', marginTop: 8 },
+  heroSub:   { fontFamily: F.body, fontSize: 14, color: 'rgba(255,255,255,0.92)', marginTop: 4 },
+  heroBottomRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 18,
+  },
+  heroCta: {
+    backgroundColor: '#fff', borderRadius: R.pill,
+    paddingHorizontal: 18, paddingVertical: 11, ...shadow('#000', 2),
+  },
+  heroCtaTxt: { fontFamily: F.display, fontSize: 15, color: C.orangeDark },
+  heroVsRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroAvatar: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  heroVs: { fontFamily: F.displayBold, fontSize: 16, color: '#fff' },
 
   // Stat badges
   statRow: { flexDirection: 'row', gap: 12 },
@@ -315,17 +353,19 @@ const styles = StyleSheet.create({
   statLabel: { fontFamily: F.bodyMedium, fontSize: 11, letterSpacing: 0.8, color: C.inkSlate, marginTop: 2 },
   statValue: { fontFamily: F.displayBold, fontSize: 18, color: C.ink },
 
-  // Battle CTA
-  battleFace: {
-    backgroundColor: C.navy, padding: 24,
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+  // PK mode cards
+  modeRow:  { flexDirection: 'row', gap: 12 },
+  modeCard: {
+    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.peachBorder,
+    borderRadius: R.lg, paddingVertical: 16, alignItems: 'center', gap: 6,
+    ...shadow('#000', 1),
   },
-  battleTitle: { fontFamily: F.display, fontSize: 28, color: '#fff' },
-  battleSub:   { fontFamily: F.body, fontSize: 15, color: C.navyMuted, marginTop: 6 },
-  battleBolt: {
-    width: 64, height: 64, borderRadius: R.md, backgroundColor: C.orange,
+  modeIconWrap: {
+    width: 48, height: 48, borderRadius: R.md, backgroundColor: C.peachBg,
     justifyContent: 'center', alignItems: 'center',
   },
+  modeName: { fontFamily: F.display, fontSize: 13, color: C.ink },
+  modeDesc: { fontFamily: F.bodyMedium, fontSize: 11, color: C.inkSlate },
 
   // Rule chips
   ruleRow:  { flexDirection: 'row', gap: 8 },

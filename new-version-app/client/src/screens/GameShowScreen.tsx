@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, Animated } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useGameShowWS } from '../hooks/useGameShowWS';
 import { useAuth } from '../hooks/useAuth';
 import { useFeedback } from '../hooks/useFeedback';
@@ -21,6 +21,7 @@ import OpponentDisconnectedPhase from './GameShow/OpponentDisconnectedPhase';
 // dedicated view component under ./GameShow.
 export default function GameShowScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { user } = useAuth();
   const userId      = user?.id ?? null;
   const displayName = user?.user_metadata?.full_name
@@ -33,6 +34,12 @@ export default function GameShowScreen() {
   const [selectedAnswer, setSelectedAnswer]   = useState<string | null>(null);
   const [revealState, setRevealState]         = useState<'hidden' | 'revealed'>('hidden');
   const [selectedMode, setSelectedMode]       = useState('add_sub');
+
+  // Mode pre-selected from HomeScreen's "Chế độ PK" cards (tab nav param).
+  useEffect(() => {
+    const m = route.params?.mode;
+    if (m) setSelectedMode(m);
+  }, [route.params?.mode]);
   const [countdown, setCountdown]             = useState(3);
   const [questionTimer, setQuestionTimer]     = useState(QUESTION_SECONDS);
   const [myRankingPoints, setMyRankingPoints] = useState<number | null>(null);
@@ -293,12 +300,11 @@ export default function GameShowScreen() {
   if (state.phase === 'idle') {
     return (
       <IdlePhase
-        selectedMode={selectedMode}
-        onSelectMode={setSelectedMode}
         myRankingPoints={myRankingPoints}
+        myAvatarUrl={myAvatarUrl}
         error={state.error}
         userId={userId}
-        onJoin={() => joinQueue(selectedMode)}
+        onJoin={(mode) => { setSelectedMode(mode); joinQueue(mode); }}
         onHistory={() => navigation.navigate('MatchHistoryTab')}
       />
     );

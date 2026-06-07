@@ -16,13 +16,14 @@ export const CHAT_HISTORY_MAX = 50;
 export interface GameModeOption {
     id: GameMode;
     label: string;
-    desc: string;
+    desc: string;    // one-word difficulty chip
+    detail: string;  // short one-line description (PK lobby cards)
     icon: string;
 }
 export const MODES: GameModeOption[] = [
-    { id: "add_sub", label: "Cộng/Trừ", desc: "Dễ",  icon: "➕" },
-    { id: "mul_div", label: "Nhân/Chia", desc: "Khó", icon: "✖️" },
-    { id: "mixed",   label: "Hỗn hợp",  desc: "Thử", icon: "🔀" },
+    { id: "add_sub", label: "Cộng/Trừ", desc: "Dễ",  detail: "Cộng, trừ trong phạm vi 10 · kèm câu so sánh", icon: "➕" },
+    { id: "mul_div", label: "Nhân/Chia", desc: "Khó", detail: "Nhân, chia trong bảng cửu chương · kèm câu so sánh", icon: "✖️" },
+    { id: "mixed",   label: "Hỗn hợp",  desc: "Thử", detail: "Đủ cả 4 phép tính + − × ÷ · thử thách toàn diện", icon: "🔀" },
 ];
 
 // ─── Chat / emoji ───────────────────────────────────────────

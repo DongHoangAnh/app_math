@@ -7,43 +7,66 @@ export const s = StyleSheet.create({
   bg:         { flex: 1, backgroundColor: C.background },
   centerFlex: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
 
-  // ── IDLE ──
-  idleWrap:      { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32 },
-  idleTitle:     { fontSize: 24, fontFamily: F.display, color: C.textPrimary, textAlign: 'center', marginBottom: 4 },
-  idleSub:       { fontSize: 13, fontFamily: F.body, color: C.textSecond, textAlign: 'center', marginBottom: 24 },
-  idleVsRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24, marginBottom: 10 },
-  idleAvatar: {
-    width: 64, height: 64, borderRadius: 32, borderWidth: 2.5,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: C.surface,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+  // ── IDLE — Battle Math lobby (Xiaoyuan-style mode cards) ──
+  idleWrap: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 32, gap: 14 },
+
+  // Solid header banner: title + sub + ranking chip + history button.
+  lobbyBar: {
+    backgroundColor: C.orange,
+    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 16, gap: 4,
+    borderBottomLeftRadius: R.xxl, borderBottomRightRadius: R.xxl,
+    ...hardShadow('#C9431A', 6, 0.3),
   },
-  idleAvatarEmoji: { fontSize: 30 },
-  idleVsLabel:     { fontSize: 19, fontWeight: '900', color: C.textPrimary },
-  idlePts:         { fontSize: 12, color: C.textSecond, textAlign: 'center', marginBottom: 20 },
-  sectionLabel:    { fontSize: 12, fontWeight: '700', color: C.textSecond, marginBottom: 8 },
-  modeRow:  { flexDirection: 'row', gap: 10, marginBottom: 24 },
-  modeCard: {
-    flex: 1, alignItems: 'center', gap: 6,
-    backgroundColor: C.surface, borderRadius: R.lg,
-    paddingVertical: 14, borderWidth: 2, borderColor: 'transparent',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  lobbyBarTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  lobbyTitle:  { flexShrink: 1, fontSize: 24, fontFamily: F.display, color: '#FFFFFF' },
+  lobbySub:    { fontSize: 12, fontFamily: F.body, color: 'rgba(255,255,255,0.92)' },
+  historyPill: {
+    backgroundColor: '#FFFFFF', borderRadius: R.pill,
+    paddingHorizontal: 14, paddingVertical: 8, ...shadow('#000', 2),
   },
-  modeCardOn: { borderColor: C.primary, backgroundColor: C.primaryBg },
-  modeIcon:   { fontSize: 22 },
-  modeName:   { fontSize: 12, fontWeight: '700', color: C.textPrimary },
-  modeDiff:   { fontSize: 10, color: C.textSecond },
-  errBox:     { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12, marginBottom: 14 },
-  errTxt:     { color: C.error, fontSize: 13, textAlign: 'center' },
-  historyBtn: {
-    marginTop: 12, paddingVertical: 13, alignItems: 'center',
-    backgroundColor: C.surface, borderRadius: R.pill,
-    borderWidth: 1.5, borderColor: C.border,
+  historyPillTxt: { fontSize: 13, fontFamily: F.display, color: C.orangeDark },
+  lobbyPtsChip: {
+    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 5, marginTop: 6,
   },
-  historyBtnTxt: { fontSize: 14, fontFamily: F.display, color: C.textPrimary },
-  loginHint: { fontSize: 12, color: C.textSecond, textAlign: 'center', marginTop: 12 },
+  lobbyPtsTxt: { fontSize: 12, fontFamily: F.bodyBold, color: '#FFFFFF' },
+
+  // Per-card background/border/accent colors come from MODE_COLORS in IdlePhase.
+  lobbyCard: {
+    borderRadius: R.xl, borderWidth: 1.5,
+    padding: 16, gap: 10, ...shadow('#000', 2),
+  },
+  lobbyCardHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  lobbyCardIcon: {
+    width: 40, height: 40, borderRadius: R.sm, backgroundColor: '#FFFFFF',
+    justifyContent: 'center', alignItems: 'center', ...shadow('#000', 1),
+  },
+  lobbyCardTitle: { flex: 1, fontSize: 17, fontFamily: F.display, color: C.ink },
+  lobbyChip:    { borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 4 },
+  lobbyChipTxt: { fontSize: 11, fontFamily: F.bodyBold, color: '#FFFFFF' },
+  lobbyCardDetail: { fontSize: 12.5, fontFamily: F.body, color: C.inkBrown, lineHeight: 18 },
+
+  lobbyPkRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 28, paddingVertical: 4,
+  },
+  lobbyPlayer: { alignItems: 'center', gap: 4 },
+  lobbyAva: {
+    width: 50, height: 50, borderRadius: 25, borderWidth: 2,
+    backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center',
+    overflow: 'hidden',
+  },
+  lobbyAvaImg:   { width: '100%', height: '100%' },
+  lobbyAvaLabel: { fontSize: 11, fontFamily: F.bodyMedium, color: C.inkSlate },
+  lobbyPkTxt: {
+    fontSize: 24, fontFamily: F.displayBold,
+    fontStyle: 'italic', letterSpacing: 1,
+  },
+  lobbyTapHint: { fontSize: 12, fontFamily: F.bodyBold, textAlign: 'center', marginTop: 2 },
+
+  errBox:    { backgroundColor: '#FFEBEE', borderRadius: R.sm, padding: 12 },
+  errTxt:    { color: C.error, fontSize: 13, textAlign: 'center' },
+  loginHint: { fontSize: 12, color: C.textSecond, textAlign: 'center', marginTop: 4 },
 
   // ── QUEUED / MATCH FOUND — "VS" diagonal splash (VersusSplash) ──
   // Full-bleed split: navy top half (opponent) / orange bottom half (me),

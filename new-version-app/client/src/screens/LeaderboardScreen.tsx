@@ -4,6 +4,7 @@ import {
   SafeAreaView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { C, R, F, shadow, hardShadow } from '../theme';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { ASSETS } from '../assets';
 import OpponentInfoModal from '../components/OpponentInfoModal';
@@ -18,6 +19,7 @@ const MEDAL = [C.gold, C.silver, C.bronze];
 
 export default function LeaderboardScreen() {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
   const [entries, setEntries]     = useState<Entry[]>([]);
   const [me, setMe]               = useState<MyRankInfo | null>(null);
   const [loading, setLoading]     = useState(true);
@@ -60,13 +62,6 @@ export default function LeaderboardScreen() {
 
   const Header = (
     <View style={{ gap: 24, marginBottom: 10 }}>
-      {/* Title */}
-      <View style={{ alignItems: 'center' }}>
-        <Text style={styles.title}>{`${ASSETS.leaderboard.trophy} Bảng Xếp Hạng`}</Text>
-        <Text style={styles.subtitle}>Top {TOP_LIMIT} người chơi</Text>
-        <Text style={styles.cadence}>Xếp hạng cập nhật mỗi 15 phút</Text>
-      </View>
-
       {/* My rank highlighted — rank from the snapshot, points always live */}
       {user && me && (
         <View style={styles.myCard}>
@@ -102,6 +97,25 @@ export default function LeaderboardScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* ── Header banner: title + sub + cadence + find-match button ── */}
+      <View style={styles.bar}>
+        <View style={styles.barTop}>
+          <Text style={styles.barTitle} numberOfLines={1}>{`${ASSETS.leaderboard.trophy} Bảng Xếp Hạng`}</Text>
+          <TouchableOpacity
+            style={styles.battlePill}
+            onPress={() => navigation.navigate('GameShowTab')}
+            activeOpacity={0.8}
+            accessibilityLabel="Tìm trận"
+          >
+            <Text style={styles.battlePillTxt}>{`${ASSETS.leaderboard.battle} Tìm trận`}</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.barSub}>Top {TOP_LIMIT} người chơi</Text>
+        <View style={styles.barChip}>
+          <Text style={styles.barChipTxt}>{`${ASSETS.leaderboard.clock} Xếp hạng cập nhật mỗi 15 phút`}</Text>
+        </View>
+      </View>
+
       {loading ? (
         <ActivityIndicator color={C.orange} size="large" style={{ marginTop: 60 }} />
       ) : error ? (
@@ -218,11 +232,28 @@ function RankRow({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-  list: { paddingHorizontal: 20, paddingTop: 68, paddingBottom: 28, gap: 10 },
+  list: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 28, gap: 10 },
 
-  title:    { fontFamily: F.display, fontSize: 24, color: C.ink },
-  subtitle: { fontFamily: F.body, fontSize: 16, color: C.inkSlate, marginTop: 4 },
-  cadence:  { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkSlate, marginTop: 2 },
+  // Header banner (matches the Battle Math lobby bar)
+  bar: {
+    backgroundColor: C.orange,
+    paddingHorizontal: 20, paddingTop: 14, paddingBottom: 16, gap: 4,
+    borderBottomLeftRadius: R.xxl, borderBottomRightRadius: R.xxl,
+    ...hardShadow('#C9431A', 6, 0.3),
+  },
+  barTop:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  barTitle: { flexShrink: 1, fontFamily: F.display, fontSize: 24, color: '#FFFFFF' },
+  barSub:   { fontFamily: F.body, fontSize: 12, color: 'rgba(255,255,255,0.92)' },
+  battlePill: {
+    backgroundColor: '#FFFFFF', borderRadius: R.pill,
+    paddingHorizontal: 14, paddingVertical: 8, ...shadow('#000', 2),
+  },
+  battlePillTxt: { fontFamily: F.display, fontSize: 13, color: C.orangeDark },
+  barChip: {
+    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 5, marginTop: 6,
+  },
+  barChipTxt: { fontFamily: F.bodyBold, fontSize: 12, color: '#FFFFFF' },
   eyebrow:  { fontFamily: F.bodyMedium, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: C.inkSlate },
   caption:  { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkSlate },
 

@@ -169,6 +169,10 @@ export const ASSETS = {
     history: '📜',
     youAvatar: '🐱',
     oppAvatar: '🐻',
+    clash: '⚡',      // tug-of-war bar clash point
+    sparkle: '✦',     // starry background decor
+    sparkleAlt: '✧',
+    crown: '👑',      // winner's avatar crown
   },
 
   gameshow: {

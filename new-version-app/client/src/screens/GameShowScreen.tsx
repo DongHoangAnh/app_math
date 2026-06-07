@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useFeedback } from '../hooks/useFeedback';
 import GameResults from '../components/GameResults';
 import { supabase } from '../services/supabase';
+import { gameApi } from '../services/api';
 import { QUESTION_SECONDS, VI_BANNED } from '../../../shared/constants';
 import { countCorrect, sumTime, type FloatingEmoji } from './GameShow/utils';
 import IdlePhase from './GameShow/IdlePhase';
@@ -27,7 +28,7 @@ export default function GameShowScreen() {
     ?? 'Bạn';
   const grade = user?.user_metadata?.grade;
 
-  const { state, joinQueue, leaveQueue, submitAnswer, sendEmoji, sendChat } = useGameShowWS(userId, displayName, grade);
+  const { state, joinQueue, leaveQueue, submitAnswer, resetGame, sendEmoji, sendChat } = useGameShowWS(userId, displayName, grade);
 
   const [selectedAnswer, setSelectedAnswer]   = useState<string | null>(null);
   const [revealState, setRevealState]         = useState<'hidden' | 'revealed'>('hidden');
@@ -35,6 +36,10 @@ export default function GameShowScreen() {
   const [countdown, setCountdown]             = useState(3);
   const [questionTimer, setQuestionTimer]     = useState(QUESTION_SECONDS);
   const [myRankingPoints, setMyRankingPoints] = useState<number | null>(null);
+  const [myAvatarUrl, setMyAvatarUrl]         = useState<string | null>(null);
+  const [myWins, setMyWins]                   = useState<number | null>(null);
+  const [oppAvatarUrl, setOppAvatarUrl]       = useState<string | null>(null);
+  const [oppWins, setOppWins]                 = useState<number | null>(null);
   const [numericInput, setNumericInput]       = useState('');
   const [chatInput, setChatInput]             = useState('');
   const [showChatInput, setShowChatInput]     = useState(false);
@@ -92,17 +97,41 @@ export default function GameShowScreen() {
     prevAnswersLen.current = len;
   }, [state.myAnswers, fb, pulseScore, shakeCard]);
 
-  // Fetch ranking points
+  // Fetch ranking points + avatar (Supabase) and win count (stats API) —
+  // avatar/wins feed the VS matchmaking splash.
   useEffect(() => {
     if (!userId) return;
     if (state.phase !== 'idle' && state.phase !== 'game_over') return;
     supabase
       .from('user_profiles')
-      .select('ranking_points')
+      .select('ranking_points,avatar_url')
       .eq('id', userId)
       .single()
-      .then(({ data }) => { if (data) setMyRankingPoints(data.ranking_points); });
+      .then(({ data }) => {
+        if (data) {
+          setMyRankingPoints(data.ranking_points);
+          setMyAvatarUrl(data.avatar_url ?? null);
+        }
+      });
+    gameApi.getStats(userId)
+      .then(stats => setMyWins(stats.totalWins))
+      .catch(() => {});
   }, [userId, state.phase]);
+
+  // Fetch opponent's public profile (avatar + wins) once matched.
+  useEffect(() => {
+    const oppId = state.opponent?.userId;
+    if (!oppId) { setOppAvatarUrl(null); setOppWins(null); return; }
+    let alive = true;
+    gameApi.getOpponentProfile(oppId)
+      .then(p => {
+        if (!alive) return;
+        setOppAvatarUrl(p.avatarUrl);
+        setOppWins(p.stats?.totalWins ?? null);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [state.opponent?.userId]);
 
   // Question countdown timer
   useEffect(() => {
@@ -248,6 +277,14 @@ export default function GameShowScreen() {
     joinQueue(selectedMode);
   };
 
+  // "Về trang chủ" on the results screen → back to the PK mode-select (idle).
+  const handleBackToIdle = () => {
+    setSelectedAnswer(null);
+    setRevealState('hidden');
+    setNumericInput('');
+    resetGame();
+  };
+
   const myScore = countCorrect(state.myAnswers);
   const myTime  = sumTime(state.myAnswers);
   const total   = state.questions.length || 10;
@@ -268,14 +305,25 @@ export default function GameShowScreen() {
   }
 
   if (state.phase === 'queued') {
-    return <QueuedPhase onCancel={leaveQueue} />;
+    return (
+      <QueuedPhase
+        displayName={displayName}
+        avatarUrl={myAvatarUrl}
+        wins={myWins}
+        onCancel={leaveQueue}
+      />
+    );
   }
 
   if (state.phase === 'match_found') {
     return (
       <MatchFoundPhase
         displayName={displayName}
+        myAvatarUrl={myAvatarUrl}
+        myWins={myWins}
         opponentName={state.opponent?.displayName ?? 'Đối thủ'}
+        oppAvatarUrl={oppAvatarUrl}
+        oppWins={oppWins}
         countdown={countdown}
       />
     );
@@ -341,7 +389,14 @@ export default function GameShowScreen() {
         currentRankingPoints={myRankingPoints}
         userId={userId}
         winnerId={state.winnerId}
+        myName={displayName}
+        oppName={state.opponent?.displayName}
+        myAvatarUrl={myAvatarUrl}
+        oppAvatarUrl={oppAvatarUrl}
+        myWins={myWins}
+        oppWins={oppWins}
         onPlayAgain={handlePlayAgain}
+        onHome={handleBackToIdle}
       />
     );
   }

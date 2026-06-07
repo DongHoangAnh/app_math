@@ -45,25 +45,48 @@ export const s = StyleSheet.create({
   historyBtnTxt: { fontSize: 14, fontFamily: F.display, color: C.textPrimary },
   loginHint: { fontSize: 12, color: C.textSecond, textAlign: 'center', marginTop: 12 },
 
-  // ── QUEUED / MATCH FOUND ──
-  centered:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-  queueAvatarRow: { flexDirection: 'row', alignItems: 'center', gap: 28, marginBottom: 24 },
-  bigRing: {
-    width: 72, height: 72, borderRadius: 36, borderWidth: 2.5,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: C.surface,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08, shadowRadius: 10, elevation: 4,
+  // ── QUEUED / MATCH FOUND — "VS" diagonal splash (VersusSplash) ──
+  // Full-bleed split: navy top half (opponent) / orange bottom half (me),
+  // separated by a white slanted stripe. Geometry (sizes/positions) is
+  // computed from useWindowDimensions inside VersusSplash.
+  vsWrap:       { flex: 1, backgroundColor: C.primary, overflow: 'hidden' },
+  vsSheetWhite: { position: 'absolute', backgroundColor: '#FFFFFF' },
+  vsSheetNavy:  { position: 'absolute', backgroundColor: C.navy },
+  vsSide:       { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  vsRingWrap:   { width: 96, height: 96, alignItems: 'center', justifyContent: 'center' },
+  vsRipple: {
+    position: 'absolute', width: 96, height: 96, borderRadius: 48,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.8)',
   },
-  bigEmoji:    { fontSize: 34 },
-  vsHuge:      { fontSize: 20, fontFamily: F.displayBold, color: C.primaryDark },
-  matchPlayer: { alignItems: 'center', gap: 10 },
-  matchName:   { fontSize: 12, fontFamily: F.bodyMedium, color: C.textSecond, maxWidth: 90, textAlign: 'center' },
-  readyTitle:  { fontSize: 28, fontFamily: F.display, color: C.primaryDark, marginBottom: 8 },
-  searchSub:   { fontSize: 14, fontFamily: F.body, color: C.textSecond, marginBottom: 32 },
-  cancelBtn:   { paddingVertical: 10, paddingHorizontal: 20 },
-  cancelTxt:   { fontSize: 14, color: C.primary, fontFamily: F.bodyMedium, textDecorationLine: 'underline' },
-  countdownBig:{ fontSize: 64, fontFamily: F.displayBold, color: C.primary },
+  vsAvatarRing: {
+    width: 96, height: 96, borderRadius: 48, backgroundColor: '#FFFFFF',
+    justifyContent: 'center', alignItems: 'center', ...shadow('#000', 3),
+  },
+  vsAvatarImg:   { width: 84, height: 84, borderRadius: 42 },
+  vsAvatarEmoji: { fontSize: 46 },
+  vsSearchMark:  { fontSize: 40, fontFamily: F.displayBold, color: C.inkSlate2 },
+  vsName: {
+    marginTop: 14, fontSize: 16, fontFamily: F.bodyBold, color: '#FFFFFF',
+    maxWidth: 230, textAlign: 'center',
+  },
+  vsMeta: { marginTop: 4, fontSize: 13, fontFamily: F.bodyMedium, color: 'rgba(255,255,255,0.85)' },
+  vsBadge: {
+    position: 'absolute', alignSelf: 'center',
+    width: 84, height: 84, borderRadius: 42, backgroundColor: '#FFFFFF',
+    justifyContent: 'center', alignItems: 'center', ...shadow('#000', 4),
+  },
+  vsBadgeTxt:  { fontSize: 30, fontFamily: F.displayBold, color: C.primaryDark },
+  vsCountTxt:  { fontSize: 40, fontFamily: F.displayBold, color: C.primary },
+  vsStatusTxt: {
+    position: 'absolute', alignSelf: 'center',
+    fontSize: 14, fontFamily: F.bodyMedium, color: '#FFFFFF',
+  },
+  vsCancel: {
+    position: 'absolute', bottom: 40, alignSelf: 'center',
+    paddingVertical: 10, paddingHorizontal: 28,
+    borderRadius: R.pill, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)',
+  },
+  vsCancelTxt: { fontSize: 14, fontFamily: F.bodyMedium, color: '#FFFFFF' },
 
   // ── PLAYING: Battle Header ──
   battleBar: {

@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated } from 'react-native';
+import {
+  View, Text, StyleSheet, SafeAreaView, Animated, Image,
+  TouchableOpacity, StatusBar,
+} from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { useNavigation } from '@react-navigation/native';
-import { C, R, F, APP_W, shadow, hardShadow } from '../theme';
+import { C, R, F, APP_W, shadow } from '../theme';
 import { TactileButton } from './ui';
 import { useFeedback } from '../hooks/useFeedback';
 import { ASSETS } from '../assets';
@@ -29,20 +32,47 @@ interface Props {
   currentRankingPoints?: number | null;
   userId?: string | null;
   winnerId?: string | null;
+  myName?: string;
+  oppName?: string;
+  myAvatarUrl?: string | null;
+  oppAvatarUrl?: string | null;
+  myWins?: number | null;
+  oppWins?: number | null;
   onPlayAgain: () => void;
+  /** "Về trang chủ" — returns to the PK mode-select (idle) screen. */
+  onHome?: () => void;
   onReview?: () => void;
 }
 
+// Compact Vietnamese time: "5,4s" under a minute, "1p 02s" above.
 function fmtTime(ms: number): string {
-  const total = Math.floor(ms / 1000);
-  const mins  = Math.floor(total / 60);
-  const secs  = total % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const total = ms / 1000;
+  if (total < 60) return `${total.toFixed(1).replace('.', ',')}s`;
+  const mins = Math.floor(total / 60);
+  const secs = Math.round(total % 60);
+  return `${mins}p ${secs.toString().padStart(2, '0')}s`;
 }
 
+// Opponent's half of the tug-of-war bar (theme has no blue token).
+const OPP_BLUE = '#4D7CFE';
+
+// Starry-night decor positions (static so they don't jump between renders).
+const SPARKLES: { top: string; left: string; size: number; alt?: boolean }[] = [
+  { top: '6%',  left: '12%', size: 18 },
+  { top: '10%', left: '78%', size: 12, alt: true },
+  { top: '20%', left: '90%', size: 16 },
+  { top: '26%', left: '6%',  size: 11, alt: true },
+  { top: '58%', left: '88%', size: 14 },
+  { top: '66%', left: '8%',  size: 17, alt: true },
+  { top: '84%', left: '16%', size: 12 },
+  { top: '90%', left: '82%', size: 16, alt: true },
+];
+
 export default function GameResults({
-  playerScore, opponentScore, playerTime,
-  totalQuestions, rankingDelta, currentRankingPoints, userId, winnerId, onPlayAgain,
+  playerScore, opponentScore, playerTime, opponentTime,
+  totalQuestions, rankingDelta, currentRankingPoints, userId, winnerId,
+  myName, oppName, myAvatarUrl, oppAvatarUrl, myWins, oppWins,
+  onPlayAgain, onHome,
 }: Props) {
   const navigation = useNavigation<any>();
 
@@ -50,7 +80,6 @@ export default function GameResults({
   const won       = winnerId != null ? winnerId === userId : playerScore > opponentScore;
   const draw      = winnerId === null || (winnerId === undefined && playerScore === opponentScore);
   const outcome   = draw ? 'draw' : won ? 'win' : 'lose';
-  const accuracy  = totalQ > 0 ? Math.round((playerScore / totalQ) * 100) : 0;
 
   const fb = useFeedback();
   useEffect(() => {
@@ -60,25 +89,58 @@ export default function GameResults({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Banner pops in with a spring.
+  const bannerScale = useRef(new Animated.Value(0.3)).current;
+  useEffect(() => {
+    Animated.spring(bannerScale, { toValue: 1, useNativeDriver: true, tension: 120, friction: 7 }).start();
+  }, [bannerScale]);
+
+  // Auto-return to the matchmaking (mode-select) screen after 10 s, with a
+  // visible countdown. Any button press unmounts this screen → timer cleans up.
+  const [autoCountdown, setAutoCountdown] = useState(10);
+  const onHomeRef = useRef(onHome);
+  useEffect(() => { onHomeRef.current = onHome; });
+  useEffect(() => {
+    if (!onHomeRef.current) return;
+    if (autoCountdown <= 0) { onHomeRef.current(); return; }
+    const t = setTimeout(() => setAutoCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [autoCountdown]);
+
   const animatedPlayerScore   = useCountUp(playerScore);
   const animatedOpponentScore = useCountUp(opponentScore);
 
   const cfg = {
-    win:  { emoji: ASSETS.gameResults.win,  label: 'CHIẾN THẮNG!', sub: 'Bạn đã hoàn thành xuất sắc thử thách', accent: C.orange,   slab: '#C9431A' },
-    lose: { emoji: ASSETS.gameResults.lose, label: 'THUA CUỘC',    sub: 'Cố gắng hơn ở trận sau nhé!',          accent: C.inkSlate, slab: '#3D4456' },
-    draw: { emoji: ASSETS.gameResults.draw, label: 'HOÀ',          sub: 'Một trận đấu cân tài cân sức!',         accent: C.orange,   slab: '#C9431A' },
+    win:  { label: 'CHIẾN THẮNG!', sub: 'Bạn đã hoàn thành xuất sắc thử thách', banner: '#FFC53D', bannerShadow: '#C9740A' },
+    lose: { label: 'THUA CUỘC',    sub: 'Cố gắng hơn ở trận sau nhé!',          banner: '#8FA3C8', bannerShadow: '#46536E' },
+    draw: { label: 'HOÀ',          sub: 'Một trận đấu cân tài cân sức!',         banner: '#FFC53D', bannerShadow: '#C9740A' },
   }[outcome];
 
-  const xpLabel  = rankingDelta != null
+  const xpLabel = rankingDelta != null
     ? `${rankingDelta >= 0 ? '+' : ''}${rankingDelta}`
     : '+0';
-  const xpColor  = !rankingDelta ? C.inkSlate
+  const xpColor = !rankingDelta ? C.inkSlate
     : rankingDelta > 0 ? C.successDeep : C.error;
+
+  // Tug-of-war split — +0.5 each side so 0-0 still renders a 50/50 bar.
+  const myFlex  = playerScore + 0.5;
+  const opFlex  = opponentScore + 0.5;
+  const clashPct = (myFlex / (myFlex + opFlex)) * 100;
 
   return (
     <SafeAreaView style={s.safe}>
-      {/* peach glow behind the celebration */}
-      <View style={s.glow} pointerEvents="none" />
+      <StatusBar barStyle="light-content" />
+
+      {/* starry background decor */}
+      {SPARKLES.map((sp, i) => (
+        <Text
+          key={i}
+          style={[s.sparkle, { top: sp.top as any, left: sp.left as any, fontSize: sp.size }]}
+          pointerEvents="none"
+        >
+          {sp.alt ? ASSETS.gameResults.sparkleAlt : ASSETS.gameResults.sparkle}
+        </Text>
+      ))}
 
       {won && (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -94,130 +156,201 @@ export default function GameResults({
       )}
 
       <View style={s.content}>
-        {/* ── Outcome ── */}
-        <View style={[s.trophy, { backgroundColor: cfg.accent }, hardShadow(cfg.slab, 8, 0.25)]}>
-          <Text style={{ fontSize: 40 }}>{cfg.emoji}</Text>
-        </View>
-        <Text style={[s.title, { color: cfg.accent }]}>{cfg.label}</Text>
-        <Text style={s.sub}>{cfg.sub}</Text>
+        {/* ── Result card ── */}
+        <View style={s.card}>
+          {/* opponent pill overlapping the card's top edge */}
+          <View style={s.oppPill}>
+            <Text style={s.oppPillTxt} numberOfLines={1}>
+              {ASSETS.gameResults.playAgain} Đấu với {oppName ?? 'Đối thủ'}
+            </Text>
+          </View>
 
-        {/* ── VS board ── */}
-        <View style={s.vsRow}>
-          <ResultCard name="Bạn" score={animatedPlayerScore} winner={won} accent={C.orange} />
-          <ResultCard name="Đối thủ" score={animatedOpponentScore} winner={!won && !draw} accent={C.inkSlate} dim />
+          {/* banner */}
+          <Animated.Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={[
+              s.banner,
+              { color: cfg.banner, textShadowColor: cfg.bannerShadow, transform: [{ scale: bannerScale }] },
+            ]}
+          >
+            {cfg.label}
+          </Animated.Text>
+          <Text style={s.bannerSub}>{cfg.sub}</Text>
+
+          {/* time line */}
+          <Text style={s.timeLine}>
+            Tôi: <Text style={s.timeStrong}>{fmtTime(playerTime)}/{totalQ} câu</Text>
+            {'   '}Đối thủ: <Text style={s.timeStrong}>{fmtTime(opponentTime)}/{totalQ} câu</Text>
+          </Text>
+
+          {/* tug-of-war bar */}
+          <View style={s.tugWrap}>
+            <View style={s.tugBar}>
+              <View style={[s.tugMe, { flex: myFlex }]} />
+              <View style={[s.tugOpp, { flex: opFlex }]} />
+            </View>
+            <View style={[s.clashWrap, { left: `${clashPct}%` as any }]} pointerEvents="none">
+              <Text style={s.clashTxt}>{ASSETS.gameResults.clash}</Text>
+            </View>
+          </View>
+
+          {/* players */}
+          <View style={s.playersRow}>
+            <PlayerCol
+              name={myName ?? 'Bạn'}
+              avatarUrl={myAvatarUrl}
+              fallbackEmoji={ASSETS.gameResults.youAvatar}
+              score={animatedPlayerScore}
+              wins={myWins}
+              accent={C.orange}
+              isWinner={!draw && won}
+            />
+            <PlayerCol
+              name={oppName ?? 'Đối thủ'}
+              avatarUrl={oppAvatarUrl}
+              fallbackEmoji={ASSETS.gameResults.oppAvatar}
+              score={animatedOpponentScore}
+              wins={oppWins}
+              accent={OPP_BLUE}
+              isWinner={!draw && !won}
+            />
+          </View>
+
+          {/* ranking */}
+          <Text style={s.rankLine}>
+            Điểm hạng: <Text style={[s.rankDelta, { color: xpColor }]}>{xpLabel}</Text>
+            {currentRankingPoints != null && (
+              <Text> · Tổng: {currentRankingPoints.toLocaleString()}</Text>
+            )}
+          </Text>
         </View>
 
-        {/* ── 3 stat cards ── */}
-        <View style={s.statRow}>
-          <StatCard icon={ASSETS.gameResults.accuracy} value={`${accuracy}%`}      label="Chính xác" />
-          <StatCard icon={ASSETS.gameResults.time} value={fmtTime(playerTime)} label="Thời gian" />
-          <StatCard icon={ASSETS.gameResults.points} value={xpLabel}             label="Điểm hạng" valueColor={xpColor} />
+        {/* ── CTA buttons (kept: same actions, Vietnamese labels) ── */}
+        <View style={s.ctaRow}>
+          <View style={s.ctaFlex}>
+            <TactileButton
+              title="Về trang chủ"
+              variant="soft"
+              style={{ paddingVertical: 16 }}  // match primary's height in the row
+              textStyle={{ fontSize: 16 }}
+              onPress={onHome ?? (() => navigation.navigate('HomeTab'))}
+            />
+          </View>
+          <View style={s.ctaFlex}>
+            <TactileButton
+              title="Đấu tiếp"
+              icon={ASSETS.gameResults.playAgain}
+              onPress={onPlayAgain}
+            />
+          </View>
         </View>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('MatchHistoryTab')}
+          activeOpacity={0.7}
+          style={s.historyLink}
+        >
+          <Text style={s.historyLinkTxt}>{ASSETS.gameResults.history} Xem lịch sử đấu</Text>
+        </TouchableOpacity>
 
-        {currentRankingPoints != null && (
-          <Text style={s.rankTotal}>Điểm xếp hạng: {currentRankingPoints.toLocaleString()}</Text>
+        {onHome != null && autoCountdown > 0 && (
+          <Text style={s.autoLeave}>Tự về màn ghép trận sau {autoCountdown} giây</Text>
         )}
-
-        {/* ── CTA buttons ── */}
-        <View style={s.ctaCol}>
-          <TactileButton title="Đấu tiếp" icon={ASSETS.gameResults.playAgain} onPress={onPlayAgain} />
-          <TactileButton
-            title="Xem lịch sử đấu"
-            icon={ASSETS.gameResults.history}
-            variant="soft"
-            onPress={() => navigation.navigate('MatchHistoryTab')}
-          />
-          <TactileButton title="Về trang chủ" variant="outline" onPress={() => navigation.navigate('HomeTab')} />
-        </View>
       </View>
     </SafeAreaView>
   );
 }
 
-function ResultCard({
-  name, score, winner, accent, dim,
-}: { name: string; score: number; winner: boolean; accent: string; dim?: boolean }) {
+function PlayerCol({
+  name, avatarUrl, fallbackEmoji, score, wins, accent, isWinner,
+}: {
+  name: string; avatarUrl?: string | null; fallbackEmoji: string;
+  score: number; wins?: number | null; accent: string; isWinner: boolean;
+}) {
   return (
-    <View style={[
-      s.resultCard,
-      { borderColor: winner ? accent : C.line },
-      winner ? shadow('#000', 2) : shadow('#000', 1),
-      dim ? { opacity: 0.92, transform: [{ scale: 0.97 }] } : null,
-    ]}>
-      <View style={[s.resultAvatar, { borderColor: winner ? accent : C.line }]}>
-        <Text style={{ fontSize: 28 }}>{name === 'Bạn' ? ASSETS.gameResults.youAvatar : ASSETS.gameResults.oppAvatar}</Text>
+    <View style={s.playerCol}>
+      <View style={[s.playerRing, { borderColor: accent }]}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={s.playerImg} />
+        ) : (
+          <Text style={{ fontSize: 30 }}>{fallbackEmoji}</Text>
+        )}
+        {isWinner && <Text style={s.playerCrown}>{ASSETS.gameResults.crown}</Text>}
       </View>
-      <Text style={s.resultName}>{name}</Text>
-      <Text style={[s.resultScore, { color: accent }]}>{score}</Text>
-      <Text style={s.resultCaption}>câu đúng</Text>
-      {winner && (
-        <View style={[s.winnerChip, { backgroundColor: accent }]}>
-          <Text style={s.winnerChipText}>THẮNG</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-function StatCard({
-  icon, value, label, valueColor,
-}: { icon: string; value: string; label: string; valueColor?: string }) {
-  return (
-    <View style={s.statCard}>
-      <Text style={s.statIcon}>{icon}</Text>
-      <Text style={[s.statValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
-      <Text style={s.statLabel}>{label}</Text>
+      <Text style={s.playerName} numberOfLines={1}>{name}</Text>
+      <Text style={[s.playerScore, { color: accent }]}>{score} câu đúng</Text>
+      {wins != null && <Text style={s.playerWins}>Thắng {wins} trận</Text>}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
-  glow: {
-    position: 'absolute', top: -120, alignSelf: 'center',
-    width: 420, height: 420, borderRadius: 210,
-    backgroundColor: C.peachGlow, opacity: 0.35,
+  // Starry-night stage
+  safe:    { flex: 1, backgroundColor: C.navy },
+  sparkle: { position: 'absolute', color: 'rgba(255,255,255,0.5)' },
+
+  content: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 20, width: '100%', maxWidth: 430, alignSelf: 'center',
   },
 
-  content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 8 },
-
-  // Outcome
-  trophy: {
-    width: 80, height: 80, borderRadius: R.pill,
-    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
+  // The big light result card
+  card: {
+    width: '100%', backgroundColor: '#F4F9FF',
+    borderRadius: 28, borderWidth: 4, borderColor: 'rgba(255,255,255,0.85)',
+    paddingTop: 34, paddingBottom: 20, paddingHorizontal: 18,
+    alignItems: 'center', ...shadow('#000', 4),
   },
-  title: { fontFamily: F.display, fontSize: 40, letterSpacing: -0.8, marginTop: 8 },
-  sub:   { fontFamily: F.body, fontSize: 16, color: C.inkBrown, textAlign: 'center', marginBottom: 12 },
-
-  // VS board
-  vsRow: { flexDirection: 'row', gap: 14, width: '100%', marginTop: 4 },
-  resultCard: {
-    flex: 1, backgroundColor: C.surface, borderRadius: R.xl, borderWidth: 2,
-    paddingVertical: 16, paddingHorizontal: 12, alignItems: 'center', gap: 6,
+  oppPill: {
+    position: 'absolute', top: -16, alignSelf: 'center',
+    backgroundColor: C.navy, borderRadius: R.pill,
+    paddingHorizontal: 16, paddingVertical: 7,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)',
   },
-  resultAvatar: {
-    width: 64, height: 64, borderRadius: R.pill, borderWidth: 2,
-    backgroundColor: C.surfaceSunken, justifyContent: 'center', alignItems: 'center',
+  oppPillTxt: { fontFamily: F.bodyBold, fontSize: 13, color: '#fff', maxWidth: 220 },
+
+  banner: {
+    fontFamily: F.displayBold, fontSize: 40, letterSpacing: 1,
+    textAlign: 'center', maxWidth: '100%',
+    textShadowOffset: { width: 0, height: 4 }, textShadowRadius: 0,
   },
-  resultName:    { fontFamily: F.display, fontSize: 14, color: C.ink },
-  resultScore:   { fontFamily: F.displayBold, fontSize: 40, lineHeight: 44 },
-  resultCaption: { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkSlate },
-  winnerChip:    { borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 3, marginTop: 2 },
-  winnerChipText:{ fontFamily: F.display, fontSize: 11, letterSpacing: 0.5, color: '#fff' },
+  bannerSub: { fontFamily: F.body, fontSize: 13, color: C.inkBrown, marginTop: 4, textAlign: 'center' },
 
-  // Stat cards
-  statRow:  { flexDirection: 'row', gap: 12, marginTop: 20, width: '100%' },
-  statCard: {
-    flex: 1, backgroundColor: C.surface, borderWidth: 1, borderColor: C.line,
-    borderRadius: R.md, paddingVertical: 12, paddingHorizontal: 6,
-    alignItems: 'center', gap: 3, ...shadow('#000', 1),
+  timeLine:   { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkSlate, marginTop: 14, textAlign: 'center' },
+  timeStrong: { fontFamily: F.bodyBold, color: C.ink },
+
+  // Tug-of-war
+  tugWrap: { width: '100%', marginTop: 14, justifyContent: 'center' },
+  tugBar: {
+    flexDirection: 'row', height: 16, borderRadius: R.pill,
+    overflow: 'hidden', borderWidth: 1.5, borderColor: '#fff',
+    ...shadow('#000', 1),
   },
-  statIcon:  { fontSize: 20 },
-  statValue: { fontFamily: F.displayBold, fontSize: 16, color: C.ink },
-  statLabel: { fontFamily: F.bodyMedium, fontSize: 11, color: C.inkSlate },
+  tugMe:  { backgroundColor: C.orange },
+  tugOpp: { backgroundColor: OPP_BLUE },
+  clashWrap: { position: 'absolute', marginLeft: -13 },
+  clashTxt:  { fontSize: 26, textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
 
-  rankTotal: { fontFamily: F.bodyMedium, fontSize: 13, color: C.inkBrown, marginTop: 16 },
+  // Players
+  playersRow: { flexDirection: 'row', width: '100%', marginTop: 18 },
+  playerCol:  { flex: 1, alignItems: 'center', gap: 3 },
+  playerRing: {
+    width: 62, height: 62, borderRadius: 31, borderWidth: 2.5,
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+  },
+  playerImg:   { width: 54, height: 54, borderRadius: 27 },
+  playerCrown: { position: 'absolute', top: -16, right: -8, fontSize: 20, transform: [{ rotate: '24deg' }] },
+  playerName:  { fontFamily: F.bodyBold, fontSize: 13, color: C.ink, maxWidth: 130, marginTop: 4 },
+  playerScore: { fontFamily: F.displayBold, fontSize: 15 },
+  playerWins:  { fontFamily: F.bodyMedium, fontSize: 11, color: C.inkSlate },
 
-  // CTA
-  ctaCol: { width: '100%', gap: 12, marginTop: 24 },
+  rankLine:  { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkSlate, marginTop: 16 },
+  rankDelta: { fontFamily: F.displayBold, fontSize: 13 },
+
+  // CTAs on the navy stage
+  ctaRow:  { flexDirection: 'row', gap: 12, width: '100%', marginTop: 26 },
+  ctaFlex: { flex: 1 },
+  historyLink:    { marginTop: 16, paddingVertical: 6, paddingHorizontal: 12 },
+  historyLinkTxt: { fontFamily: F.bodyMedium, fontSize: 14, color: 'rgba(255,255,255,0.85)', textDecorationLine: 'underline' },
+  autoLeave:      { marginTop: 10, fontFamily: F.bodyMedium, fontSize: 12, color: 'rgba(255,255,255,0.55)' },
 });

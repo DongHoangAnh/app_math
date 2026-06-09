@@ -34,10 +34,11 @@ Every difficulty uses **mixed operations (+ − × ÷)** plus a comparison quest
   - D2 (×1.5): **+8 / −5** (7.5→8, 4.5→5)
   - D3 (×2): **+10 / −6**
   - Disconnect win uses the same multiplier.
-- **Matchmaking:** prefer pairing players who chose the **same difficulty**. After the
-  existing ~12 s fallback wait, match anyone; the room's difficulty **and** multiplier
-  follow the longest-waiting player (p1) and apply to **both** players (consistent with
-  how p1 already decides the question set today).
+- **Matchmaking:** **strictly same difficulty** — a player is only ever paired with
+  someone who chose the **same difficulty**. There is **no** cross-difficulty fallback;
+  if nobody on the same difficulty is waiting, the player stays in queue until one
+  appears. Both players therefore always share the same range and multiplier. (This
+  removes the old ~12 s "match anyone" fallback.)
 
 ## Match history (in scope)
 
@@ -93,8 +94,8 @@ Match difficulty **is** persisted and shown in history.
     (multiplier looked up from it).
   - `createRoom`: `difficulty = normalizeDifficulty(p1.difficulty)`;
     `generateQuestions(QUESTIONS_PER_MATCH, difficulty)`.
-  - `tryMatch` Pass 1 pairs by **difficulty** (replacing same-mode); Pass-2 fallback
-    logic unchanged (p1 decides).
+  - `tryMatch` pairs **only** players with the same difficulty; the old Pass-2
+    "match anyone" fallback (and `MATCH_FALLBACK_MS`) is **removed**.
   - `finishGame` and the disconnect path pass the room's multiplier through.
   - (Optional) include `difficulty`/`multiplier` in `MATCH_FOUND` for client display.
 - `supabase-server.ts`
@@ -124,8 +125,8 @@ Match difficulty **is** persisted and shown in history.
   ops + comparison appear.
 - `server/__tests__/ranking` (new or extended): multiplier rounding —
   D2 → +8/−5, D3 → +10/−6.
-- `server/__tests__/gameshow-ws.integration.test.ts`: matchmaking pairs by difficulty;
-  fallback uses p1's difficulty/multiplier.
+- `server/__tests__/gameshow-ws.integration.test.ts`: same-difficulty players pair;
+  two different-difficulty players do **not** pair; D3 win awards the multiplied delta.
 - Match-history mapping: `rankingDelta` reflects the stored difficulty's multiplier
   (e.g. a D2 win shows +8, not +5).
 
@@ -136,7 +137,7 @@ IdlePhase (tap Độ khó N)
   → GameShowScreen.onJoin(N)
   → useGameShowWS.joinQueue(N)
   → JOIN_QUEUE { difficulty: N }
-  → tryMatch() pairs same-difficulty (or p1 fallback)
+  → tryMatch() pairs ONLY same-difficulty (no cross-difficulty fallback)
   → createRoom: generateQuestions(10, N), room.difficulty = N
   → MATCH_FOUND { questions }
   → play …
@@ -146,7 +147,9 @@ IdlePhase (tap Độ khó N)
 
 ## Error handling / edge cases
 
-- **Cross-difficulty fallback match:** room difficulty = p1's, so both players get p1's
-  questions and p1's multiplier — both rewarded equally for the match they played.
+- **No cross-difficulty matches:** players are only ever paired with someone on the
+  same difficulty. If nobody on that difficulty is waiting, the player simply stays in
+  queue — never matched into a different difficulty. Both players in a room always share
+  the same range and multiplier.
 - **Untrusted difficulty:** `normalizeDifficulty` coerces any missing/invalid value to
   `1`, mirroring the existing `normalizeMode` guard.

@@ -20,7 +20,7 @@
 - Operand range by difficulty: D1 `0–10`, D2 `0–100`, D3 `0–1000`.
 - **Global answer rule (all difficulties):** every answer is a **positive integer**, `1 ≤ answer < 2000`.
 - Points (base +5 / −3) × multiplier, rounded with `Math.round` on magnitude: D1 +5/−3, D2 +8/−5, D3 +10/−6. Disconnect win uses the same multiplier.
-- Matchmaking prefers same difficulty; the existing ~12 s fallback matches anyone, with the room's difficulty (and multiplier) following p1.
+- Matchmaking is **strictly same-difficulty**: a player is only paired with someone who chose the same difficulty. There is **no** cross-difficulty fallback — remove the old ~12 s "match anyone" path (`MATCH_FALLBACK_MS` + Pass 2). If no same-difficulty partner is waiting, the player stays queued.
 - Difficulty stored on `game_matches`; history recomputes `rankingDelta` with the stored difficulty's multiplier.
 
 ---
@@ -532,25 +532,49 @@ Add `difficulty` to BOTH `MATCH_FOUND` payloads (so the client can show the mult
         difficulty,
 ```
 
-- [ ] **Step 4: Match by difficulty in `tryMatch`**
+- [ ] **Step 4: Match STRICTLY by difficulty in `tryMatch` (remove the cross-difficulty fallback)**
 
-In `tryMatch` Pass 1, replace the mode comparison:
-
-```typescript
-        const mode1 = normalizeMode(waitingQueue[i].mode);
-        for (let j = i + 1; j < waitingQueue.length; j++) {
-            if (normalizeMode(waitingQueue[j].mode) === mode1) {
-```
-
-with:
+Replace the **entire** `tryMatch` function with a strict version that only ever pairs two players of the same difficulty — no "match anyone" fallback:
 
 ```typescript
+function tryMatch() {
+    if (waitingQueue.length < 2) return;
+
+    // Pair ONLY players who chose the SAME difficulty — never across difficulties,
+    // because the point multiplier and number range must be identical for both.
+    // Earliest-waiting player first; if no same-difficulty partner exists, the player
+    // simply stays in the queue until one joins.
+    for (let i = 0; i < waitingQueue.length; i++) {
         const diff1 = normalizeDifficulty(waitingQueue[i].difficulty);
         for (let j = i + 1; j < waitingQueue.length; j++) {
             if (normalizeDifficulty(waitingQueue[j].difficulty) === diff1) {
+                const [p1] = waitingQueue.splice(i, 1);
+                const [p2] = waitingQueue.splice(j - 1, 1); // j shifted left after removing i
+                createRoom(p1, p2);
+                return tryMatch(); // keep pairing while same-difficulty pairs remain
+            }
+        }
+    }
+}
 ```
 
-(Pass 2 fallback is unchanged — p1 still decides via `createRoom`.)
+Then **delete** the now-unused fallback constant. Remove this line from the "Server-only tunables" block:
+
+```typescript
+const MATCH_FALLBACK_MS = 12_000;   // after this wait, ignore mode and match anyone
+```
+
+and update the comment just above `MATCHMAKING_SWEEP_MS` (which referenced the fallback) so it reads:
+
+```typescript
+// How often to re-run matchmaking on a timer as a safety net (in addition to running
+// it on every JOIN_QUEUE), so a same-difficulty pair still gets matched promptly.
+const MATCHMAKING_SWEEP_MS = 2_000; // re-run matchmaking even when nobody new joins
+```
+
+Also update the comment on the `matchSweep` interval inside `setupGameShowWS` if it mentions the fallback — change it to: `// Matchmaking sweep — re-run matching on a timer as a safety net (strict same-difficulty pairing only).`
+
+(`queuedAt` is now only informational; leaving it set is harmless and keeps the diff small.)
 
 - [ ] **Step 5: Apply the multiplier on finish**
 
@@ -830,16 +854,44 @@ Add this test inside the `describe('full match flow', ...)` block (after the exi
   });
 ```
 
-- [ ] **Step 5: Run the full server suite**
+- [ ] **Step 5: Add a "no cross-difficulty match" test**
+
+Add this test inside the `describe('matchmaking', ...)` block (after the existing pairing test). It proves two players on different difficulties are NOT matched, while a same-difficulty partner joining a beat later IS matched:
+
+```typescript
+  it('never pairs players on different difficulties', async () => {
+    const a = makeClient('xdiff-a');
+    const b = makeClient('xdiff-b');
+    await Promise.all([a.opened, b.opened]);
+    join(a, 1); // easy
+    join(b, 3); // hard
+    // Neither should get a MATCH_FOUND — they must not be paired across difficulties.
+    await expect(a.waitType('MATCH_FOUND', 1500)).rejects.toThrow();
+    expect(b.buf.some((m) => m.type === 'MATCH_FOUND')).toBe(false);
+
+    // A same-difficulty partner for A joins → A matches with it, B stays waiting.
+    const c = makeClient('xdiff-c');
+    await c.opened;
+    join(c, 1);
+    const [ma, mc] = await Promise.all([a.waitType('MATCH_FOUND'), c.waitType('MATCH_FOUND')]);
+    expect(ma.roomId).toBe(mc.roomId);
+    expect(ma.difficulty).toBe(1);
+    expect(b.buf.some((m) => m.type === 'MATCH_FOUND')).toBe(false);
+
+    a.close(); b.close(); c.close();
+  });
+```
+
+- [ ] **Step 6: Run the full server suite**
 
 Run: `npx jest server/__tests__`
-Expected: PASS — matchmaking, full-match (default D1 → +5/−3), D3 multiplier (+10/−6), emoji, chat, disconnect (still +5 at default D1), session locks.
+Expected: PASS — same-difficulty pairing, no cross-difficulty pairing, full-match (default D1 → +5/−3), D3 multiplier (+10/−6), emoji, chat, disconnect (still +5 at default D1), session locks.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add server/__tests__/gameshow-ws.integration.test.ts
-git commit -m "test(gameshow-ws): difficulty matchmaking + multiplied delta coverage"
+git commit -m "test(gameshow-ws): strict difficulty matchmaking + multiplied delta coverage"
 ```
 
 ---

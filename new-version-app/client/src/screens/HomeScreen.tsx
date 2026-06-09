@@ -143,7 +143,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── PK modes (Xiaoyuan-style feature cards) ── */}
+        {/* ── PK difficulties (Xiaoyuan-style feature cards) ── */}
         <View style={{ gap: 12 }}>
           <Text style={styles.h3}>Chọn độ khó</Text>
           <View style={styles.modeRow}>

@@ -7,7 +7,7 @@ export const s = StyleSheet.create({
   bg:         { flex: 1, backgroundColor: C.background },
   centerFlex: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
 
-  // ── IDLE — Battle Math lobby (Xiaoyuan-style mode cards) ──
+  // ── IDLE — Battle Math lobby (Xiaoyuan-style difficulty cards) ──
   idleWrap: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 32, gap: 14 },
 
   // Solid header banner: title + sub + ranking chip + history button.

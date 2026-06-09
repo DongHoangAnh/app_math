@@ -422,6 +422,7 @@ export type MatchHistoryItem = {
     outcome: "win" | "lose" | "draw";
     rankingDelta: number;
     questionsCount: number;
+    difficulty: number;
 };
 
 export async function getMatchHistory(

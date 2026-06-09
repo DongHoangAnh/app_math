@@ -21,6 +21,7 @@ export type { GameQuestion, OpponentInfo, GameResult, ChatMessage, MatchPhase };
 export interface GameShowState {
     phase: MatchPhase;
     roomId: string | null;
+    difficulty: number;
     questions: GameQuestion[];
     // My local progress
     currentQuestionIndex: number;
@@ -61,6 +62,7 @@ export function useGameShowWS(
     const [state, setState] = useState<GameShowState>({
         phase: "idle",
         roomId: null,
+        difficulty: 1,
         questions: [],
         currentQuestionIndex: 0,
         myAnswers: {},
@@ -122,6 +124,7 @@ export function useGameShowWS(
                         ...s,
                         phase: "match_found",
                         roomId: msg.roomId,
+                        difficulty: msg.difficulty ?? 1,
                         questions: msg.questions,
                         currentQuestionIndex: 0,
                         myAnswers: {},
@@ -250,7 +253,7 @@ export function useGameShowWS(
     }, []);
 
     // ─── Join queue ─────────────────────────────────────────
-    const joinQueue = useCallback(async (mode?: string) => {
+    const joinQueue = useCallback(async (difficulty?: number) => {
         if (!userId) return;
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token ?? "";
@@ -259,7 +262,7 @@ export function useGameShowWS(
         connect();
         const tryJoin = () => {
             if (wsRef.current?.readyState === WebSocket.OPEN) {
-                send({ type: "JOIN_QUEUE", userId, token, deviceId, displayName, grade, winRate, totalScore, mode });
+                send({ type: "JOIN_QUEUE", userId, token, deviceId, displayName, grade, winRate, totalScore, difficulty });
             } else {
                 setTimeout(tryJoin, 200);
             }
@@ -362,6 +365,7 @@ export function useGameShowWS(
         setState({
             phase: "idle",
             roomId: null,
+            difficulty: 1,
             questions: [],
             currentQuestionIndex: 0,
             myAnswers: {},

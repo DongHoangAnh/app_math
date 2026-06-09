@@ -21,11 +21,11 @@ jest.mock('../supabase-server', () => {
         ? { id: token.slice('valid:'.length) }
         : null,
     ),
-    saveGameMatch: jest.fn(async (data: any) =>
-      computeRankingDeltas(data.winner_id, data.player1_id, data.player2_id),
+    saveGameMatch: jest.fn(async (data: any, multiplier = 1) =>
+      computeRankingDeltas(data.winner_id, data.player1_id, data.player2_id, multiplier),
     ),
     saveMatchRecord: jest.fn(async () => undefined),
-    saveDisconnectWin: jest.fn(async () => 5),
+    saveDisconnectWin: jest.fn(async (_id: string, _name: string, multiplier = 1) => Math.round(5 * multiplier)),
     updateTasksAfterMatch: jest.fn(async () => undefined),
     getLockOwnerDeviceId: jest.fn(async () => null),
   };
@@ -109,22 +109,22 @@ function makeClient(userId: string) {
 
 type Client = ReturnType<typeof makeClient>;
 
-const join = (c: Client, mode?: string) =>
+const join = (c: Client, difficulty?: number) =>
   c.send({
     type: 'JOIN_QUEUE',
     userId: c.userId,
     token: `valid:${c.userId}`,
     displayName: c.userId,
-    mode,
+    difficulty,
   });
 
 /** Pair two fresh clients and return them once both are in a room. */
-async function pair(idA: string, idB: string, mode?: string) {
+async function pair(idA: string, idB: string, difficulty?: number) {
   const a = makeClient(idA);
   const b = makeClient(idB);
   await Promise.all([a.opened, b.opened]);
-  join(a, mode);
-  join(b, mode);
+  join(a, difficulty);
+  join(b, difficulty);
   const [ma, mb] = await Promise.all([
     a.waitType('MATCH_FOUND'),
     b.waitType('MATCH_FOUND'),
@@ -136,7 +136,7 @@ async function pair(idA: string, idB: string, mode?: string) {
 
 describe('matchmaking', () => {
   it('pairs two queued players into the same room with a full question set', async () => {
-    const { a, b, ma, mb } = await pair('mm-a', 'mm-b', 'add_sub');
+    const { a, b, ma, mb } = await pair('mm-a', 'mm-b', 1);
 
     expect(ma.type).toBe('MATCH_FOUND');
     expect(ma.roomId).toBe(mb.roomId);
@@ -149,6 +149,28 @@ describe('matchmaking', () => {
 
     a.close();
     b.close();
+  });
+
+  it('never pairs players on different difficulties', async () => {
+    const a = makeClient('xdiff-a');
+    const b = makeClient('xdiff-b');
+    await Promise.all([a.opened, b.opened]);
+    join(a, 1); // easy
+    join(b, 3); // hard
+    // Neither should get a MATCH_FOUND — they must not be paired across difficulties.
+    await expect(a.waitType('MATCH_FOUND', 1500)).rejects.toThrow();
+    expect(b.buf.some((m) => m.type === 'MATCH_FOUND')).toBe(false);
+
+    // A same-difficulty partner for A joins → A matches with it, B stays waiting.
+    const c = makeClient('xdiff-c');
+    await c.opened;
+    join(c, 1);
+    const [ma, mc] = await Promise.all([a.waitType('MATCH_FOUND'), c.waitType('MATCH_FOUND')]);
+    expect(ma.roomId).toBe(mc.roomId);
+    expect(ma.difficulty).toBe(1);
+    expect(b.buf.some((m) => m.type === 'MATCH_FOUND')).toBe(false);
+
+    a.close(); b.close(); c.close();
   });
 
   it('rejects a JOIN_QUEUE with an invalid token (close code 4001)', async () => {
@@ -198,6 +220,29 @@ describe('full match flow', () => {
     // Ranking deltas from the real ./ranking math: winner +5, loser -3.
     expect(resA.rankingDelta).toBe(5);
     expect(resB.rankingDelta).toBe(-3);
+
+    a.close();
+    b.close();
+  });
+
+  it('applies the difficulty multiplier to ranking deltas (D3 → +10 / -6)', async () => {
+    const { a, b, ma } = await pair('d3-a', 'd3-b', 3);
+    const questions: any[] = ma.questions;
+    const roomId: string = ma.roomId;
+    expect(ma.difficulty).toBe(3);
+
+    for (let i = 0; i < questions.length; i++) {
+      a.send({ type: 'SUBMIT_ANSWER', userId: a.userId, roomId, questionIndex: i, answer: questions[i].correctAnswer, timeMs: 1000 });
+    }
+    await a.waitType('YOU_FINISHED');
+    for (let i = 0; i < questions.length; i++) {
+      b.send({ type: 'SUBMIT_ANSWER', userId: b.userId, roomId, questionIndex: i, answer: `${questions[i].correctAnswer}_wrong`, timeMs: 2000 });
+    }
+
+    const over = await a.waitType('GAME_OVER');
+    expect(over.winnerId).toBe('d3-a');
+    expect(over.results['d3-a'].rankingDelta).toBe(10);
+    expect(over.results['d3-b'].rankingDelta).toBe(-6);
 
     a.close();
     b.close();

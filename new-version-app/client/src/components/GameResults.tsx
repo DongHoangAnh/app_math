@@ -39,7 +39,7 @@ interface Props {
   myWins?: number | null;
   oppWins?: number | null;
   onPlayAgain: () => void;
-  /** "Về trang chủ" — returns to the PK mode-select (idle) screen. */
+  /** "Về trang chủ" — returns to the difficulty picker (idle) screen. */
   onHome?: () => void;
   onReview?: () => void;
 }
@@ -95,7 +95,7 @@ export default function GameResults({
     Animated.spring(bannerScale, { toValue: 1, useNativeDriver: true, tension: 120, friction: 7 }).start();
   }, [bannerScale]);
 
-  // Auto-return to the matchmaking (mode-select) screen after 10 s, with a
+  // Auto-return to the matchmaking (difficulty picker) screen after 10 s, with a
   // visible countdown. Any button press unmounts this screen → timer cleans up.
   const [autoCountdown, setAutoCountdown] = useState(10);
   const onHomeRef = useRef(onHome);

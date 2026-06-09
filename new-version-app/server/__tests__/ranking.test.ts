@@ -58,3 +58,32 @@ describe('ranking — computeRankingDeltas', () => {
     expect(player1Delta + player2Delta).toBe(POINTS_WIN - POINTS_LOSE);
   });
 });
+
+describe('ranking — multiplier', () => {
+  it('rounds win/lose by the difficulty multiplier (half-up on magnitude)', () => {
+    // D2 ×1.5 → 7.5→8 win, 4.5→5 lose
+    expect(outcomeDelta('win', 1.5)).toBe(8);
+    expect(outcomeDelta('lose', 1.5)).toBe(-5);
+    // D3 ×2 → 10 win, 6 lose
+    expect(outcomeDelta('win', 2)).toBe(10);
+    expect(outcomeDelta('lose', 2)).toBe(-6);
+    // Draw is always zero regardless of multiplier
+    expect(outcomeDelta('draw', 2)).toBe(0);
+  });
+
+  it('defaults to multiplier 1 when omitted', () => {
+    expect(outcomeDelta('win')).toBe(5);
+    expect(outcomeDelta('lose')).toBe(-3);
+  });
+
+  it('computeRankingDeltas applies the multiplier to both players', () => {
+    expect(computeRankingDeltas('p1', 'p1', 'p2', 1.5)).toEqual({
+      player1Delta: 8,
+      player2Delta: -5,
+    });
+    expect(computeRankingDeltas('p2', 'p1', 'p2', 2)).toEqual({
+      player1Delta: -6,
+      player2Delta: 10,
+    });
+  });
+});

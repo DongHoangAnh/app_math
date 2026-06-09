@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import OpponentInfoModal from '../components/OpponentInfoModal';
 import { gameApi, ApiError, type MatchHistoryItem as MatchItem } from '../services/api';
 import { ASSETS } from '../assets';
+import { difficultyById } from '../../../shared/constants';
 
 const PAGE = 5; // tải 5 trận mỗi lần
 
@@ -107,6 +108,7 @@ export default function MatchHistoryScreen() {
           <Text style={s.meta}>
             Đúng {item.myCorrect}/{item.questionsCount} · {fmtDate(item.playedAt)}
           </Text>
+          <Text style={s.diffTag}>{difficultyById(item.difficulty).label}</Text>
         </View>
 
         <View style={s.cardRight}>
@@ -216,6 +218,7 @@ const s = StyleSheet.create({
   oppAvatarInitial: { fontSize: 14, color: '#fff', fontFamily: F.display },
   opponent: { flex: 1, fontSize: 15, fontFamily: F.display, color: C.ink },
   meta:     { fontSize: 12, color: C.inkBrown, fontFamily: F.body },
+  diffTag:  { fontSize: 11, color: C.inkSlate, fontFamily: F.bodyMedium },
 
   cardRight: { alignItems: 'flex-end', gap: 3 },
   scoreLine: { fontSize: 18, fontFamily: F.displayBold },

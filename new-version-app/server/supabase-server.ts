@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { POINTS_WIN, computeRankingDeltas, outcomeDelta } from "./ranking";
+import { multiplierForDifficulty } from "../shared/constants";
 
 const supabaseUrl = process.env.SUPABASE_URL ?? "";
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY ?? "";
@@ -36,6 +37,7 @@ export type GameMatchData = {
     player2_total_time_ms: number;
     winner_id: string | null;
     questions_count: number;
+    difficulty: number;
 };
 
 async function insertGameMatch(data: GameMatchData): Promise<void> {
@@ -53,6 +55,7 @@ async function insertGameMatch(data: GameMatchData): Promise<void> {
         player2_total_time_ms: data.player2_total_time_ms,
         winner_id: data.winner_id,
         questions_count: data.questions_count,
+        difficulty: data.difficulty,
     });
     if (matchError) {
         console.error("[Supabase] Insert game_matches error:", matchError.message);
@@ -64,13 +67,13 @@ export async function saveMatchRecord(data: GameMatchData): Promise<void> {
     await insertGameMatch(data);
 }
 
-export async function saveGameMatch(data: GameMatchData): Promise<{ player1Delta: number; player2Delta: number }> {
+export async function saveGameMatch(data: GameMatchData, multiplier = 1): Promise<{ player1Delta: number; player2Delta: number }> {
     // 1. Save match record
     await insertGameMatch(data);
 
-    // 2. Determine point deltas (pure math in ./ranking)
+    // 2. Determine point deltas (pure math in ./ranking), scaled by difficulty
     const { player1Delta: p1Delta, player2Delta: p2Delta } =
-        computeRankingDeltas(data.winner_id, data.player1_id, data.player2_id);
+        computeRankingDeltas(data.winner_id, data.player1_id, data.player2_id, multiplier);
 
     // 3. Update ranking points atomically via RPC (floor at 0 enforced in DB)
     await Promise.all([
@@ -91,10 +94,12 @@ export async function saveGameMatch(data: GameMatchData): Promise<{ player1Delta
 
 export async function saveDisconnectWin(
     winnerId: string,
-    winnerDisplayName: string
+    winnerDisplayName: string,
+    multiplier = 1,
 ): Promise<number> {
-    await applyRankingDelta(winnerId, POINTS_WIN, winnerDisplayName);
-    return POINTS_WIN;
+    const delta = Math.round(POINTS_WIN * multiplier);
+    await applyRankingDelta(winnerId, delta, winnerDisplayName);
+    return delta;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -417,6 +422,7 @@ export type MatchHistoryItem = {
     outcome: "win" | "lose" | "draw";
     rankingDelta: number;
     questionsCount: number;
+    difficulty: number;
 };
 
 export async function getMatchHistory(
@@ -426,7 +432,7 @@ export async function getMatchHistory(
 ): Promise<MatchHistoryItem[]> {
     const { data, error } = await getSupabaseClient()
         .from("game_matches")
-        .select("id,room_id,played_at,player1_id,player2_id,player1_display_name,player2_display_name,player1_score,player2_score,player1_correct,player2_correct,winner_id,questions_count")
+        .select("id,room_id,played_at,player1_id,player2_id,player1_display_name,player2_display_name,player1_score,player2_score,player1_correct,player2_correct,winner_id,questions_count,difficulty")
         .or(`player1_id.eq.${userId},player2_id.eq.${userId}`)
         .order("played_at", { ascending: false })
         .range(offset, offset + limit - 1);
@@ -437,8 +443,9 @@ export async function getMatchHistory(
         const isP1 = m.player1_id === userId;
         const outcome: "win" | "lose" | "draw" =
             m.winner_id == null ? "draw" : m.winner_id === userId ? "win" : "lose";
-        // Điểm xếp hạng cộng/trừ tương ứng kết quả (cùng quy tắc khi kết thúc trận)
-        const rankingDelta = outcomeDelta(outcome);
+        const difficulty = m.difficulty ?? 1;
+        // Điểm xếp hạng tính theo hệ số của độ khó trận đó (đồng bộ với lúc kết thúc trận)
+        const rankingDelta = outcomeDelta(outcome, multiplierForDifficulty(difficulty));
         return {
             id: String(m.id),
             roomId: m.room_id,
@@ -453,6 +460,7 @@ export async function getMatchHistory(
             outcome,
             rankingDelta,
             questionsCount: m.questions_count ?? 10,
+            difficulty,
         };
     });
 

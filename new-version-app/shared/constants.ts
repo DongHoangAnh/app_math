@@ -3,7 +3,7 @@
 // Centralized so client UI and server logic stay in sync.
 // ═══════════════════════════════════════════════════════════
 
-import type { GameMode } from "./types";
+import type { GameDifficulty } from "./types";
 
 // ─── Match shape ────────────────────────────────────────────
 export const QUESTIONS_PER_MATCH = 10;
@@ -12,19 +12,34 @@ export const QUESTION_SECONDS = 10;
 // Keep at most this many chat/emoji bubbles in client state.
 export const CHAT_HISTORY_MAX = 50;
 
-// ─── Play modes (client picker + server question gen) ───────
-export interface GameModeOption {
-    id: GameMode;
-    label: string;
-    desc: string;    // one-word difficulty chip
-    detail: string;  // short one-line description (PK lobby cards)
+// ─── Difficulty levels (client picker + server question gen / scoring) ──────
+export interface DifficultyOption {
+    id: GameDifficulty;
+    label: string;      // "Độ khó 1"
+    desc: string;       // short chip ("Dễ")
+    detail: string;     // one-line description (lobby cards)
     icon: string;
+    max: number;        // operand range upper bound (0..max)
+    multiplier: number; // ranking-point coefficient
 }
-export const MODES: GameModeOption[] = [
-    { id: "add_sub", label: "Cộng/Trừ", desc: "Dễ",  detail: "Cộng, trừ trong phạm vi 10 · kèm câu so sánh", icon: "➕" },
-    { id: "mul_div", label: "Nhân/Chia", desc: "Khó", detail: "Nhân, chia trong bảng cửu chương · kèm câu so sánh", icon: "✖️" },
-    { id: "mixed",   label: "Hỗn hợp",  desc: "Thử", detail: "Đủ cả 4 phép tính + − × ÷ · thử thách toàn diện", icon: "🔀" },
+export const DIFFICULTIES: DifficultyOption[] = [
+    { id: 1, label: "Độ khó 1", desc: "Dễ",  detail: "Số 0–10 · + − × ÷ · điểm thường", icon: "🟢", max: 10,   multiplier: 1 },
+    { id: 2, label: "Độ khó 2", desc: "Vừa", detail: "Số 0–100 · + − × ÷ · điểm ×1.5",  icon: "🟡", max: 100,  multiplier: 1.5 },
+    { id: 3, label: "Độ khó 3", desc: "Khó", detail: "Số 0–1000 · + − × ÷ · điểm ×2",   icon: "🔴", max: 1000, multiplier: 2 },
 ];
+
+// Every generated answer is a positive integer strictly below this, for all difficulties.
+export const ANSWER_MAX = 2000;
+
+/** Look up a difficulty option by id; falls back to the easiest (1) for unknown ids. */
+export function difficultyById(id: number): DifficultyOption {
+    return DIFFICULTIES.find((d) => d.id === id) ?? DIFFICULTIES[0];
+}
+
+/** Ranking-point multiplier for a difficulty id (defaults to 1). */
+export function multiplierForDifficulty(id: number): number {
+    return difficultyById(id).multiplier;
+}
 
 // ─── Chat / emoji ───────────────────────────────────────────
 // The only emojis allowed in match chat. Client renders this list;

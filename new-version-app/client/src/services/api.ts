@@ -63,6 +63,7 @@ export interface MatchHistoryItem {
   outcome: 'win' | 'lose' | 'draw';
   rankingDelta: number;
   questionsCount: number;
+  difficulty: number;
 }
 
 export interface DailyTask {

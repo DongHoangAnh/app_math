@@ -11,7 +11,7 @@ import { supabase } from '../services/supabase';
 import { useDailyTasks, type DailyTask } from '../hooks/useDailyTasks';
 import { gameApi } from '../services/api';
 import { getLevelProgress } from '../utils/levelUtils';
-import { MODES } from '../../../shared/constants';
+import { DIFFICULTIES } from '../../../shared/constants';
 import { ASSETS } from '../assets';
 
 export default function HomeScreen() {
@@ -143,22 +143,22 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── PK modes (Xiaoyuan-style feature cards) ── */}
+        {/* ── PK difficulties (Xiaoyuan-style feature cards) ── */}
         <View style={{ gap: 12 }}>
-          <Text style={styles.h3}>Chế độ Battle Math</Text>
+          <Text style={styles.h3}>Chọn độ khó</Text>
           <View style={styles.modeRow}>
-            {MODES.map(m => (
+            {DIFFICULTIES.map(d => (
               <TouchableOpacity
-                key={m.id}
+                key={d.id}
                 style={styles.modeCard}
-                onPress={() => navigation.navigate('GameShowTab', { mode: m.id })}
+                onPress={() => navigation.navigate('GameShowTab', { difficulty: d.id })}
                 activeOpacity={0.85}
               >
                 <View style={styles.modeIconWrap}>
-                  <Text style={{ fontSize: 24 }}>{m.icon}</Text>
+                  <Text style={{ fontSize: 24 }}>{d.icon}</Text>
                 </View>
-                <Text style={styles.modeName}>{m.label}</Text>
-                <Text style={styles.modeDesc}>{m.desc}</Text>
+                <Text style={styles.modeName}>{d.label}</Text>
+                <Text style={styles.modeDesc}>{d.desc}</Text>
               </TouchableOpacity>
             ))}
           </View>

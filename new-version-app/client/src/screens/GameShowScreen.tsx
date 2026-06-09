@@ -33,13 +33,13 @@ export default function GameShowScreen() {
 
   const [selectedAnswer, setSelectedAnswer]   = useState<string | null>(null);
   const [revealState, setRevealState]         = useState<'hidden' | 'revealed'>('hidden');
-  const [selectedMode, setSelectedMode]       = useState('add_sub');
+  const [selectedDifficulty, setSelectedDifficulty] = useState(1);
 
-  // Mode pre-selected from HomeScreen's "Chế độ PK" cards (tab nav param).
+  // Difficulty pre-selected from HomeScreen's quick-cards (tab nav param).
   useEffect(() => {
-    const m = route.params?.mode;
-    if (m) setSelectedMode(m);
-  }, [route.params?.mode]);
+    const d = route.params?.difficulty;
+    if (d) setSelectedDifficulty(d);
+  }, [route.params?.difficulty]);
   const [countdown, setCountdown]             = useState(3);
   const [questionTimer, setQuestionTimer]     = useState(QUESTION_SECONDS);
   const [myRankingPoints, setMyRankingPoints] = useState<number | null>(null);
@@ -281,7 +281,7 @@ export default function GameShowScreen() {
     setSelectedAnswer(null);
     setRevealState('hidden');
     setNumericInput('');
-    joinQueue(selectedMode);
+    joinQueue(selectedDifficulty);
   };
 
   // "Về trang chủ" on the results screen → back to the PK mode-select (idle).
@@ -304,7 +304,7 @@ export default function GameShowScreen() {
         myAvatarUrl={myAvatarUrl}
         error={state.error}
         userId={userId}
-        onJoin={(mode) => { setSelectedMode(mode); joinQueue(mode); }}
+        onJoin={(difficulty) => { setSelectedDifficulty(difficulty); joinQueue(difficulty); }}
         onHistory={() => navigation.navigate('MatchHistoryTab')}
       />
     );

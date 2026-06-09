@@ -1,15 +1,18 @@
 // ═══════════════════════════════════════════════════════════
-// RANDOM QUESTION GENERATOR — lớp 1: +, -, ×, ÷ và so sánh <, >, =
+// RANDOM QUESTION GENERATOR — +, -, ×, ÷ và so sánh <, >, =
 //
-// Chế độ chơi quyết định phép tính của câu số học. Câu so sánh (<, >, =)
-// luôn xuất hiện ở mọi chế độ (cứ 3 câu thì có 1 câu so sánh).
+// Mọi độ khó dùng cả 4 phép tính. Độ khó quyết định phạm vi toán hạng
+// (0..max) còn đáp án LUÔN là số nguyên dương và < ANSWER_MAX (2000).
+// Câu so sánh xuất hiện cứ 3 câu một lần (index % 3 === 2).
 // ═══════════════════════════════════════════════════════════
 
-import type { GameQuestion, GameMode } from "../shared/types";
+import type { GameQuestion, GameDifficulty } from "../shared/types";
+import { ANSWER_MAX, difficultyById } from "../shared/constants";
 
-/** Coerce an untrusted mode string to a valid GameMode (default: mixed). */
-export function normalizeMode(m?: string): GameMode {
-    return m === "add_sub" || m === "mul_div" || m === "mixed" ? m : "mixed";
+/** Coerce an untrusted difficulty value to 1 | 2 | 3 (default: 1). */
+export function normalizeDifficulty(d?: number | string): GameDifficulty {
+    const n = Number(d);
+    return n === 1 || n === 2 || n === 3 ? (n as GameDifficulty) : 1;
 }
 
 let _qCounter = 0;
@@ -40,58 +43,65 @@ function numericOptions(correct: number): string[] {
     return shuffleArr([...pool].slice(0, 4).map(String));
 }
 
-// Các phép tính được phép theo từng chế độ
-function opsForMode(mode: GameMode): string[] {
-    if (mode === "add_sub") return ["+", "-"];
-    if (mode === "mul_div") return ["×", "÷"];
-    return ["+", "-", "×", "÷"];
-}
+// Đáp án phải là số nguyên dương và < ANSWER_MAX cho MỌI độ khó.
+const CAP = ANSWER_MAX - 1; // giá trị đáp án tối đa cho phép (1999)
 
-function makeArithmeticQ(mode: GameMode): GameQuestion {
-    const op = shuffleArr(opsForMode(mode))[0];
-    let a: number, b: number, answer: number, text: string;
+function makeArithmeticQ(difficulty: GameDifficulty): GameQuestion {
+    const { max } = difficultyById(difficulty);
+    const op = shuffleArr(["+", "-", "×", "÷"])[0];
+    let answer: number, text: string;
 
     if (op === "+") {
-        a = randInt(1, 9); b = randInt(1, 9);
+        const a = randInt(1, max);
+        // giữ tổng < ANSWER_MAX: b không vượt CAP - a
+        const b = randInt(1, Math.max(1, Math.min(max, CAP - a)));
         answer = a + b;
         text = `${a} + ${b} = ?`;
     } else if (op === "-") {
-        a = randInt(1, 9); b = randInt(1, a);
+        const a = randInt(2, max);           // a ≥ 2 nên có chỗ cho hiệu ≥ 1
+        const b = randInt(1, a - 1);          // hiệu nằm trong [1, max-1]
         answer = a - b;
         text = `${a} - ${b} = ?`;
     } else if (op === "×") {
-        a = randInt(1, 5); b = randInt(1, 5);
+        const a = randInt(1, max);
+        // b sao cho tích < ANSWER_MAX và vẫn trong phạm vi độ khó
+        const bMax = Math.max(1, Math.min(max, Math.floor(CAP / a)));
+        const b = randInt(1, bMax);
         answer = a * b;
         text = `${a} × ${b} = ?`;
     } else {
-        b = randInt(2, 5); answer = randInt(1, 4);
-        a = b * answer;
+        // chia hết: chọn số chia nhỏ (bảng cửu chương rộng) và thương trong phạm vi
+        const b = randInt(2, Math.min(max, 12));
+        const qMax = Math.max(1, Math.min(max, Math.floor(CAP / b)));
+        answer = randInt(1, qMax);            // thương = đáp án
+        const a = b * answer;                 // số bị chia (chia hết)
         text = `${a} ÷ ${b} = ?`;
     }
 
     return {
-        id: nextQId(), level: 1, question: text,
+        id: nextQId(), level: difficulty, question: text,
         options: numericOptions(answer), correctAnswer: String(answer),
-        difficulty: 1, type: "arithmetic",
+        difficulty, type: "arithmetic",
     };
 }
 
-function makeComparisonQ(): GameQuestion {
-    const a = randInt(1, 9), b = randInt(1, 9);
+function makeComparisonQ(difficulty: GameDifficulty): GameQuestion {
+    const { max } = difficultyById(difficulty);
+    const a = randInt(0, max), b = randInt(0, max);
     const correct = a > b ? ">" : a < b ? "<" : "=";
     return {
-        id: nextQId(), level: 1,
+        id: nextQId(), level: difficulty,
         question: `${a}  ?  ${b}`,
         options: ["<", "=", ">"],
         correctAnswer: correct,
-        difficulty: 1,
+        difficulty,
         type: "comparison",
     };
 }
 
-// Tạo bộ câu hỏi: cứ mỗi 3 câu thì có 1 câu so sánh, còn lại là số học theo mode
-export function generateQuestions(count: number, mode: GameMode): GameQuestion[] {
+// Tạo bộ câu hỏi: cứ mỗi 3 câu thì có 1 câu so sánh, còn lại là số học.
+export function generateQuestions(count: number, difficulty: GameDifficulty): GameQuestion[] {
     return Array.from({ length: count }, (_, i) =>
-        i % 3 === 2 ? makeComparisonQ() : makeArithmeticQ(mode)
+        i % 3 === 2 ? makeComparisonQ(difficulty) : makeArithmeticQ(difficulty)
     );
 }

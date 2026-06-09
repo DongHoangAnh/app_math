@@ -6,9 +6,9 @@
 
 export type QuestionType = "arithmetic" | "comparison";
 
-// Play mode chosen at queue time. Decides which arithmetic ops appear;
-// comparison questions (<, >, =) show in every mode.
-export type GameMode = "add_sub" | "mul_div" | "mixed";
+// Difficulty chosen at queue time. Decides the operand range and the ranking
+// point multiplier. All difficulties use mixed operations (+ − × ÷).
+export type GameDifficulty = 1 | 2 | 3;
 
 export interface GameQuestion {
     id: string;

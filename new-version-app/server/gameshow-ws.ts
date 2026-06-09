@@ -1,9 +1,9 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
 import { saveGameMatch, saveDisconnectWin, saveMatchRecord, updateTasksAfterMatch, verifyToken, getLockOwnerDeviceId } from "./supabase-server";
-import type { GameQuestion, AnswerRecord } from "../shared/types";
-import { QUESTIONS_PER_MATCH, CHAT_MAX_LEN } from "../shared/constants";
-import { generateQuestions, normalizeMode } from "./questions";
+import type { GameQuestion, AnswerRecord, GameDifficulty } from "../shared/types";
+import { QUESTIONS_PER_MATCH, CHAT_MAX_LEN, multiplierForDifficulty } from "../shared/constants";
+import { generateQuestions, normalizeDifficulty } from "./questions";
 import { canSendEmoji, canSendChat, hasProfanity, isAllowedEmoji, clearRateLimit } from "./rateLimiter";
 
 // ═══════════════════════════════════════════════════════════
@@ -17,9 +17,9 @@ interface Player {
     grade?: string;
     winRate?: number;
     totalScore?: number;
-    mode?: string;
+    difficulty?: number;
     roomId?: string;
-    queuedAt?: number; // when the player entered the waiting queue (for fallback matching)
+    queuedAt?: number; // when the player entered the waiting queue
 }
 
 interface PlayerProgress {
@@ -34,13 +34,14 @@ interface GameRoom {
     player1: Player;
     player2: Player;
     questions: GameQuestion[];
+    difficulty: GameDifficulty;
     progress: Record<string, PlayerProgress>; // userId → progress
     startedAt: number;
     finished: boolean;
 }
 
 type WSMessage =
-    | { type: "JOIN_QUEUE"; userId: string; token: string; displayName: string; grade?: string; winRate?: number; totalScore?: number; mode?: string; deviceId?: string }
+    | { type: "JOIN_QUEUE"; userId: string; token: string; displayName: string; grade?: string; winRate?: number; totalScore?: number; difficulty?: number; deviceId?: string }
     | { type: "LEAVE_QUEUE"; userId: string }
     | { type: "SUBMIT_ANSWER"; userId: string; roomId: string; questionIndex: number; answer: string; timeMs: number }
     | { type: "SEND_EMOJI"; roomId: string; emoji: string }
@@ -56,11 +57,10 @@ const activeRooms = new Map<string, GameRoom>();
 const playerToRoom = new Map<string, string>(); // userId → roomId
 
 // ─── Server-only tunables ───────────────────────────────────
-// How often to ping clients + how long a queued player waits for a same-mode
-// opponent before we match them with anyone available.
 const HEARTBEAT_MS = 30_000;       // ping sweep interval (must be > client app-PING of 25s)
+// How often to re-run matchmaking on a timer as a safety net (in addition to running
+// it on every JOIN_QUEUE), so a same-difficulty pair still gets matched promptly.
 const MATCHMAKING_SWEEP_MS = 2_000; // re-run matchmaking even when nobody new joins
-const MATCH_FALLBACK_MS = 12_000;   // after this wait, ignore mode and match anyone
 
 // ═══════════════════════════════════════════════════════════
 // HELPERS
@@ -97,9 +97,9 @@ function calcPlayerStats(prog?: PlayerProgress) {
 
 function createRoom(p1: Player, p2: Player) {
     const roomId = generateRoomId();
-    // Dùng chế độ của người vào hàng đợi trước (p1) để cả hai cùng một bộ câu hỏi
-    const mode = normalizeMode(p1.mode);
-    const questions = generateQuestions(QUESTIONS_PER_MATCH, mode);
+    // Độ khó của người vào hàng đợi trước (p1) quyết định bộ câu hỏi + hệ số điểm cho cả hai
+    const difficulty = normalizeDifficulty(p1.difficulty);
+    const questions = generateQuestions(QUESTIONS_PER_MATCH, difficulty);
 
     const makeProgress = (): PlayerProgress => ({ answers: {}, finished: false });
 
@@ -108,6 +108,7 @@ function createRoom(p1: Player, p2: Player) {
         player1: { ...p1, roomId },
         player2: { ...p2, roomId },
         questions,
+        difficulty,
         progress: {
             [p1.userId]: makeProgress(),
             [p2.userId]: makeProgress(),
@@ -125,12 +126,14 @@ function createRoom(p1: Player, p2: Player) {
         type: "MATCH_FOUND",
         roomId,
         questions,
+        difficulty,
         opponent: { userId: p2.userId, displayName: p2.displayName, grade: p2.grade, winRate: p2.winRate, totalScore: p2.totalScore },
     });
     sendToPlayer(p2, {
         type: "MATCH_FOUND",
         roomId,
         questions,
+        difficulty,
         opponent: { userId: p1.userId, displayName: p1.displayName, grade: p1.grade, winRate: p1.winRate, totalScore: p1.totalScore },
     });
 
@@ -140,29 +143,20 @@ function createRoom(p1: Player, p2: Player) {
 function tryMatch() {
     if (waitingQueue.length < 2) return;
 
-    // Pass 1 — prefer pairing players who picked the SAME mode (best UX:
-    // both get the questions they chose). Earliest-waiting player first.
+    // Pair ONLY players who chose the SAME difficulty — never across difficulties,
+    // because the point multiplier and number range must be identical for both.
+    // Earliest-waiting player first; if no same-difficulty partner exists, the player
+    // simply stays in the queue until one joins.
     for (let i = 0; i < waitingQueue.length; i++) {
-        const mode1 = normalizeMode(waitingQueue[i].mode);
+        const diff1 = normalizeDifficulty(waitingQueue[i].difficulty);
         for (let j = i + 1; j < waitingQueue.length; j++) {
-            if (normalizeMode(waitingQueue[j].mode) === mode1) {
+            if (normalizeDifficulty(waitingQueue[j].difficulty) === diff1) {
                 const [p1] = waitingQueue.splice(i, 1);
                 const [p2] = waitingQueue.splice(j - 1, 1); // j shifted left after removing i
                 createRoom(p1, p2);
-                return tryMatch(); // keep pairing while pairs remain
+                return tryMatch(); // keep pairing while same-difficulty pairs remain
             }
         }
-    }
-
-    // Pass 2 — fallback: if the longest-waiting player has been queued past the
-    // threshold, match them with anyone so nobody is stuck waiting forever for a
-    // mode nobody else picked. p1 (longest wait) decides the question mode.
-    const head = waitingQueue[0];
-    if (head && Date.now() - (head.queuedAt ?? 0) >= MATCH_FALLBACK_MS) {
-        const p1 = waitingQueue.shift()!;
-        const p2 = waitingQueue.shift()!;
-        createRoom(p1, p2);
-        return tryMatch();
     }
 }
 
@@ -269,7 +263,8 @@ function finishGame(room: GameRoom) {
                 player2_total_time_ms: p2Stats.totalTimeMs,
                 winner_id: winnerId,
                 questions_count: room.questions.length,
-            });
+                difficulty: room.difficulty,
+            }, multiplierForDifficulty(room.difficulty));
             p1Delta = deltas.player1Delta;
             p2Delta = deltas.player2Delta;
 
@@ -344,6 +339,7 @@ function handleDisconnect(userId: string) {
             const p2Stats = calcPlayerStats(room.progress[room.player2.userId]);
 
             // Save match record + award ranking points (fire-and-forget)
+            const mult = multiplierForDifficulty(room.difficulty);
             (async () => {
                 const matchRecord = {
                     room_id: room.roomId,
@@ -359,12 +355,13 @@ function handleDisconnect(userId: string) {
                     player2_total_time_ms: p2Stats.totalTimeMs,
                     winner_id: opponent.userId,
                     questions_count: room.questions.length,
+                    difficulty: room.difficulty,
                 };
 
                 const saveMatch = saveMatchRecord(matchRecord).catch((err) =>
                     console.error("[GameShow WS] saveMatchRecord error:", err)
                 );
-                const saveRanking = saveDisconnectWin(opponent.userId, opponent.displayName).catch((err) =>
+                const saveRanking = saveDisconnectWin(opponent.userId, opponent.displayName, mult).catch((err) =>
                     console.error("[GameShow WS] saveDisconnectWin error:", err)
                 );
                 await Promise.all([saveMatch, saveRanking]);
@@ -372,7 +369,7 @@ function handleDisconnect(userId: string) {
             sendToPlayer(opponent, {
                 type: "OPPONENT_DISCONNECTED",
                 message: "Đối thủ đã ngắt kết nối. Bạn thắng mặc định!",
-                rankingDelta: 5,
+                rankingDelta: Math.round(5 * mult),
             });
         }
         playerToRoom.delete(userId);
@@ -406,8 +403,7 @@ export function setupGameShowWS(httpServer: Server) {
         }
     }, HEARTBEAT_MS);
 
-    // Matchmaking sweep — re-run matching on a timer so the fallback (match
-    // anyone after a long wait) fires even when nobody new joins the queue.
+    // Matchmaking sweep — re-run matching on a timer as a safety net (strict same-difficulty pairing only).
     const matchSweep = setInterval(tryMatch, MATCHMAKING_SWEEP_MS);
 
     // Don't let these intervals keep the process alive on shutdown.
@@ -465,7 +461,7 @@ export function setupGameShowWS(httpServer: Server) {
                         grade: msg.grade,
                         winRate: msg.winRate,
                         totalScore: msg.totalScore,
-                        mode: msg.mode,
+                        difficulty: msg.difficulty,
                     };
 
                     // Reconnect to active room if exists

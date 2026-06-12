@@ -4,6 +4,7 @@ import { s } from './styles';
 import { EMOJIS } from '../../../../shared/constants';
 import { ASSETS } from '../../assets';
 import ChatBubble from './ChatBubble';
+import AssetIcon from '../../components/AssetIcon';
 import type { ChatMessage } from '../../../../shared/types';
 
 interface Props {
@@ -64,7 +65,7 @@ export default function ChatBar({
           style={[s.emojiBtn, showChatInput && s.emojiBtnActive]}
           activeOpacity={0.7}
         >
-          <Text style={s.emojiBtnText}>{ASSETS.gameshow.chat}</Text>
+          <AssetIcon source={ASSETS.gameshow.chat} size={22} style={s.emojiBtnText} />
         </TouchableOpacity>
       </View>
     </View>

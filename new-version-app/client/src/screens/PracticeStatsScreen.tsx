@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { gameApi, type PracticeSessionDTO, type PracticeSummaryDTO } from '../services/api';
 import { s } from './Practice/styles';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 import { PRACTICE_OP_LABELS, PRACTICE_OPS } from '../../../shared/constants';
 
 const KIND_LABEL: Record<string, string> = { fixed: 'Số câu', endless: 'Vô tận', timed: 'Theo giờ' };
@@ -26,7 +27,10 @@ export default function PracticeStatsScreen() {
   return (
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.body}>
-        <Text style={s.h1}>{ASSETS.practice.history} Tiến bộ luyện tập</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <AssetIcon source={ASSETS.practice.history} size={26} />
+          <Text style={s.h1}>Tiến bộ luyện tập</Text>
+        </View>
 
         {summary && (
           <View style={s.statGrid}>
@@ -59,7 +63,10 @@ export default function PracticeStatsScreen() {
 
         <Text style={s.h3}>Lịch sử gần đây</Text>
         {!loading && sessions.length === 0 && (
-          <Text style={s.emptyTxt}>{ASSETS.practice.empty} Chưa có phiên luyện tập nào.</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <AssetIcon source={ASSETS.practice.empty} size={16} />
+            <Text style={s.emptyTxt}>Chưa có phiên luyện tập nào.</Text>
+          </View>
         )}
         {sessions.map((ss) => {
           const acc = ss.total > 0 ? Math.round((ss.correct / ss.total) * 100) : 0;

@@ -4,6 +4,7 @@ import {
   StyleProp, ViewStyle, TextStyle,
 } from 'react-native';
 import { C, R, F } from '../theme';
+import AssetIcon from './AssetIcon';
 
 // ==========================================================================
 // MathUp signature: the "tactile" hard-slab element.
@@ -113,8 +114,8 @@ type ButtonProps = {
   title: string;
   onPress?: () => void;
   variant?: Variant;
-  icon?: string;       // leading emoji / glyph
-  iconRight?: string;  // trailing emoji / glyph
+  icon?: any;       // leading emoji string OR ASSETS image (require)
+  iconRight?: any;  // trailing emoji string OR ASSETS image (require)
   disabled?: boolean;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
@@ -144,9 +145,9 @@ export function TactileButton({
         <ActivityIndicator color={variant === 'primary' || variant === 'dark' ? '#fff' : C.orange} />
       ) : (
         <>
-          {icon ? <Text style={[v.text, textStyle]}>{icon}</Text> : null}
+          {icon ? <AssetIcon source={icon} size={18} style={[v.text, textStyle]} /> : null}
           <Text style={[v.text, textStyle]}>{title}</Text>
-          {iconRight ? <Text style={[v.text, textStyle]}>{iconRight}</Text> : null}
+          {iconRight ? <AssetIcon source={iconRight} size={18} style={[v.text, textStyle]} /> : null}
         </>
       )}
     </Tactile>

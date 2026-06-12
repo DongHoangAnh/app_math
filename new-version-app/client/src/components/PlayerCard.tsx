@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { C, R } from '../theme';
 import { ASSETS } from '../assets';
+import AssetIcon from './AssetIcon';
 
 interface PlayerCardProps {
   name: string;
@@ -37,8 +38,9 @@ export default function PlayerCard({
       <Text style={styles.score}>{score}</Text>
 
       {isWinner && (
-        <View style={styles.winnerBadge}>
-          <Text style={styles.winnerText}>{`${ASSETS.playerCard.crown} Winner`}</Text>
+        <View style={[styles.winnerBadge, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+          <AssetIcon source={ASSETS.playerCard.crown} size={12} style={styles.winnerText} />
+          <Text style={styles.winnerText}>Winner</Text>
         </View>
       )}
     </View>

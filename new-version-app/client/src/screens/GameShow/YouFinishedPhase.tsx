@@ -6,6 +6,7 @@ import { C } from '../../theme';
 import { s } from './styles';
 import { type FloatingEmoji } from './utils';
 import { ASSETS } from '../../assets';
+import AssetIcon from '../../components/AssetIcon';
 import FloatingEmojiLayer from './FloatingEmojiLayer';
 import WaitChatPanel from './WaitChatPanel';
 import type { ChatMessage } from '../../../../shared/types';
@@ -37,7 +38,9 @@ export default function YouFinishedPhase({
       <FloatingEmojiLayer emojis={floatingEmojis} />
 
       <View style={s.centerFlex}>
-        <Text style={{ fontSize: 52, marginBottom: 16 }}>{ASSETS.gameshow.youFinished}</Text>
+        <View style={{ marginBottom: 16 }}>
+          <AssetIcon source={ASSETS.gameshow.youFinished} size={52} style={{ fontSize: 52 }} />
+        </View>
         <Text style={s.waitTitle}>Bạn đã hoàn thành!</Text>
         <Text style={s.waitSub}>
           Đang chờ đối thủ · {opponentAnsweredCount}/{total} câu

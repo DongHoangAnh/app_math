@@ -13,6 +13,7 @@ import { gameApi } from '../services/api';
 import { getLevelProgress } from '../utils/levelUtils';
 import { DIFFICULTIES } from '../../../shared/constants';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -90,7 +91,7 @@ export default function HomeScreen() {
           <Text style={styles.wordmark} numberOfLines={1}>{displayName}</Text>
         </TouchableOpacity>
         <View style={styles.pointsPill}>
-          <Text style={styles.pointsPillIcon}>{ASSETS.home.points}</Text>
+          <AssetIcon source={ASSETS.home.points} size={14} style={styles.pointsPillIcon} />
           <Text style={styles.pointsPillValue}>{rankingPoints.toLocaleString()} pts</Text>
         </View>
       </View>
@@ -110,21 +111,25 @@ export default function HomeScreen() {
           <Text style={[styles.heroGlyph, { right: '30%', bottom: '10%', fontSize: 40 }]}>×</Text>
           <View style={styles.heroGreetRow}>
             <Text style={styles.heroGreet}>{greeting}, {displayName}</Text>
-            <Text style={{ fontSize: 14 }}>{greetingEmoji}</Text>
+            <AssetIcon source={greetingEmoji} size={14} style={{ fontSize: 14 }} />
           </View>
-          <Text style={styles.heroTitle}>{ASSETS.home.pk} Battle Math</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <AssetIcon source={ASSETS.home.pk} size={28} />
+            <Text style={styles.heroTitle}>Battle Math</Text>
+          </View>
           <Text style={styles.heroSub}>Thách đấu toàn server · Real-time</Text>
           <View style={styles.heroBottomRow}>
-            <View style={styles.heroCta}>
-              <Text style={styles.heroCtaTxt}>Vào trận ngay {ASSETS.home.bolt}</Text>
+            <View style={[styles.heroCta, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+              <Text style={styles.heroCtaTxt}>Vào trận ngay</Text>
+              <AssetIcon source={ASSETS.home.bolt} size={15} />
             </View>
             <View style={styles.heroVsRow}>
               <View style={styles.heroAvatar}>
-                <Text style={{ fontSize: 22 }}>{ASSETS.home.heroYou}</Text>
+                <AssetIcon source={ASSETS.home.heroYou} size={22} style={{ fontSize: 22 }} />
               </View>
               <Text style={styles.heroVs}>VS</Text>
               <View style={styles.heroAvatar}>
-                <Text style={{ fontSize: 22 }}>{ASSETS.home.heroOpp}</Text>
+                <AssetIcon source={ASSETS.home.heroOpp} size={22} style={{ fontSize: 22 }} />
               </View>
             </View>
           </View>
@@ -132,14 +137,17 @@ export default function HomeScreen() {
 
         {/* ── PK rule chips ── */}
         <View style={styles.ruleRow}>
-          <View style={[styles.ruleChip, { backgroundColor: '#E7F6E8' }]}>
-            <Text style={[styles.ruleChipText, { color: C.successDeep }]}>{`${ASSETS.home.win} Thắng +5`}</Text>
+          <View style={[styles.ruleChip, { backgroundColor: '#E7F6E8', flexDirection: 'row', gap: 4 }]}>
+            <AssetIcon source={ASSETS.home.win} size={12} style={[styles.ruleChipText, { color: C.successDeep }]} />
+            <Text style={[styles.ruleChipText, { color: C.successDeep }]}>Thắng +5</Text>
           </View>
-          <View style={[styles.ruleChip, { backgroundColor: C.errorSoft }]}>
-            <Text style={[styles.ruleChipText, { color: C.error }]}>{`${ASSETS.home.lose} Thua −3`}</Text>
+          <View style={[styles.ruleChip, { backgroundColor: C.errorSoft, flexDirection: 'row', gap: 4 }]}>
+            <AssetIcon source={ASSETS.home.lose} size={12} style={[styles.ruleChipText, { color: C.error }]} />
+            <Text style={[styles.ruleChipText, { color: C.error }]}>Thua −3</Text>
           </View>
-          <View style={[styles.ruleChip, { backgroundColor: C.surfaceSunken }]}>
-            <Text style={[styles.ruleChipText, { color: C.inkSlate }]}>{`${ASSETS.home.draw} Hoà ±0`}</Text>
+          <View style={[styles.ruleChip, { backgroundColor: C.surfaceSunken, flexDirection: 'row', gap: 4 }]}>
+            <AssetIcon source={ASSETS.home.draw} size={12} style={[styles.ruleChipText, { color: C.inkSlate }]} />
+            <Text style={[styles.ruleChipText, { color: C.inkSlate }]}>Hoà ±0</Text>
           </View>
         </View>
 
@@ -173,7 +181,7 @@ export default function HomeScreen() {
             activeOpacity={0.85}
           >
             <View style={styles.practiceIconWrap}>
-              <Text style={{ fontSize: 26 }}>{ASSETS.practice.title}</Text>
+              <AssetIcon source={ASSETS.practice.title} size={26} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.practiceName}>Luyện tập đơn</Text>
@@ -237,7 +245,7 @@ export default function HomeScreen() {
 
         {/* ── Tip Banner ── */}
         <View style={styles.tipBanner}>
-          <Text style={styles.tipEmoji}>{ASSETS.home.tip}</Text>
+          <AssetIcon source={ASSETS.home.tip} size={22} style={styles.tipEmoji} />
           <Text style={styles.tipText}>Hoàn thành nhiệm vụ mỗi ngày để tích EXP và lên cấp!</Text>
         </View>
       </ScrollView>
@@ -245,20 +253,20 @@ export default function HomeScreen() {
   );
 }
 
-function StatBadge({ emoji, label, value }: { emoji: string; label: string; value: string }) {
+function StatBadge({ emoji, label, value }: { emoji: any; label: string; value: string }) {
   return (
     <View style={styles.statBadge}>
-      <Text style={{ fontSize: 22, lineHeight: 26 }}>{emoji}</Text>
+      <AssetIcon source={emoji} size={22} style={{ fontSize: 22, lineHeight: 26 }} />
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={styles.statValue} numberOfLines={1}>{value}</Text>
     </View>
   );
 }
 
-function NavCard({ emoji, label, onPress }: { emoji: string; label: string; onPress: () => void }) {
+function NavCard({ emoji, label, onPress }: { emoji: any; label: string; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.navCard} onPress={onPress} activeOpacity={0.85}>
-      <Text style={{ fontSize: 24 }}>{emoji}</Text>
+      <AssetIcon source={emoji} size={24} style={{ fontSize: 24 }} />
       <Text style={styles.navCardLabel}>{label}</Text>
     </TouchableOpacity>
   );
@@ -273,9 +281,15 @@ function TaskRow({
   return (
     <View style={[styles.taskRow, done && styles.taskRowDone]}>
       <View style={[styles.taskIcon, { backgroundColor: done ? C.line : C.successBright }]}>
-        <Text style={{ fontSize: 18, color: done ? C.inkSlate : C.successDeep }}>
-          {done ? '✓' : task.completed ? ASSETS.home.target : ASSETS.home.bolt}
-        </Text>
+        {done ? (
+          <Text style={{ fontSize: 18, color: C.inkSlate }}>✓</Text>
+        ) : (
+          <AssetIcon
+            source={task.completed ? ASSETS.home.target : ASSETS.home.bolt}
+            size={18}
+            style={{ fontSize: 18, color: C.successDeep }}
+          />
+        )}
       </View>
       <View style={styles.taskInfo}>
         <View style={styles.taskTitleRow}>

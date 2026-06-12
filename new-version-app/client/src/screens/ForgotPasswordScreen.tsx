@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import { C, R, F, hardShadow } from '../theme';
 import { TactileButton } from '../components/ui';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 
 export default function ForgotPasswordScreen() {
   const { sendPasswordResetEmail } = useAuth();
@@ -61,7 +62,7 @@ export default function ForgotPasswordScreen() {
           {/* Hero */}
           <View style={styles.hero}>
             <View style={[styles.iconWrap, hardShadow(C.orangeDark, 6, 0.25)]}>
-              <Text style={styles.iconEmoji}>{ASSETS.forgotPassword.lock}</Text>
+              <AssetIcon source={ASSETS.forgotPassword.lock} size={42} style={styles.iconEmoji} />
             </View>
             <Text style={styles.title}>Quên mật khẩu?</Text>
             <Text style={styles.subtitle}>
@@ -71,7 +72,7 @@ export default function ForgotPasswordScreen() {
 
           {sent ? (
             <View style={styles.successBox}>
-              <Text style={styles.successEmoji}>{ASSETS.forgotPassword.sent}</Text>
+              <AssetIcon source={ASSETS.forgotPassword.sent} size={64} style={styles.successEmoji} />
               <Text style={styles.successTitle}>Kiểm tra hộp thư!</Text>
               <Text style={styles.successText}>
                 Nếu địa chỉ <Text style={{ fontFamily: F.display, color: C.orangeDark }}>{email}</Text>
@@ -107,7 +108,10 @@ export default function ForgotPasswordScreen() {
 
               {error && (
                 <View style={styles.errorBox}>
-                  <Text style={styles.errorText}>{ASSETS.forgotPassword.warn}  {error}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <AssetIcon source={ASSETS.forgotPassword.warn} size={16} />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
                 </View>
               )}
 

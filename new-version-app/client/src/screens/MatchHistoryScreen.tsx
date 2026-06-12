@@ -9,6 +9,7 @@ import { useAuth } from '../hooks/useAuth';
 import OpponentInfoModal from '../components/OpponentInfoModal';
 import { gameApi, ApiError, type MatchHistoryItem as MatchItem } from '../services/api';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 import { difficultyById } from '../../../shared/constants';
 
 const PAGE = 5; // tải 5 trận mỗi lần
@@ -91,7 +92,7 @@ export default function MatchHistoryScreen() {
         onPress={() => setSelected({ id: item.opponentId, name: item.opponentName })}
       >
         <View style={[s.outcomeBadge, { backgroundColor: o.color }]}>
-          <Text style={s.outcomeEmoji}>{o.emoji}</Text>
+          <AssetIcon source={o.emoji} size={22} style={s.outcomeEmoji} />
         </View>
 
         <View style={s.cardMid}>
@@ -133,7 +134,10 @@ export default function MatchHistoryScreen() {
         >
           <Text style={s.backTxt}>‹</Text>
         </TouchableOpacity>
-        <Text style={s.headerTitle}>{`${ASSETS.matchHistory.title} Lịch sử đấu`}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <AssetIcon source={ASSETS.matchHistory.title} size={20} style={s.headerTitle} />
+          <Text style={s.headerTitle}>Lịch sử đấu</Text>
+        </View>
         <View style={s.backBtn} />
       </View>
 
@@ -148,7 +152,7 @@ export default function MatchHistoryScreen() {
         </View>
       ) : items.length === 0 ? (
         <View style={s.centerBox}>
-          <Text style={s.emptyEmoji}>{ASSETS.matchHistory.empty}</Text>
+          <AssetIcon source={ASSETS.matchHistory.empty} size={56} style={s.emptyEmoji} />
           <Text style={s.emptyTitle}>Chưa có trận nào</Text>
           <Text style={s.emptySub}>Hãy vào trận PK đầu tiên của bạn!</Text>
         </View>

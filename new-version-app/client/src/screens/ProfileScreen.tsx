@@ -13,6 +13,7 @@ import { getLevelProgress, getTier, TIER_LABEL } from '../utils/levelUtils';
 import EditProfileModal from '../components/EditProfileModal';
 import { gameApi } from '../services/api';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 import { TERMS_OF_SERVICE_URL, SUPPORT_EMAIL } from '../config';
 import { AchievementId, AchievementStats, isUnlocked } from '../utils/achievements';
 
@@ -27,7 +28,7 @@ const FALLBACK: UserStats = {
   bestStreak: 0, accuracyRate: 0, avgTimePerMatch: 0,
 };
 
-const ACHIEVEMENTS: { id: AchievementId; emoji: string; label: string }[] = [
+const ACHIEVEMENTS: { id: AchievementId; emoji: any; label: string }[] = [
   { id: 'champion', emoji: ASSETS.profile.champion, label: 'Vô địch' },
   { id: 'hotStreak', emoji: ASSETS.profile.streak5, label: 'Streak 5' },
   { id: 'speed', emoji: ASSETS.profile.speed, label: 'Tốc độ' },
@@ -133,7 +134,7 @@ export default function ProfileScreen() {
               </View>
             )}
             <View style={styles.editBadge}>
-              <Text style={styles.editBadgeIcon}>{ASSETS.profile.edit}</Text>
+              <AssetIcon source={ASSETS.profile.edit} size={13} style={styles.editBadgeIcon} />
             </View>
           </TouchableOpacity>
 
@@ -171,7 +172,7 @@ export default function ProfileScreen() {
                 return (
                   <View key={a.label} style={[styles.achCard, !unlocked && styles.achCardLocked]}>
                     {!unlocked && <Text style={styles.achLock}>🔒</Text>}
-                    <Text style={[{ fontSize: 24 }, !unlocked && styles.achDim]}>{a.emoji}</Text>
+                    <AssetIcon source={a.emoji} size={24} style={[{ fontSize: 24 }, !unlocked && styles.achDim]} />
                     <Text style={styles.achLabel}>{a.label}</Text>
                   </View>
                 );
@@ -236,14 +237,14 @@ function ProfileStat({ value, label, color }: { value: string; label: string; co
 
 function SettingRow({
   icon, label, onPress, danger, isLast,
-}: { icon: string; label: string; onPress: () => void; danger?: boolean; isLast?: boolean }) {
+}: { icon: any; label: string; onPress: () => void; danger?: boolean; isLast?: boolean }) {
   return (
     <TouchableOpacity
       style={[styles.settingRow, isLast && { borderBottomWidth: 0 }]}
       onPress={onPress} activeOpacity={0.7}
     >
       <View style={[styles.settingIcon, { backgroundColor: danger ? C.errorSoft : C.peachBg }]}>
-        <Text style={{ fontSize: 16 }}>{icon}</Text>
+        <AssetIcon source={icon} size={16} style={{ fontSize: 16 }} />
       </View>
       <Text style={[styles.settingLabel, danger && { color: C.error }]}>{label}</Text>
       {!danger && <Text style={styles.settingArrow}>›</Text>}

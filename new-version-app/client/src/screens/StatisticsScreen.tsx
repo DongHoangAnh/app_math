@@ -9,6 +9,7 @@ import { supabase } from '../services/supabase';
 import { LevelCard } from '../components/LevelBadge';
 import { gameApi } from '../services/api';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 import { AchievementId, AchievementStats, isUnlocked } from '../utils/achievements';
 
 interface Stats {
@@ -25,7 +26,7 @@ const FALLBACK: Stats = {
   accuracyRate: 0, avgTimePerMatch: 0,
 };
 
-const BADGES: { id: AchievementId; emoji: string; title: string; desc: string }[] = [
+const BADGES: { id: AchievementId; emoji: any; title: string; desc: string }[] = [
   { id: 'firstMatch', emoji: ASSETS.statistics.achStart,   title: 'Bắt Đầu',   desc: 'Trận đầu tiên' },
   { id: 'hotStreak',  emoji: ASSETS.statistics.achHot,     title: 'Nóng Lên',  desc: '5 trận thắng liên tiếp' },
   { id: 'lucky',      emoji: ASSETS.statistics.achLucky,   title: 'Nhân Phẩm', desc: 'Đạt 50 điểm xếp hạng' },
@@ -106,7 +107,10 @@ export default function StatisticsScreen() {
 
         {/* Title */}
         <View style={styles.titleWrap}>
-          <Text style={styles.title}>{`${ASSETS.statistics.title} Thống Kê`}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AssetIcon source={ASSETS.statistics.title} size={24} style={styles.title} />
+            <Text style={styles.title}>Thống Kê</Text>
+          </View>
           <Text style={styles.subtitle}>Tổng quan hiệu suất của bạn</Text>
         </View>
 
@@ -123,12 +127,12 @@ export default function StatisticsScreen() {
           <Text style={styles.h3}>Chuỗi thắng</Text>
           <View style={styles.streakRow}>
             <View style={[styles.streakCard, { backgroundColor: C.peachBg, borderColor: C.peachBorder }]}>
-              <Text style={{ fontSize: 26 }}>{ASSETS.statistics.streakNow}</Text>
+              <AssetIcon source={ASSETS.statistics.streakNow} size={26} style={{ fontSize: 26 }} />
               <Text style={styles.streakValue}>{stats.currentStreak}</Text>
               <Text style={styles.streakLabel}>Hiện tại</Text>
             </View>
             <View style={[styles.streakCard, { backgroundColor: '#FFF6D9', borderColor: '#FCE08A' }]}>
-              <Text style={{ fontSize: 26 }}>{ASSETS.statistics.streakBest}</Text>
+              <AssetIcon source={ASSETS.statistics.streakBest} size={26} style={{ fontSize: 26 }} />
               <Text style={styles.streakValue}>{stats.bestStreak}</Text>
               <Text style={styles.streakLabel}>Tốt nhất</Text>
             </View>
@@ -180,7 +184,7 @@ export default function StatisticsScreen() {
               return (
                 <View key={b.title} style={[styles.badge, !unlocked && styles.badgeLocked]}>
                   {!unlocked && <Text style={styles.badgeLock}>🔒</Text>}
-                  <Text style={[{ fontSize: 34, marginBottom: 6 }, !unlocked && styles.badgeDim]}>{b.emoji}</Text>
+                  <AssetIcon source={b.emoji} size={34} style={[{ fontSize: 34, marginBottom: 6 }, !unlocked && styles.badgeDim]} />
                   <Text style={styles.badgeTitle}>{b.title}</Text>
                   <Text style={styles.badgeDesc}>{b.desc}</Text>
                 </View>
@@ -195,10 +199,10 @@ export default function StatisticsScreen() {
 
 function BigStat({
   emoji, value, label, valueColor,
-}: { emoji: string; value: string; label: string; valueColor?: string }) {
+}: { emoji: any; value: string; label: string; valueColor?: string }) {
   return (
     <View style={styles.bigStat}>
-      <Text style={{ fontSize: 26 }}>{emoji}</Text>
+      <AssetIcon source={emoji} size={26} style={{ fontSize: 26 }} />
       <Text style={[styles.bigStatValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
       <Text style={styles.bigStatLabel}>{label}</Text>
     </View>
@@ -207,10 +211,10 @@ function BigStat({
 
 function PerfRow({
   icon, label, value, isLast,
-}: { icon: string; label: string; value: string; isLast?: boolean }) {
+}: { icon: any; label: string; value: string; isLast?: boolean }) {
   return (
     <View style={[styles.perfRow, isLast && { borderBottomWidth: 0 }]}>
-      <Text style={{ fontSize: 18 }}>{icon}</Text>
+      <AssetIcon source={icon} size={18} style={{ fontSize: 18 }} />
       <Text style={styles.perfLabel}>{label}</Text>
       <Text style={styles.perfValue}>{value}</Text>
     </View>

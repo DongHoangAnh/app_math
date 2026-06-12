@@ -7,6 +7,7 @@ import { C, R, F, shadow } from '../theme';
 import { LevelBadge } from './LevelBadge';
 import { gameApi, type PublicProfile } from '../services/api';
 import { ASSETS } from '../assets';
+import AssetIcon from './AssetIcon';
 
 interface Props {
   visible: boolean;
@@ -89,7 +90,7 @@ export default function OpponentInfoModal({ visible, opponentId, fallbackName, o
                 </>
               ) : (
                 <View style={s.hiddenBox}>
-                  <Text style={s.hiddenEmoji}>{ASSETS.opponentInfo.locked}</Text>
+                  <AssetIcon source={ASSETS.opponentInfo.locked} size={44} style={s.hiddenEmoji} />
                   <Text style={s.hiddenText}>Người chơi này đã ẩn thông tin chi tiết.</Text>
                 </View>
               )}
@@ -107,10 +108,11 @@ export default function OpponentInfoModal({ visible, opponentId, fallbackName, o
 
 function BigStat({
   emoji, value, label, valueColor,
-}: { emoji: string; value: string; label: string; valueColor?: string }) {
+}: { emoji: any; value: string; label: string; valueColor?: string }) {
   return (
     <View style={s.bigStat}>
-      <Text style={{ fontSize: 24 }}>{emoji}</Text>
+      <AssetIcon source={emoji} size={24} />
+
       <Text style={[s.bigStatValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
       <Text style={s.bigStatLabel}>{label}</Text>
     </View>
@@ -119,10 +121,11 @@ function BigStat({
 
 function PerfRow({
   icon, label, value, isLast,
-}: { icon: string; label: string; value: string; isLast?: boolean }) {
+}: { icon: any; label: string; value: string; isLast?: boolean }) {
   return (
     <View style={[s.perfRow, isLast && { borderBottomWidth: 0 }]}>
-      <Text style={{ fontSize: 18 }}>{icon}</Text>
+      <AssetIcon source={icon} size={18} />
+
       <Text style={s.perfLabel}>{label}</Text>
       <Text style={s.perfValue}>{value}</Text>
     </View>

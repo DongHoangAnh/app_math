@@ -4,6 +4,7 @@ import { C } from '../../theme';
 import { DIFFICULTIES } from '../../../../shared/constants';
 import { s } from './styles';
 import { ASSETS } from '../../assets';
+import AssetIcon from '../../components/AssetIcon';
 
 interface Props {
   myRankingPoints: number | null;
@@ -32,16 +33,21 @@ export default function IdlePhase({
       {/* ── Header bar ── */}
       <View style={s.lobbyBar}>
         <View style={s.lobbyBarTop}>
-          <Text style={s.lobbyTitle} numberOfLines={1}>{`${ASSETS.gameshow.pkTitle} Battle Math`}</Text>
-          <TouchableOpacity style={s.historyPill} onPress={onHistory} activeOpacity={0.8}>
-            <Text style={s.historyPillTxt}>{`${ASSETS.gameshow.history} Lịch sử`}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+            <AssetIcon source={ASSETS.gameshow.pkTitle} size={24} style={s.lobbyTitle} />
+            <Text style={s.lobbyTitle} numberOfLines={1}>Battle Math</Text>
+          </View>
+          <TouchableOpacity style={[s.historyPill, { flexDirection: 'row', alignItems: 'center', gap: 6 }]} onPress={onHistory} activeOpacity={0.8}>
+            <AssetIcon source={ASSETS.gameshow.history} size={13} />
+            <Text style={s.historyPillTxt}>Lịch sử</Text>
           </TouchableOpacity>
         </View>
         <Text style={s.lobbySub}>Chọn độ khó · Real-time 1v1</Text>
         {myRankingPoints != null && (
-          <View style={s.lobbyPtsChip}>
+          <View style={[s.lobbyPtsChip, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            <AssetIcon source={ASSETS.home.points} size={12} />
             <Text style={s.lobbyPtsTxt}>
-              {ASSETS.home.points} Điểm xếp hạng: {myRankingPoints.toLocaleString()}
+              Điểm xếp hạng: {myRankingPoints.toLocaleString()}
             </Text>
           </View>
         )}
@@ -84,7 +90,7 @@ export default function IdlePhase({
                     {myAvatarUrl ? (
                       <Image source={{ uri: myAvatarUrl }} style={s.lobbyAvaImg} />
                     ) : (
-                      <Text style={{ fontSize: 24 }}>{ASSETS.gameshow.youAvatar}</Text>
+                      <AssetIcon source={ASSETS.gameshow.youAvatar} size={24} style={{ fontSize: 24 }} />
                     )}
                   </View>
                   <Text style={s.lobbyAvaLabel}>Tôi</Text>
@@ -98,9 +104,12 @@ export default function IdlePhase({
                 </View>
               </View>
 
-              <Text style={[s.lobbyTapHint, { color: dc.accent }]}>
-                Chạm để vào trận ngay {ASSETS.home.bolt}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 2 }}>
+                <Text style={[s.lobbyTapHint, { color: dc.accent, marginTop: 0 }]}>
+                  Chạm để vào trận ngay
+                </Text>
+                <AssetIcon source={ASSETS.home.bolt} size={12} />
+              </View>
             </TouchableOpacity>
           );
         })}

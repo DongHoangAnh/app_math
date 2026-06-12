@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import { s } from './styles';
 import { ASSETS } from '../../assets';
+import AssetIcon from '../../components/AssetIcon';
 import {
   PRACTICE_OPS, PRACTICE_OP_LABELS, TIMER_SPEEDS, FIXED_COUNTS, TIMED_SECONDS,
   RAMP_LIMITS, presetConfig, type PracticePresetId,
@@ -30,7 +31,10 @@ export default function ConfigPhase({ onStart, weakOpsHint }: Props) {
     return (
       <SafeAreaView style={s.safe}>
         <ScrollView contentContainerStyle={s.body}>
-          <Text style={s.h1}>{ASSETS.practice.title} Luyện tập</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <AssetIcon source={ASSETS.practice.title} size={26} />
+            <Text style={s.h1}>Luyện tập</Text>
+          </View>
           <Text style={s.sub}>Chọn kiểu luyện tập để bắt đầu</Text>
           <View style={s.presetGrid}>
             {PRESETS.map((p) => (
@@ -43,7 +47,7 @@ export default function ConfigPhase({ onStart, weakOpsHint }: Props) {
                   onStart(presetConfig(p.id), p.id);
                 }}
               >
-                <View style={s.presetIconWrap}><Text style={{ fontSize: 26 }}>{p.icon}</Text></View>
+                <View style={s.presetIconWrap}><AssetIcon source={p.icon} size={26} /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.presetName}>{p.name}</Text>
                   <Text style={s.presetDesc}>{p.desc}</Text>
@@ -72,7 +76,10 @@ export default function ConfigPhase({ onStart, weakOpsHint }: Props) {
   return (
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.body}>
-        <Text style={s.h1}>{ASSETS.practice.custom} Tùy chỉnh</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <AssetIcon source={ASSETS.practice.custom} size={26} />
+          <Text style={s.h1}>Tùy chỉnh</Text>
+        </View>
 
         {/* Ops filter */}
         <View style={s.knobCard}>

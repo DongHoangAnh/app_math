@@ -9,6 +9,7 @@
 
 import { API_URL } from '../config';
 import { authFetch } from '../utils/authFetch';
+import type { PracticeResult, PracticeOp, OpTally, SessionKind, PracticeEndReason } from '../../../shared/types';
 
 /** Thrown when the backend returns a non-2xx response. Carries the status. */
 export class ApiError extends Error {
@@ -90,6 +91,23 @@ export interface HeartbeatResult {
   owner: boolean;
 }
 
+export interface PracticeSessionDTO {
+  id: string;
+  kind: SessionKind;
+  difficultyStart: number;
+  total: number;
+  correct: number;
+  totalTimeMs: number;
+  endedReason: PracticeEndReason;
+  createdAt: string;
+}
+
+export interface PracticeSummaryDTO {
+  perOp: Record<PracticeOp, OpTally>;
+  bestEndlessStreak: number;
+  bestTimedScore: number;
+}
+
 // ═══════════════════════════════════════════════════════════
 // CORE — auth + URL + JSON in one place.
 // ═══════════════════════════════════════════════════════════
@@ -144,4 +162,18 @@ export const gameApi = {
       method: 'POST',
       body: JSON.stringify({ deviceId }),
     }),
+
+  savePracticeSession: (result: PracticeResult) =>
+    request<{ ok: boolean }>(`/api/practice/sessions`, {
+      method: 'POST',
+      body: JSON.stringify(result),
+    }),
+
+  getPracticeSessions: (userId: string, limit = 10, offset = 0) =>
+    request<PracticeSessionDTO[]>(
+      `/api/practice/sessions/${userId}?limit=${limit}&offset=${offset}`,
+    ),
+
+  getPracticeSummary: (userId: string) =>
+    request<PracticeSummaryDTO>(`/api/practice/summary/${userId}`),
 };

@@ -3,7 +3,7 @@
 // Centralized so client UI and server logic stay in sync.
 // ═══════════════════════════════════════════════════════════
 
-import type { GameDifficulty } from "./types";
+import type { GameDifficulty, PracticeOp, PracticeConfig, SessionKind } from "./types";
 
 // ─── Match shape ────────────────────────────────────────────
 export const QUESTIONS_PER_MATCH = 10;
@@ -71,3 +71,50 @@ export const EN_BANNED = [
     "fuck", "shit", "bitch", "bastard", "cunt", "dick", "cock",
     "pussy", "whore", "slut", "nigga", "nigger",
 ];
+
+// ─── Practice mode tunables ─────────────────────────────────
+export const PRACTICE_OPS: PracticeOp[] = ["add", "sub", "mul", "div", "compare"];
+
+// Vietnamese labels for each op (UI chips + per-op stats table).
+export const PRACTICE_OP_LABELS: Record<PracticeOp, string> = {
+    add: "Cộng (+)", sub: "Trừ (−)", mul: "Nhân (×)", div: "Chia (÷)", compare: "So sánh (< = >)",
+};
+
+export const RAMP_DEFAULT = { upStreak: 10, downStreak: 3 } as const;
+export const RAMP_LIMITS = { up: { min: 5, max: 20 }, down: { min: 2, max: 5 } } as const;
+
+export const TIMER_SPEEDS = [
+    { id: "slow",   label: "Chậm",  seconds: 15 },
+    { id: "normal", label: "Vừa",   seconds: 10 },
+    { id: "fast",   label: "Nhanh", seconds: 5  },
+] as const;
+
+export const FIXED_COUNTS = [10, 20, 30] as const;
+export const TIMED_SECONDS = [60, 120] as const;
+
+export type PracticePresetId = "classic" | "endless" | "speed" | "weakspot" | "custom";
+
+/** Build a fresh default config for a preset card. "custom" returns the classic
+ *  baseline that the advanced screen then mutates. */
+export function presetConfig(id: PracticePresetId): PracticeConfig {
+    const base: PracticeConfig = {
+        ops: [...PRACTICE_OPS],
+        difficulty: 1,
+        ramp: { enabled: false, upStreak: RAMP_DEFAULT.upStreak, downStreak: RAMP_DEFAULT.downStreak },
+        session: { kind: "fixed", count: 10 },
+        timer: { enabled: true, perQuestionSeconds: 10 },
+        weakSpot: false,
+    };
+    switch (id) {
+        case "classic":
+            return base;
+        case "endless":
+            return { ...base, ramp: { ...base.ramp, enabled: true }, session: { kind: "endless" } };
+        case "speed":
+            return { ...base, session: { kind: "timed", seconds: 60 }, timer: { enabled: true, perQuestionSeconds: 5 } };
+        case "weakspot":
+            return { ...base, weakSpot: true };
+        case "custom":
+            return base;
+    }
+}

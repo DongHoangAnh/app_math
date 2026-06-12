@@ -622,3 +622,123 @@ export async function getPublicProfile(
         stats: canSeeStats ? await getPlayerStats(targetId) : null,
     };
 }
+
+// ═══════════════════════════════════════════════════════════
+// PRACTICE MODE (single-player, unranked)
+// ═══════════════════════════════════════════════════════════
+
+import type { PracticeOp, OpTally, SessionKind, PracticeEndReason } from "../shared/types";
+import type { NormalizedPracticeResult } from "./practice";
+
+export type PracticeSessionRow = {
+    id: string;
+    kind: SessionKind;
+    difficultyStart: number;
+    total: number;
+    correct: number;
+    totalTimeMs: number;
+    endedReason: PracticeEndReason;
+    createdAt: string;
+};
+
+export type PracticeSummary = {
+    perOp: Record<PracticeOp, OpTally>;
+    bestEndlessStreak: number;
+    bestTimedScore: number;
+};
+
+const PRACTICE_OPS: PracticeOp[] = ["add", "sub", "mul", "div", "compare"];
+
+export async function savePracticeSession(
+    userId: string,
+    r: NormalizedPracticeResult,
+): Promise<void> {
+    const db = getSupabaseClient();
+    const { error } = await db.from("practice_sessions").insert({
+        user_id: userId,
+        kind: r.kind,
+        difficulty_start: r.difficultyStart,
+        ramp_enabled: r.rampEnabled,
+        ops: r.ops,
+        total: r.total,
+        correct: r.correct,
+        total_time_ms: r.totalTimeMs,
+        best_streak: r.bestStreak,
+        ended_reason: r.endedReason,
+    });
+    if (error) {
+        console.error("[Supabase] insert practice_sessions error:", error.message);
+        throw error;
+    }
+
+    // Bump per-op aggregates (atomic increment via RPC), only ops with attempts.
+    await Promise.all(
+        PRACTICE_OPS.filter((op) => r.perOp[op].attempted > 0).map((op) =>
+            db.rpc("bump_practice_op_stats", {
+                p_user_id: userId,
+                p_op: op,
+                p_attempted: r.perOp[op].attempted,
+                p_correct: r.perOp[op].correct,
+            }),
+        ),
+    );
+}
+
+export async function getPracticeSessions(
+    userId: string,
+    limit: number,
+    offset: number,
+): Promise<PracticeSessionRow[]> {
+    const { data, error } = await getSupabaseClient()
+        .from("practice_sessions")
+        .select("id,kind,difficulty_start,total,correct,total_time_ms,ended_reason,created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+    if (error || !data) return [];
+    return data.map((s) => ({
+        id: String(s.id),
+        kind: s.kind,
+        difficultyStart: s.difficulty_start ?? 1,
+        total: s.total ?? 0,
+        correct: s.correct ?? 0,
+        totalTimeMs: s.total_time_ms ?? 0,
+        endedReason: s.ended_reason ?? "completed",
+        createdAt: s.created_at,
+    }));
+}
+
+export async function getPracticeSummary(userId: string): Promise<PracticeSummary> {
+    const db = getSupabaseClient();
+    const perOp = {} as Record<PracticeOp, OpTally>;
+    for (const op of PRACTICE_OPS) perOp[op] = { attempted: 0, correct: 0 };
+
+    const { data: stats } = await db
+        .from("practice_op_stats")
+        .select("op,attempted,correct")
+        .eq("user_id", userId);
+    if (stats) {
+        for (const row of stats) {
+            if (PRACTICE_OPS.includes(row.op)) {
+                perOp[row.op as PracticeOp] = { attempted: row.attempted ?? 0, correct: row.correct ?? 0 };
+            }
+        }
+    }
+
+    const { data: endless } = await db
+        .from("practice_sessions")
+        .select("best_streak")
+        .eq("user_id", userId).eq("kind", "endless")
+        .order("best_streak", { ascending: false }).limit(1);
+    const { data: timed } = await db
+        .from("practice_sessions")
+        .select("correct")
+        .eq("user_id", userId).eq("kind", "timed")
+        .order("correct", { ascending: false }).limit(1);
+
+    return {
+        perOp,
+        bestEndlessStreak: endless?.[0]?.best_streak ?? 0,
+        bestTimedScore: timed?.[0]?.correct ?? 0,
+    };
+}

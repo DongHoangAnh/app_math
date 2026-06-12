@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 import { validateDisplayName } from '../utils/validation';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 
 export default function RegisterScreen() {
   const { signUp, signInWithGoogle, loading } = useAuth();
@@ -94,7 +95,7 @@ export default function RegisterScreen() {
           {/* Hero */}
           <View style={styles.hero}>
             <View style={[styles.mascot, hardShadow(C.orangeDark, 6, 0.25)]}>
-              <Text style={styles.mascotEmoji}>{ASSETS.register.mascot}</Text>
+              <AssetIcon source={ASSETS.register.mascot} size={38} style={styles.mascotEmoji} />
             </View>
             <Text style={styles.appName}>Tạo Tài Khoản</Text>
             <Text style={styles.tagline}>Tham gia cộng đồng MathUp 🚀</Text>
@@ -102,7 +103,7 @@ export default function RegisterScreen() {
 
           {success ? (
             <View style={styles.successBox}>
-              <Text style={styles.successEmoji}>{ASSETS.register.success}</Text>
+              <AssetIcon source={ASSETS.register.success} size={64} style={styles.successEmoji} />
               <Text style={styles.successTitle}>Đăng ký thành công!</Text>
               <Text style={styles.successText}>
                 Kiểm tra email để xác nhận tài khoản (nếu có).
@@ -160,7 +161,7 @@ export default function RegisterScreen() {
                       editable={!busy}
                     />
                     <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPwd(!showPwd)}>
-                      <Text style={styles.eyeIcon}>{showPwd ? ASSETS.register.eyeHide : ASSETS.register.eyeShow}</Text>
+                      <AssetIcon source={showPwd ? ASSETS.register.eyeHide : ASSETS.register.eyeShow} size={18} style={styles.eyeIcon} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -186,7 +187,10 @@ export default function RegisterScreen() {
 
                 {error && (
                   <View style={styles.errorBox}>
-                    <Text style={styles.errorText}>{ASSETS.register.warn}  {error}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <AssetIcon source={ASSETS.register.warn} size={16} />
+                      <Text style={styles.errorText}>{error}</Text>
+                    </View>
                   </View>
                 )}
 

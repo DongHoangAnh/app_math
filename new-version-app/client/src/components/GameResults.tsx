@@ -9,6 +9,7 @@ import { C, R, F, APP_W, shadow } from '../theme';
 import { TactileButton } from './ui';
 import { useFeedback } from '../hooks/useFeedback';
 import { ASSETS } from '../assets';
+import AssetIcon from './AssetIcon';
 
 // Animate a number from 0 → target. useNativeDriver:false because we read the value.
 function useCountUp(target: number, duration = 800): number {
@@ -133,13 +134,17 @@ export default function GameResults({
 
       {/* starry background decor */}
       {SPARKLES.map((sp, i) => (
-        <Text
+        <View
           key={i}
-          style={[s.sparkle, { top: sp.top as any, left: sp.left as any, fontSize: sp.size }]}
+          style={[s.sparkle, { top: sp.top as any, left: sp.left as any }]}
           pointerEvents="none"
         >
-          {sp.alt ? ASSETS.gameResults.sparkleAlt : ASSETS.gameResults.sparkle}
-        </Text>
+          <AssetIcon
+            source={sp.alt ? ASSETS.gameResults.sparkleAlt : ASSETS.gameResults.sparkle}
+            size={sp.size}
+            style={{ color: 'rgba(255,255,255,0.5)', fontSize: sp.size }}
+          />
+        </View>
       ))}
 
       {won && (
@@ -159,9 +164,10 @@ export default function GameResults({
         {/* ── Result card ── */}
         <View style={s.card}>
           {/* opponent pill overlapping the card's top edge */}
-          <View style={s.oppPill}>
+          <View style={[s.oppPill, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            <AssetIcon source={ASSETS.gameResults.playAgain} size={13} style={s.oppPillTxt} />
             <Text style={s.oppPillTxt} numberOfLines={1}>
-              {ASSETS.gameResults.playAgain} Đấu với {oppName ?? 'Đối thủ'}
+              Đấu với {oppName ?? 'Đối thủ'}
             </Text>
           </View>
 
@@ -191,7 +197,7 @@ export default function GameResults({
               <View style={[s.tugOpp, { flex: opFlex }]} />
             </View>
             <View style={[s.clashWrap, { left: `${clashPct}%` as any }]} pointerEvents="none">
-              <Text style={s.clashTxt}>{ASSETS.gameResults.clash}</Text>
+              <AssetIcon source={ASSETS.gameResults.clash} size={26} style={s.clashTxt} />
             </View>
           </View>
 
@@ -248,9 +254,10 @@ export default function GameResults({
         <TouchableOpacity
           onPress={() => navigation.navigate('MatchHistoryTab')}
           activeOpacity={0.7}
-          style={s.historyLink}
+          style={[s.historyLink, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}
         >
-          <Text style={s.historyLinkTxt}>{ASSETS.gameResults.history} Xem lịch sử đấu</Text>
+          <AssetIcon source={ASSETS.gameResults.history} size={14} style={s.historyLinkTxt} />
+          <Text style={s.historyLinkTxt}>Xem lịch sử đấu</Text>
         </TouchableOpacity>
 
         {onHome != null && autoCountdown > 0 && (
@@ -264,7 +271,7 @@ export default function GameResults({
 function PlayerCol({
   name, avatarUrl, fallbackEmoji, score, wins, accent, isWinner,
 }: {
-  name: string; avatarUrl?: string | null; fallbackEmoji: string;
+  name: string; avatarUrl?: string | null; fallbackEmoji: any;
   score: number; wins?: number | null; accent: string; isWinner: boolean;
 }) {
   return (
@@ -273,9 +280,13 @@ function PlayerCol({
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={s.playerImg} />
         ) : (
-          <Text style={{ fontSize: 30 }}>{fallbackEmoji}</Text>
+          <AssetIcon source={fallbackEmoji} size={30} style={{ fontSize: 30 }} />
         )}
-        {isWinner && <Text style={s.playerCrown}>{ASSETS.gameResults.crown}</Text>}
+        {isWinner && (
+          <View style={s.playerCrown}>
+            <AssetIcon source={ASSETS.gameResults.crown} size={20} style={{ fontSize: 20 }} />
+          </View>
+        )}
       </View>
       <Text style={s.playerName} numberOfLines={1}>{name}</Text>
       <Text style={[s.playerScore, { color: accent }]}>{score} câu đúng</Text>

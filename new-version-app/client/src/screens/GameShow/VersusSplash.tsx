@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { s } from './styles';
 import { ASSETS } from '../../assets';
+import AssetIcon from '../../components/AssetIcon';
 
 interface SideInfo {
   name: string;
@@ -101,7 +102,7 @@ export default function VersusSplash({ me, opponent, countdown, onCancel }: Prop
               opponent.avatarUrl ? (
                 <Image source={{ uri: opponent.avatarUrl }} style={s.vsAvatarImg} />
               ) : (
-                <Text style={s.vsAvatarEmoji}>{ASSETS.gameshow.oppAvatar}</Text>
+                <AssetIcon source={ASSETS.gameshow.oppAvatar} size={46} style={s.vsAvatarEmoji} />
               )
             ) : (
               <Text style={s.vsSearchMark}>?</Text>
@@ -129,7 +130,11 @@ export default function VersusSplash({ me, opponent, countdown, onCancel }: Prop
       {/* ── VS badge on the divider ── */}
       <View style={[s.vsBadge, { top: dividerY - 42 }]}>
         {matchFound && countdown !== undefined ? (
-          <Text style={s.vsCountTxt}>{countdown > 0 ? countdown : ASSETS.gameshow.rocket}</Text>
+          countdown > 0 ? (
+            <Text style={s.vsCountTxt}>{countdown}</Text>
+          ) : (
+            <AssetIcon source={ASSETS.gameshow.rocket} size={40} style={s.vsCountTxt} />
+          )
         ) : (
           <Text style={s.vsBadgeTxt}>VS</Text>
         )}
@@ -144,7 +149,7 @@ export default function VersusSplash({ me, opponent, countdown, onCancel }: Prop
           {me.avatarUrl ? (
             <Image source={{ uri: me.avatarUrl }} style={s.vsAvatarImg} />
           ) : (
-            <Text style={s.vsAvatarEmoji}>{ASSETS.gameshow.youAvatar}</Text>
+            <AssetIcon source={ASSETS.gameshow.youAvatar} size={46} style={s.vsAvatarEmoji} />
           )}
         </View>
         <Text style={s.vsName} numberOfLines={1}>{me.name} (Tôi)</Text>

@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../services/supabase';
 import { validateDisplayName, validateAvatarFile } from '../utils/validation';
 import { ASSETS } from '../assets';
+import AssetIcon from './AssetIcon';
 
 interface Props {
   visible: boolean;
@@ -156,7 +157,7 @@ export default function EditProfileModal({
                   </View>
                 )}
                 <View style={styles.avatarEditBadge}>
-                  <Text style={styles.avatarEditIcon}>{ASSETS.editProfile.camera}</Text>
+                  <AssetIcon source={ASSETS.editProfile.camera} size={14} style={styles.avatarEditIcon} />
                 </View>
               </TouchableOpacity>
 

@@ -7,6 +7,7 @@ import { C, R, F, shadow, hardShadow } from '../theme';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 import OpponentInfoModal from '../components/OpponentInfoModal';
 import {
   getTopRanks, fetchMyRank, formatRank, TOP_LIMIT,
@@ -100,19 +101,28 @@ export default function LeaderboardScreen() {
       {/* ── Header banner: title + sub + cadence + find-match button ── */}
       <View style={styles.bar}>
         <View style={styles.barTop}>
-          <Text style={styles.barTitle} numberOfLines={1}>{`${ASSETS.leaderboard.trophy} Bảng Xếp Hạng`}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}>
+            <AssetIcon source={ASSETS.leaderboard.trophy} size={24} style={styles.barTitle} />
+            <Text style={styles.barTitle} numberOfLines={1}>Bảng Xếp Hạng</Text>
+          </View>
           <TouchableOpacity
             style={styles.battlePill}
             onPress={() => navigation.navigate('GameShowTab')}
             activeOpacity={0.8}
             accessibilityLabel="Tìm trận"
           >
-            <Text style={styles.battlePillTxt}>{`${ASSETS.leaderboard.battle} Tìm trận`}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AssetIcon source={ASSETS.leaderboard.battle} size={13} style={styles.battlePillTxt} />
+              <Text style={styles.battlePillTxt}>Tìm trận</Text>
+            </View>
           </TouchableOpacity>
         </View>
         <Text style={styles.barSub}>Top {TOP_LIMIT} người chơi</Text>
         <View style={styles.barChip}>
-          <Text style={styles.barChipTxt}>{`${ASSETS.leaderboard.clock} Xếp hạng cập nhật mỗi 15 phút`}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <AssetIcon source={ASSETS.leaderboard.clock} size={12} style={styles.barChipTxt} />
+            <Text style={styles.barChipTxt}>Xếp hạng cập nhật mỗi 15 phút</Text>
+          </View>
         </View>
       </View>
 
@@ -197,7 +207,7 @@ function PodiumCard({
           ? { backgroundColor: C.orange, ...hardShadow(C.orange, 6, 0.3) }
           : { backgroundColor: C.surface, borderWidth: 1, borderColor: C.line, ...shadow('#000', 1) },
       ]}>
-        {isFirst && <Text style={{ fontSize: 20 }}>{ASSETS.leaderboard.crown}</Text>}
+        {isFirst && <AssetIcon source={ASSETS.leaderboard.crown} size={20} style={{ fontSize: 20 }} />}
         <Text style={[styles.podiumPts, { color: isFirst ? '#fff' : C.ink }]}>
           {entry.ranking_points.toLocaleString()}
         </Text>

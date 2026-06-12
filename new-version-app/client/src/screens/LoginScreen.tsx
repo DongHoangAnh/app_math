@@ -9,6 +9,7 @@ import { Tactile, TactileButton } from '../components/ui';
 import { useAuth, SessionLockedError } from '../hooks/useAuth';
 import { useNavigation } from '@react-navigation/native';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 
 export default function LoginScreen() {
   const { signInWithEmail, signInWithGoogle, loading, evictedElsewhere, clearEviction } = useAuth();
@@ -83,7 +84,7 @@ export default function LoginScreen() {
           {/* Hero */}
           <View style={styles.hero}>
             <View style={[styles.mascot, hardShadow(C.orangeDark, 8, 0.25)]}>
-              <Text style={styles.mascotEmoji}>{ASSETS.login.mascot}</Text>
+              <AssetIcon source={ASSETS.login.mascot} size={56} style={styles.mascotEmoji} />
             </View>
             <Text style={styles.appName}>MATHUP</Text>
             <Text style={styles.tagline}>Thách đấu toán học 1v1 🔥</Text>
@@ -123,7 +124,7 @@ export default function LoginScreen() {
                   onSubmitEditing={handleEmailLogin}
                 />
                 <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPwd(!showPwd)}>
-                  <Text style={styles.eyeIcon}>{showPwd ? ASSETS.login.eyeHide : ASSETS.login.eyeShow}</Text>
+                  <AssetIcon source={showPwd ? ASSETS.login.eyeHide : ASSETS.login.eyeShow} size={18} style={styles.eyeIcon} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -138,8 +139,9 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {error && (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{ASSETS.login.warn}  {error}</Text>
+              <View style={[styles.errorBox, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }]}>
+                <AssetIcon source={ASSETS.login.warn} size={16} />
+                <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
 

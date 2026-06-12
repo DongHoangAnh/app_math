@@ -3,6 +3,7 @@ import { View, Text, SafeAreaView, TouchableOpacity, Animated } from 'react-nati
 import { s } from './styles';
 import { C } from '../../theme';
 import { ASSETS } from '../../assets';
+import AssetIcon from '../../components/AssetIcon';
 import { difficultyById } from '../../../../shared/constants';
 import GameKeypad from '../GameShow/GameKeypad';
 import ComparisonButtons from '../GameShow/ComparisonButtons';
@@ -43,11 +44,16 @@ export default function PlayPhase({
           <Text style={s.secondaryTxt}>✕</Text>
         </TouchableOpacity>
         <View style={s.diffPill}>
-          <Text style={{ fontSize: 14 }}>{diff.icon}</Text>
+          <AssetIcon source={diff.icon} size={14} />
           <Text style={s.diffPillTxt}>{diff.label}</Text>
         </View>
         {timerEnabled
-          ? <Text style={s.timerTxt}>{ASSETS.practice.timer} {timer}</Text>
+          ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <AssetIcon source={ASSETS.practice.timer} size={16} />
+              <Text style={s.timerTxt}>{timer}</Text>
+            </View>
+          )
           : <Text style={s.progressTxt}>{progressLabel}</Text>}
       </View>
 
@@ -85,9 +91,7 @@ export default function PlayPhase({
             { opacity: toastOpacity, backgroundColor: rampToast === 'up' ? C.success : C.inkSlate },
           ]}
         >
-          <Text style={{ fontSize: 18 }}>
-            {rampToast === 'up' ? ASSETS.practice.levelUp : ASSETS.practice.levelDown}
-          </Text>
+          <AssetIcon source={rampToast === 'up' ? ASSETS.practice.levelUp : ASSETS.practice.levelDown} size={18} />
           <Text style={s.rampToastTxt}>
             {rampToast === 'up' ? `Lên ${difficultyById(difficulty).label}` : `Về ${difficultyById(difficulty).label}`}
           </Text>

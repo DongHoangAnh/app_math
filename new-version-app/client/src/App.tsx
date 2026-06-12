@@ -19,6 +19,7 @@ import { SettingsProvider } from './hooks/useSettings';
 import { createSessionFromUrl } from './services/supabase';
 import { C, R, F } from './theme';
 import { ASSETS } from './assets';
+import AssetIcon from './components/AssetIcon';
 
 // Screens
 import LoginScreen         from './screens/LoginScreen';
@@ -57,7 +58,7 @@ function useDeepLinkHandler() {
   }, []);
 }
 
-function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+function TabIcon({ icon, focused }: { icon: any; focused: boolean }) {
   return (
     <View style={{
       alignItems: 'center', justifyContent: 'center',
@@ -65,7 +66,7 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
       backgroundColor: focused ? C.peachBg : 'transparent',
       borderRadius: R.squircle,
     }}>
-      <Text style={{ fontSize: focused ? 22 : 20 }}>{icon}</Text>
+      <AssetIcon source={icon} size={focused ? 26 : 24} style={{ fontSize: focused ? 22 : 20 }} />
     </View>
   );
 }

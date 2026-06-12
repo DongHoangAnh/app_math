@@ -14,5 +14,8 @@
       "Bash(tar -xzf webfetch-1780483515823-9um7vd.bin -C /tmp/dx)",
       "Bash(cp /tmp/dx/mathup-design-system/project/ui_kits/mobile-app/screens-social.jsx /d/app_math/new-version-app/.dx-social.jsx)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright"
+  ]
 }

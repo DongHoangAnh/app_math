@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import { C, R, F, hardShadow } from '../theme';
 import { TactileButton } from '../components/ui';
 import { ASSETS } from '../assets';
+import AssetIcon from '../components/AssetIcon';
 
 const PASSWORD_MIN = 8;
 
@@ -66,7 +67,7 @@ export default function ResetPasswordScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.doneWrap}>
-          <Text style={styles.doneEmoji}>{ASSETS.resetPassword.done}</Text>
+          <AssetIcon source={ASSETS.resetPassword.done} size={72} style={styles.doneEmoji} />
           <Text style={styles.doneTitle}>Đặt lại thành công!</Text>
           <Text style={styles.doneText}>Mật khẩu mới của bạn đã được lưu. Bạn đã đăng nhập.</Text>
         </View>
@@ -90,7 +91,7 @@ export default function ResetPasswordScreen() {
           {/* Hero */}
           <View style={styles.hero}>
             <View style={[styles.iconWrap, hardShadow(C.orangeDark, 6, 0.25)]}>
-              <Text style={styles.iconEmoji}>{ASSETS.resetPassword.key}</Text>
+              <AssetIcon source={ASSETS.resetPassword.key} size={42} style={styles.iconEmoji} />
             </View>
             <Text style={styles.title}>Đặt mật khẩu mới</Text>
             <Text style={styles.subtitle}>Chọn một mật khẩu mạnh mà bạn chưa dùng ở nơi khác.</Text>
@@ -112,7 +113,7 @@ export default function ResetPasswordScreen() {
                   autoCapitalize="none"
                 />
                 <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPwd(!showPwd)}>
-                  <Text style={styles.eyeIcon}>{showPwd ? ASSETS.resetPassword.eyeHide : ASSETS.resetPassword.eyeShow}</Text>
+                  <AssetIcon source={showPwd ? ASSETS.resetPassword.eyeHide : ASSETS.resetPassword.eyeShow} size={18} style={styles.eyeIcon} />
                 </TouchableOpacity>
               </View>
 
@@ -157,7 +158,7 @@ export default function ResetPasswordScreen() {
                   onSubmitEditing={handleReset}
                 />
                 <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowConfirm(!showConfirm)}>
-                  <Text style={styles.eyeIcon}>{showConfirm ? ASSETS.resetPassword.eyeHide : ASSETS.resetPassword.eyeShow}</Text>
+                  <AssetIcon source={showConfirm ? ASSETS.resetPassword.eyeHide : ASSETS.resetPassword.eyeShow} size={18} style={styles.eyeIcon} />
                 </TouchableOpacity>
               </View>
               {confirm.length > 0 && password !== confirm && (
@@ -167,7 +168,10 @@ export default function ResetPasswordScreen() {
 
             {error && (
               <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{ASSETS.resetPassword.warn}  {error}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <AssetIcon source={ASSETS.resetPassword.warn} size={16} />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
               </View>
             )}
 

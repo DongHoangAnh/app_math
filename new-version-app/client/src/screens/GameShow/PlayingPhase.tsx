@@ -7,6 +7,7 @@ import { QUESTION_SECONDS } from '../../../../shared/constants';
 import { s } from './styles';
 import { adaptQuestion, type FloatingEmoji } from './utils';
 import { ASSETS } from '../../assets';
+import AssetIcon from '../../components/AssetIcon';
 import type { GameShowState } from '../../hooks/useGameShowWS';
 import QuestionDisplay from './QuestionDisplay';
 import FloatingEmojiLayer from './FloatingEmojiLayer';
@@ -76,7 +77,7 @@ export default function PlayingPhase({
         {/* My side */}
         <View style={s.battleSide}>
           <View style={[s.battleRing, { borderColor: C.primary }]}>
-            <Text style={s.battleEmoji}>{ASSETS.gameshow.youAvatar}</Text>
+            <AssetIcon source={ASSETS.gameshow.youAvatar} size={22} style={s.battleEmoji} />
           </View>
           <View>
             <Text style={s.battleWho}>Tôi</Text>
@@ -101,7 +102,7 @@ export default function PlayingPhase({
             </Text>
           </View>
           <View style={[s.battleRing, { borderColor: C.error }]}>
-            <Text style={s.battleEmoji}>{ASSETS.gameshow.oppAvatar}</Text>
+            <AssetIcon source={ASSETS.gameshow.oppAvatar} size={22} style={s.battleEmoji} />
           </View>
         </View>
       </View>
@@ -114,8 +115,9 @@ export default function PlayingPhase({
       {/* ── Body ── */}
       <View style={s.playBody}>
         {state.opponentFinished && (
-          <View style={s.opDoneBanner}>
-            <Text style={s.opDoneTxt}>{`${ASSETS.gameshow.oppDone} Đối thủ đã hoàn thành!`}</Text>
+          <View style={[s.opDoneBanner, { flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+            <AssetIcon source={ASSETS.gameshow.oppDone} size={16} />
+            <Text style={s.opDoneTxt}>Đối thủ đã hoàn thành!</Text>
           </View>
         )}
 

@@ -32,6 +32,8 @@ import ProfileScreen       from './screens/ProfileScreen';
 import StatisticsScreen    from './screens/StatisticsScreen';
 import LeaderboardScreen   from './screens/LeaderboardScreen';
 import MatchHistoryScreen  from './screens/MatchHistoryScreen';
+import PracticeScreen       from './screens/PracticeScreen';
+import PracticeStatsScreen  from './screens/PracticeStatsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -98,6 +100,8 @@ function MainTabs() {
       <Tab.Screen name="LeaderboardTab" component={LeaderboardScreen} options={{ tabBarLabel: 'Xếp Hạng', tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.leaderboard} focused={focused} /> }} />
       <Tab.Screen name="StatsTab"     component={StatisticsScreen} options={{ tabBarLabel: 'Thống Kê', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.stats} focused={focused} /> }} />
       <Tab.Screen name="MatchHistoryTab" component={MatchHistoryScreen} options={{ tabBarLabel: 'Lịch Sử', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.matchHistory} focused={focused} /> }} />
+      <Tab.Screen name="PracticeTab"      component={PracticeScreen}      options={{ tabBarLabel: 'Luyện Tập', tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.practice.title} focused={focused} /> }} />
+      <Tab.Screen name="PracticeStatsTab" component={PracticeStatsScreen} options={{ tabBarLabel: 'Tiến Bộ',   tabBarButton: () => null, tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.practice.history} focused={focused} /> }} />
       <Tab.Screen name="ProfileTab"   component={ProfileScreen}    options={{ tabBarLabel: 'Hồ Sơ',   tabBarIcon: ({ focused }) => <TabIcon icon={ASSETS.tabs.profile} focused={focused} /> }} />
     </Tab.Navigator>
   );

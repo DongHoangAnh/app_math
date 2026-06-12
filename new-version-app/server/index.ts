@@ -12,7 +12,11 @@ import {
     acquireSessionLock,
     heartbeatSessionLock,
     releaseSessionLock,
+    savePracticeSession,
+    getPracticeSessions,
+    getPracticeSummary,
 } from "./supabase-server";
+import { normalizePracticeResult } from "./practice";
 import { LOCK_TTL_SECONDS } from "../shared/constants";
 
 const PORT = Number(process.env.PORT ?? 3000);
@@ -133,6 +137,8 @@ export function createApp() {
     const matchesMatch   = pathname.match(/^\/api\/gameshow\/matches\/([^/]+)$/);
     const dailyTasksMatch = pathname.match(/^\/api\/daily-tasks\/([^/]+)$/);
     const claimTaskMatch  = pathname.match(/^\/api\/daily-tasks\/([^/]+)\/claim\/([^/]+)$/);
+    const practiceSessionsMatch = pathname.match(/^\/api\/practice\/sessions\/([^/]+)$/);
+    const practiceSummaryMatch  = pathname.match(/^\/api\/practice\/summary\/([^/]+)$/);
 
     // GET /api/gameshow/stats/:userId  — public (leaderboard-style)
     if (req.method === "GET" && statsMatch) {
@@ -323,6 +329,55 @@ export function createApp() {
             json(res, 200, { ok: true });
         } catch (e) {
             console.error("[session/release] error:", (e as Error)?.message);
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+    // POST /api/practice/sessions  — save a finished session (own data only)
+    if (req.method === "POST" && pathname === "/api/practice/sessions") {
+        const authedId = await authenticate(req);
+        if (!authedId) { json(res, 401, { error: "unauthorized" }); return; }
+        const rawBody = await readBody(req);
+        if (rawBody === null) { json(res, 413, { error: "payload too large" }); return; }
+        const result = normalizePracticeResult(rawBody);
+        if (!result) { json(res, 400, { error: "invalid result" }); return; }
+        try {
+            await savePracticeSession(authedId, result);
+            json(res, 200, { ok: true });
+        } catch {
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+    // GET /api/practice/sessions/:userId?limit=&offset=  — own history only
+    if (req.method === "GET" && practiceSessionsMatch) {
+        const userId = practiceSessionsMatch[1];
+        if (!isValidUuid(userId)) { json(res, 400, { error: "invalid userId" }); return; }
+        const authedId = await authenticate(req);
+        if (!authedId || authedId !== userId) { json(res, 401, { error: "unauthorized" }); return; }
+        const limitRaw  = Number(parsedUrl.searchParams.get("limit"));
+        const offsetRaw = Number(parsedUrl.searchParams.get("offset"));
+        const limit  = Number.isFinite(limitRaw)  ? Math.min(Math.max(Math.floor(limitRaw), 1), 20) : 10;
+        const offset = Number.isFinite(offsetRaw) ? Math.max(Math.floor(offsetRaw), 0) : 0;
+        try {
+            json(res, 200, await getPracticeSessions(userId, limit, offset));
+        } catch {
+            json(res, 500, { error: "internal" });
+        }
+        return;
+    }
+
+    // GET /api/practice/summary/:userId  — own per-op accuracy + records
+    if (req.method === "GET" && practiceSummaryMatch) {
+        const userId = practiceSummaryMatch[1];
+        if (!isValidUuid(userId)) { json(res, 400, { error: "invalid userId" }); return; }
+        const authedId = await authenticate(req);
+        if (!authedId || authedId !== userId) { json(res, 401, { error: "unauthorized" }); return; }
+        try {
+            json(res, 200, await getPracticeSummary(userId));
+        } catch {
             json(res, 500, { error: "internal" });
         }
         return;

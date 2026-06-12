@@ -22,6 +22,7 @@
 //   editProfile   : components/EditProfileModal.tsx
 //   gameResults   : components/GameResults.tsx
 //   gameshow      : screens/GameShow/*.tsx
+//   practice      : screens/Practice/*.tsx + PracticeStatsScreen.tsx
 // ==========================================================================
 
 export const ASSETS = {
@@ -191,5 +192,20 @@ export const ASSETS = {
     youFinished: '✅',
     oppLeft: '🏃',
     chat: '💬',
+  },
+
+  practice: {
+    title: '🎯',
+    classic: '📚',     // Cổ điển preset card
+    endless: '♾️',     // Endless preset card
+    speed: '⚡',       // Tốc độ preset card
+    weakspot: '🩹',    // Ôn điểm yếu preset card
+    custom: '🛠️',      // Tùy chỉnh preset card
+    levelUp: '⬆️',     // ramp level-up indicator
+    levelDown: '⬇️',   // ramp level-down indicator
+    timer: '⏱️',
+    correct: '✅',
+    history: '📒',
+    empty: '🗒️',
   },
 } as const;

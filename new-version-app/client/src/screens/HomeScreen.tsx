@@ -164,6 +164,25 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* ── Practice (solo learning) ── */}
+        <View style={{ gap: 12 }}>
+          <Text style={styles.h3}>Luyện tập</Text>
+          <TouchableOpacity
+            style={styles.practiceCard}
+            onPress={() => navigation.navigate('PracticeTab')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.practiceIconWrap}>
+              <Text style={{ fontSize: 26 }}>{ASSETS.practice.title}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.practiceName}>Luyện tập đơn</Text>
+              <Text style={styles.practiceDesc}>Tự rèn · không tính điểm xếp hạng</Text>
+            </View>
+            <Text style={styles.practiceArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* ── 3 metrics ── */}
         <View style={styles.statRow}>
           <StatBadge emoji={ASSETS.home.score} label="ĐIỂM" value={rankingPoints.toLocaleString()} />
@@ -366,6 +385,20 @@ const styles = StyleSheet.create({
   },
   modeName: { fontFamily: F.display, fontSize: 13, color: C.ink },
   modeDesc: { fontFamily: F.bodyMedium, fontSize: 11, color: C.inkSlate },
+
+  // Practice card
+  practiceCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: C.surface, borderWidth: 1, borderColor: C.peachBorder,
+    borderRadius: R.lg, padding: 16, ...shadow('#000', 1),
+  },
+  practiceIconWrap: {
+    width: 52, height: 52, borderRadius: R.md, backgroundColor: C.peachBg,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  practiceName: { fontFamily: F.display, fontSize: 15, color: C.ink },
+  practiceDesc: { fontFamily: F.bodyMedium, fontSize: 12, color: C.inkSlate, marginTop: 2 },
+  practiceArrow: { fontFamily: F.displayBold, fontSize: 20, color: C.orange },
 
   // Rule chips
   ruleRow:  { flexDirection: 'row', gap: 8 },
